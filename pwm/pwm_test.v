@@ -33,17 +33,17 @@ ax_pwm pwm_obj (
     .rst(~rst_n_i),
     .period(period),
     .duty(duty),
-    .pwm_out(pwm_out) 
+    .pwm_out(pwm_out)
     );
 
 
 initial
-begin            
+begin
     $dumpfile("wave.vcd");    //生成的vcd文件名称
     $dumpvars(0, pwm_test);   //tb模块名称
-end 
+end
 
-initial 
+initial
 begin
      clk_i <= 0;
      rst_n_i <= 0;
@@ -64,6 +64,13 @@ begin
     #200
     duty   <= 10;
     #200
+    period <= 100;
+    duty <= 50;
+    #10000
+    duty   <= 80;
+    #10000
+    duty   <= 100;
+    #5000
     $stop;
 end
 

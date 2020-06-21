@@ -84,7 +84,7 @@ begin
     begin
         if (duty_r == 0)
             pwm_r <= 1'b0;
-        else if(period_cnt < duty_r)
+        else if(period_cnt <= duty_r)
             pwm_r <= 1'b1;
         else
             pwm_r <= 1'b0;
