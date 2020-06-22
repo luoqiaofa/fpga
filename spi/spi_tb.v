@@ -19,8 +19,8 @@ module spi_tb;
     wire tx_done; 
 
 spi_module # (
-    .N(7),
-    .N_CS(3)
+    .N(8),
+    .N_CS(4)
 )
 u_spi
 (
