@@ -41,17 +41,21 @@ localparam BITNO_TRANS_START = 3;
 localparam CS_HI       = N_CS - 1;
 
 //value of the ceiling of the log base 2.
-function integer clogb2 (input integer bit_depth);
+function integer clogb2 (input integer x);
+    integer i;
     begin
-        for(clogb2=0; bit_depth > 0; clogb2=clogb2+1)
-            bit_depth = bit_depth>>1;
+        clogb2 = 1;
+        for (i = 0; 2**i < x; i = i + 1)
+        begin
+            clogb2 = i + 1;
+        end
     end
 endfunction
 
-// localparam N_BITS_CNT = clogb2(N);
-// localparam N_CS_CNT   = clogb2(N_CS);
-localparam N_BITS_CNT = 3;
-localparam N_CS_CNT   = 2;
+localparam N_BITS_CNT = clogb2(N);
+localparam N_CS_CNT   = clogb2(N_CS);
+// localparam N_BITS_CNT = 3;
+// localparam N_CS_CNT   = 2;
 
 reg r_sck;
 reg [N - 1:0] sck_hlf_cnt;
