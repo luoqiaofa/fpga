@@ -1,5 +1,19 @@
 `timescale 1ns / 1ps
 /*
+ * this spi module will compatible to Fresscale powerpc ESPI
+ * ESPI normal operation, exclude RapidS
+ * ESPI_SPMODE
+ * ESPI_SPIE
+ * ESPI_SPIM
+ * ESPI_SPCOM
+ * ESPI_SPITF
+ * ESPI_SPIRF
+ * ESPI_SPMODE0
+ * ESPI_SPMODE1
+ * ESPI_SPMODE2
+ * ESPI_SPMODE3
+ */
+/*
  * ***************************************************************************
  * I_SPI_MODE
  * 31   RST
