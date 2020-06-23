@@ -32,16 +32,18 @@
 `timescale 1ns / 1ps
 module ax_pwm
 #(
-	parameter N = 32 //pwm bit width 
+	parameter N = 32 //pwm bit width
 )
 (
-    input         clk,
-    input         rst,
-    input[N - 1:0]period,
-    input[N - 1:0]duty,
-    output        pwm_out 
+    input            clk,
+    input            rst,
+    input  [N - 1:0] mode,
+    input  [N - 1:0] period,
+    input  [N - 1:0] duty,
+    output           pwm_out
     );
- 
+localparam PWM_EN = 0;
+
 reg[N - 1:0] period_r;
 reg[N - 1:0] duty_r;
 reg[N - 1:0] period_cnt;
@@ -66,12 +68,18 @@ always@(posedge clk or posedge rst)
 begin
     if(rst==1)
         period_cnt <= { N {1'b0} };
-    else if (period_r == 0)
-        period_cnt <= 0;
-    else if (period_cnt >= (period_r - 1))
-        period_cnt <= 0;
     else
-        period_cnt <= period_cnt + 1;
+        if (mode[PWM_EN])
+        begin
+            if (period_r == 0)
+                period_cnt <= 0;
+            else if (period_cnt >= (period_r - 1))
+                period_cnt <= 0;
+            else
+                period_cnt <= period_cnt + 1;
+        end
+        else
+            period_cnt <= 0;
 end
 
 always@(posedge clk or posedge rst)
@@ -82,10 +90,15 @@ begin
     end
     else
     begin
-        if (duty_r == 0)
-            pwm_r <= 1'b0;
-        else if(period_cnt <= duty_r)
-            pwm_r <= 1'b1;
+        if (mode[PWM_EN])
+        begin
+            if (duty_r == 0)
+                pwm_r <= 1'b0;
+            else if(period_cnt <= duty_r)
+                pwm_r <= 1'b1;
+            else
+                pwm_r <= 1'b0;
+        end
         else
             pwm_r <= 1'b0;
     end

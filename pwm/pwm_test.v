@@ -23,6 +23,7 @@
 module pwm_test;
     reg         clk_i;
     reg         rst_n_i;
+    reg[31:0]   mode;
     reg[31:0]   period;
     reg[31:0]   duty;
     wire        pwm_out;
@@ -31,6 +32,7 @@ module pwm_test;
 ax_pwm pwm_obj (
     .clk(clk_i),
     .rst(~rst_n_i),
+    .mode(mode),
     .period(period),
     .duty(duty),
     .pwm_out(pwm_out)
@@ -45,16 +47,20 @@ end
 
 initial
 begin
-     clk_i <= 0;
-     rst_n_i <= 0;
-     period <= 10;
-     duty   <= 5;
+    clk_i <= 0;
+    rst_n_i <= 0;
+    period <= 10;
+    duty   <= 5;
+    mode   <= 0;
     #15
     rst_n_i = 1;
     #500
     duty   <= 2;
     #500
     duty   <= 7;
+
+    mode   <= 1;
+
     #500
     duty   <= 1;
     #500
@@ -70,6 +76,9 @@ begin
     duty   <= 80;
     #10000
     duty   <= 100;
+    #5000
+    period <= 100;
+    duty   <= 50;
     #5000
     $stop;
 end
