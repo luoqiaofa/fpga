@@ -6,7 +6,7 @@ module spi_tb;
     wire O_mosi;
     wire O_sck;
     reg I_miso;
-    wire [4:0] O_cs;
+    wire [3:0] O_cs;
     reg [7:0] r_txdata;
     wire [7:0] r_rxdata;
     reg [7:0] r_spi_mode;
@@ -15,8 +15,8 @@ module spi_tb;
     reg [7:0] r_test_rx_data;
     reg [2:0] r_sck_cnt;
     reg [7:0] r_trans_bytes_cnt;
+    wire [7:0] r_spi_stat;
 
-    wire tx_done; 
 
 spi_module # (
     .N(8),
@@ -34,7 +34,7 @@ u_spi
     .O_RX_DATA(r_rxdata),
     .I_SPI_MODE(r_spi_mode),
     .I_SPI_SCK_DIV(r_sck_div),
-    .O_SPI_TX_DONE(tx_done)
+    .O_SPI_STATUS(r_spi_stat)
 );
 
 
@@ -67,7 +67,7 @@ end
 always @(I_sysclk)
     #2 I_sysclk <= !I_sysclk;
 
-always @(posedge tx_done)
+always @(posedge r_spi_stat[0])
 begin
     r_txdata <= r_txdata + 1;
     r_test_rx_data <= r_test_rx_data - 1;
