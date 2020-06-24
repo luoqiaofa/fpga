@@ -1,0 +1,313 @@
+I2C registers list:
+Note : 
+   This definition is from Freescale(NXP) powrpc arch 
+   I want to make our i2c module to be compitable with it
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|  Offset  |                                                          | Width     |        |             |
+|  address |             Register name                                | (in bits) | Access | Reset value |
+|  (hex)   |                                                          |           |        |             |
++----------+----------------------------------------------------------+-----------+--------+-------------|
+|   000    | I2C address register (I2C1_I2CADR)                       | 8         | R/W    | 00h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|   004    | I2C frequency divider register (I2C1_I2CFDR)             | 8         | R/W    | 00h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|   008    | I2C control register (I2C1_I2CCR)                        | 8         | R/W    | 00h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|   00C    | I2C status register (I2C1_I2CSR)                         | 8         | R/W    | 81h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|   010    | I2C data register (I2C1_I2CDR)                           | 8         | R/W    | 00h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+|   014    | I2C digital filter sampling rate register (I2C1_I2CDFSRR)| 8         | R/W    | 10h         |
++----------+----------------------------------------------------------+-----------+--------+-------------+
+
+1 I2C address register (I2Cx_I2CADR)
+    The I2C address register (I2CADR) specifies the address to which the I2C module
+responds if the I2C is addressed as a slave. This is not the address sent on the bus during
+the address-calling cycle when the I2C module is in master mode.
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0–6    |Description                                                                                                 |
+|ADDR   |Slave address. The ADDR field specifies the slave address to which the I2C module responds if it is         |
+|       |addressed as a slave. If the I2C is in slave mode and a transaction's calling address matches               |
+|       |I2CADR[ADDR], the module will set I2CSR[MIF], signaling a pending interrupt. (For more information          |
+|       |about I2CSR[MIF], see I2C status register (I2C_I2CSR).)                                                     |
++-------+------------------------------------------------------------------------------------------------------------+
+|7      |This field is reserved.                                                                                     |
+|-      |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+
+2 I2C frequency divider register (I2Cx_I2CFDR)
+  The I2C frequency divider register (I2CFDR), shown in the following figure, specifies the
+ratio used to prescale the clock for selecting a specific bit rate.
+For additional guidance about the proper use of I2CFDR and I2CDFSRR on Power
+Architecture® integrated host/communications processors, refer to the application note
+AN2919, Determining the I2C Frequency Divider Ratio for SCL.
+Writing to the Reserved Field: While writing to the reserved
+field, always write back the field's original value, as described
+in the note in the Programmable Registers section.
+The I2CFDR fields and FDR field settings for clock divider values are listed in the
+following table.
+
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0–1    |This field is reserved.                                                                                     |
+|-      |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+|2–7    |Frequency divider ratio. Specifies the ratio used to prescale the clock for bit rate selection.             |
+| FDR   | The serial bit                                                                                             |
+|       |clock frequency of the SCL is equal to one half the platform clock divided by the designated divider.       |
+|       |However, the frequency divider value can be changed at any point in a program. The serial bit clock         |
+|       |frequency divider selections are described in the following list:                                           |
+|       |                                                                                                            |
+|       |FDR Divider (Decimal)                                                                                       |
+|       |0x00   384                                                                                                  |
+|       |0x01   416                                                                                                  |
+|       |0x02   480                                                                                                  |
+|       |0x03   576                                                                                                  |
+|       |0x04   640                                                                                                  |
+|       |0x05   704                                                                                                  |
+|       |0x06   832                                                                                                  |
+|       |0x07   1024                                                                                                 |
+|       |0x08   1152                                                                                                 |
+|       |0x09   1280                                                                                                 |
+|       |0x0A   1536                                                                                                 |
+|       |0x0B   1920                                                                                                 |
+|       |0x0C   2304                                                                                                 |
+|       |0x0D   2560                                                                                                 |
+|       |0x0E   3072                                                                                                 |
+|       |0x0F   3840                                                                                                 |
+|       |0x10   4608                                                                                                 |
+|       |0x11   5120                                                                                                 |
+|       |0x12   6144                                                                                                 |
+|       |0x13   7680                                                                                                 |
+|       |0x14   9216                                                                                                 |
+|       |0x15   10240                                                                                                |
+|       |0x16   12288                                                                                                |
+|       |0x17   15360                                                                                                |
+|       |0x18   18432                                                                                                |
+|       |0x19   20480                                                                                                |
+|       |0x1A   24576                                                                                                |
+|       |0x1B   30720                                                                                                |
+|       |0x1C   36864                                                                                                |
+|       |0x1D   40960                                                                                                |
+|       |0x1E   49152                                                                                                |
+|       |0x1F   61440                                                                                                |
+|       |0x20   256                                                                                                  |
+|       |0x21   288                                                                                                  |
+|       |0x22   320                                                                                                  |
+|       |0x23   352                                                                                                  |
+|       |0x24   384                                                                                                  |
+|       |0x25   448                                                                                                  |
+|       |0x26   512                                                                                                  |
+|       |0x27   576                                                                                                  |
+|       |0x28   640                                                                                                  |
+|       |0x29   768                                                                                                  |
+|       |0x2A   896                                                                                                  |
+|       |0x2B   1024                                                                                                 |
+|       |0x2C   1280                                                                                                 |
+|       |0x2D   1536                                                                                                 |
+|       |0x2E   1792                                                                                                 |
+|       |0x2F   2048                                                                                                 |
+|       |0x30   2560                                                                                                 |
+|       |0x31   3072                                                                                                 |
+|       |0x32   3584                                                                                                 |
+|       |0x33   4096                                                                                                 |
+|       |0x34   5120                                                                                                 |
+|       |0x35   6144                                                                                                 |
+|       |0x36   7168                                                                                                 |
+|       |0x37   8192                                                                                                 |
+|       |0x38   10240                                                                                                |
+|       |0x39   12288                                                                                                |
+|       |0x3A   14336                                                                                                |
+|       |0x3B   16384                                                                                                |
+|       |0x3C   20480                                                                                                |
+|       |0x3D   24576                                                                                                |
+|       |0x3E   28672                                                                                                |
+|       |0x3F   32768                                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+
+3 I2C control register (I2Cx_I2CCR)
+The I2C control register (I2CCR) contains fields for controlling several actions, modes,
+messages, conditions, and capabilities.
+NOTE
+Writing to the Reserved Field: While writing to the reserved
+field, always write back the field's original value, as described
+in the note in the Programmable Registers section.
+
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0       Module enable. Controls the software reset of the I2C module.                                               |
+|MEN                                                                                                                 |
+|        0 The module is reset and disabled. The module is held in reset, but the registers can still be accessed.   |
+|        1 The I2C module is enabled. MEN must be set before any other control register fields have any effect.      |
+|          All I2C registers for slave receive or master START can be initialized before setting this field,         |
+|          however.                                                                                                  |
++-------+------------------------------------------------------------------------------------------------------------+
+|1      |Module interrupt enable. Enables the interrupt to be reported to the interrupt controller and/or            |
+|MIEN   |(ultimately) the CPU.                                                                                       |
+|       |                                                                                                            |
+|       |0 Interrupt reporting from the I2C module is disabled. If any pending interrupt conditions exist, they are  |
+|       |  not cleared.                                                                                              |
+|       |1 Interrupt reporting from the I2C module is enabled. If an interrupt condition is detected and I2CSR[MIF]  |
+|       |  is also set, the interrupt is reported.(For more information about I2CSR fields, see I2C status register  |
+|       |  (I2C_I2CSR).)                                                                                             |
++-------+------------------------------------------------------------------------------------------------------------+
+|2      |Master/Slave Mode START.                                                                                    |
+|MSTA   |                                                                                                            |
+|       |0 If MSTA is changed from 1 to 0, a STOP condition is generated and the I2C mode changes from               |
+|       |  master to slave. MSTA is cleared without generating a STOP condition when the master loses                |
+|       |  arbitration.                                                                                              |
+|       |1 If MSTA is changed from 0 to 1, a START condition is generated on the bus and master mode is              |
+|       |  selected for the I2C.                                                                                     |
++-------+------------------------------------------------------------------------------------------------------------+
+|3      |Transmit/Receive Mode Select. Specifies the direction of master and slave transfers. If the I2C module is   |
+|MTX    |configured as a slave, the software should set MTX to match I2CSR[SRW]. If the I2C module is in master      |
+|       |mode, MTX should be set according to the type of transfer required. For address cycles, therefore, this     |
+|       |field is always high (has a value of 1). MTX is cleared if the master loses arbitration.                    |
+|       |0  Receive mode is selected.                                                                                |
+|       |1  Transmit mode is selected.                                                                               |
++-------+------------------------------------------------------------------------------------------------------------+
+|4      |Transfer Acknowledge. Specifies the value driven onto the SDA line during acknowledge cycles for both       |
+|TXAK   |master and slave receivers. The TXAK value applies only if the I2C module is configured as a receiver, not  |
+|       |as a transmitter. The TXAK setting does not apply to address cycles. When the device is addressed as a      |
+|       |slave, an acknowledge is always sent.                                                                       |
+|       |                                                                                                            |
+|       |0  An acknowledge signal (low value on the SDA) is sent out to the bus at the ninth clock after receiving   |
+|       |   1 byte of data.                                                                                          |
+|       |1  No acknowledge signal (high value on the SDA) is sent.                                                   |
++-------+------------------------------------------------------------------------------------------------------------+
+|5      |Repeated START. Specifies whether to generate a repeated START condition. Setting RSTA always               |
+|RSTA   | generates a repeated START condition on the bus and provides the device with the current bus master.       |
+|       |The RSTA field is not readable; an attempt to read RSTA returns a 0.                                        |
+|       |                                                                                                            |
+|       |0  No START condition is generated.                                                                         |
+|       |1  A repeated START condition is generated.                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|6      |This field is reserved.                                                                                     |
+|-      |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+|7      |Broadcast.                                                                                                  |
+|BCST   |                                                                                                            |
+|       |0  The broadcast accept capability is disabled.                                                             |
+|       |1  The I2C is enabled to accept broadcast messages at address 0.1                                           |
++-------+------------------------------------------------------------------------------------------------------------+
+ 
+4 I2C status register (I2Cx_I2CSR)
+The I2C status register (I2CSR) is read-only with the exception of the MIF and MAL
+fields, which can be cleared by software. 
+I2Cx_I2CSR field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0      |Data Transfer. When one byte of data is transferred, MCF is cleared. MCF is set by the falling edge of the  |
+|MCF    |ninth clock of a byte transfer.                                                                             |
+|       |                                                                                                            |
+|       |0   A byte transfer is in progress. MCF is cleared when I2CDR is read in receive mode or written in         |
+|       |    transmit mode. (For more information about I2CDR, see I2C data register (I2C_I2CDR).)                   |
+|       |1   The byte transfer is completed.                                                                         |
++-------+------------------------------------------------------------------------------------------------------------+
+|1      |Addressed as a slave. MAAS is set if the module is acting as a slave and has detected that the I2CADR       |
+|MAAS   |address matches with the transaction's calling address. The processor is interrupted if I2CCR[MIEN] is      |
+|       |set. Next, the processor must check the SRW value and set I2CCR[MTX] accordingly. Any write to I2CCR        |
+|       |automatically clears MAAS. For more information, see I2C address register (I2C_I2CADR) (I2CADR fields)      |
+|       |and I2C control register (I2C_I2CCR) (I2CCR fields).                                                        |
+|       |                                                                                                            |
+|       |0  Not addressed as a slave.                                                                                |
+|       |1  Addressed as a slave.                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+|2      |Bus Busy. Indicates the status of the bus. When a START condition is detected, MBB is set. If a STOP        |
+|MBB    |condition is detected, it is cleared.                                                                       |
+|       |                                                                                                            |
+|       |0  The I2C bus is idle.                                                                                     |
+|       |1  The I2C bus is busy.                                                                                     |
++-------+------------------------------------------------------------------------------------------------------------+
+|3      |Arbitration Lost. MAL is automatically set (value of 1) if arbitration is lost. Note that the device        |
+|MAL     does not automatically retry a failed transfer attempt.                                                     |
+|       |                                                                                                            |
+|       |0  Arbitration is not lost. Can only be cleared by software.                                                |
+|       |1  Arbitration is lost.                                                                                     |
++-------+------------------------------------------------------------------------------------------------------------+
+|4      |Broadcast Match. The broadcast address is always all zeros. BCSTM can be set only if I2CCR[BCST] is         |
+|BCSTM  |set to enable it. (For more information about I2CCR[BCST], see I2C control register (I2C_I2CCR).)           |
+|       |                                                                                                            |
+|       |0  There has not been a broadcast match.                                                                    |
+|       |1  The calling address matches with the broadcast address instead of the programmed slave address.          |
+|       |   BCSTM is also set if the I2C drives an address of all zeros and broadcast mode is enabled.               |
++-------+------------------------------------------------------------------------------------------------------------+
+|5      |Slave Read/Write. If MAAS is set, SRW indicates the value of the R/W command bit of the calling address,    |
+|SRW    |which is sent from the master. By checking SRW, the processor can select slave transmit/receive mode        |
+|       |according to the master's command.                                                                          |
+|       |0  Slave receive mode is selected, with the master writing to the slave.                                    |
+|       |1  Slave transmit mode is selected, with the master reading from the slave. SRW is valid only if both of    |
+|       |   the following conditions are met:                                                                        |
+|       |       • A complete transfer occurred and no other transfers have been initiated.                           |
+|       |       • The I2C module is configured as a slave and has an address match.                                  |
++-------+------------------------------------------------------------------------------------------------------------+
+|6      |Module Interrupt. MIF is set if an interrupt is detected. An interrupt is reported if I2CCR[MIEN] is set.   |
+|MIF    |The interrupts for I2C1 and I2C2 are combined into one interrupt, which is sourced by the dual I2C          |
+|       |module 1;                                                                                                   |
+|       |                                                                                                            |
+|       |similarly, the interrupts for I2C3 is sourced by the dual I2C module 2.(For more information about I2CCR    |
+|       |fields, see I2C control register (I2C_I2CCR).                                                                
+|       |                                                                                                            |
+|       |0  No interrupt is detected. MIF can be cleared only by software.                                           |
+|       |1  An interrupt is detected. MIF is set when one of the following events occurs:                            |
+|       |       • One byte of data is transferred (set at the falling edge of the ninth clock).                      |
+|       |       • The I2CADR value matches with the calling address in Slave Receive mode.                           |
+|       |       • Arbitration is lost.                                                                               |
++-------+------------------------------------------------------------------------------------------------------------+
+|7      |Received Acknowledge. The value of SDA during the reception of a bus cycle's acknowledge bit. If RXAK       |
+|RXAK   |= 0, it indicates that an acknowledge signal has been received after the 8 bits of data have been           |
+|       |transmitted on the bus. If RXAK = 1, it means no acknowledge signal has been detected at the ninth clock.   |
+|       |                                                                                                            |
+|       |0  An acknowledge signal has been received.                                                                 |
+|       |1  No acknowledge signal has been received.                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+        
+5 I2C data register (I2Cx_I2CDR)
+I2CDR specifies the calling address and data to be transmitted (if the I2C is in master or
+slave transmit mode) or allows the I2C module to receive the next byte of data on the I2C
+module (if the I2C is in master or slave receive mode). 
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0–7    |Specifies data to be transmitted or allows receipt of the next data byte on the I2C module, depending on    |
+|DATA   |the I2C mode:                                                                                               |
+|       |    • Transmit mode: Data transmission is initiated when data is written to I2CDR. For master transmit      |
+|       |      mode, the first byte of data written to I2CDR is used for the address transfer and is follows the     |
+|       |      format described in Transactions. When bytes are written to I2CDR in transmit mode, they cannot       |
+|       |      be verified by reading them back.                                                                     |
+|       |    • Receive mode: Reading I2CDR allows the I2C module to receive the next byte of data on the I2C         |
+|       |      interface (in addition to reading the contents of I2CDR).                                             |
+|       |                                                                                                            |
+|       |In all cases, the most significant bit is sent first.                                                       |
+|       |                                                                                                            |
+|       |I2CCR[MTX] must be set appropriately for the desired behavior. For example, if I2CCR[MTX] is set for        |
+|       |transmit mode (1) instead of receive mode (0), reading I2CDR does not initiate receipt of the next data     |
+|       |byte. (For more information about I2CCR[MTX], see I2C control register (I2C_I2CCR).)                        |
+|       |For both master receive and slave receive modes, the very first read is always a dummy read.                |
++-------+------------------------------------------------------------------------------------------------------------+
+  
+6 I2C digital filter sampling rate register (I2Cx_I2CDFSRR)
+  The digital filter sampling rate register (I2CDFSRR) specifies the sample rate for filtering
+  out signal noise.
+  For additional guidance about the proper use of I2CFDR and I2CDFSRR on Power
+  Architecture® integrated host/communications processors, refer to the application note
+  AN2919, Determining the I2C Frequency Divider Ratio for SCL.
+
+I2Cx_I2CDFSRR field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+|Field  |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+|0–1    |This field is reserved.                                                                                     |
+|-      |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+|2–7    |Digital Filter Sampling Rate. Specifies the sample rate for the program to use in filtering out signal noise|
+|DFSR   |This rate is used to prescale the frequency the digital filter uses to take samples from the I2C bus. The   |
+|       |resulting sampling rate is calculated by dividing one half the platform frequency by the non-zero value of  |
+|       |the DFSR. If I2CDFSRR = 0, the I2C bus sample points to the reset divisor.                                  |
++-------+------------------------------------------------------------------------------------------------------------+
+ 
