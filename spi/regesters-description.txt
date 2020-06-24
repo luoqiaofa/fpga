@@ -1,3 +1,5 @@
+Note: The registers definition come from Freescale(NXP) powerpc arch eSPI controller
+      I want to be compitable with it.
 eSPI register list
 +-----------+-------------------------------------------------+-----------+--------+----------------+
 |  Offset   |                                                 | Width     |        |                |
