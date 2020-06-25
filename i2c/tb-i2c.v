@@ -22,17 +22,6 @@
 
 
 module tb_i2c;
-    inout iic_sda;
-    inout iic_scl;
-    reg clk_i;
-    reg rst_n_i;
-    reg scl;
-    reg sda;
-    reg is_sda_lo;
-    reg is_scl_lo;
-    reg [7:0] tx_data;
-    reg [2:0] bit_cnt;
-
     reg       I_rstn;
     reg       I_clk;
     wire      I_i2cscl;
@@ -105,6 +94,8 @@ begin
     I_i2ccr[BIT_I2CCR_MEN] <= 1'b1;
     // # 10000
     // I_i2cfdr <= 8'h1f;
+    #100000
+    $stop;
 end
 always #2 I_clk = ~I_clk;
 
@@ -113,55 +104,5 @@ begin
     $dumpfile("wave.vcd");    //生成的vcd文件名称
     $dumpvars(0, tb_i2c);   //tb模块名称
 end 
-
-initial 
-begin
-    clk_i = 0;
-    rst_n_i = 0;
-    scl <= 1;
-    sda <= 1;
-    is_sda_lo <= 0;
-    is_scl_lo <= 0;
-    tx_data <= 8'haa;
-    bit_cnt <= 3'h7;
-    #15
-    rst_n_i = 1;
-    #(175-15)
-    tx_data <= 8'h55;
-    #100000
-    $stop;
-end
-
-always #5 clk_i = ~clk_i;
-assign iic_scl = is_scl_lo? 0: 1'bz;
-assign iic_sda = is_sda_lo? 0: 1'bz;
-
-always @(negedge clk_i or negedge rst_n_i)
-begin
-    if (!rst_n_i) begin
-        scl <= 1;
-        is_scl_lo <= 0;
-    end
-    else 
-    begin
-        scl <= ~scl;
-    end
-end
-
-always @(negedge scl) 
-begin
-    is_scl_lo <= 1;
-    bit_cnt <= bit_cnt - 1;
-    sda <= tx_data[bit_cnt];
-    if (tx_data[bit_cnt])
-        is_sda_lo <= 0;
-    else
-        is_sda_lo <= 1;
-end
-
-always @(posedge scl) 
-begin
-    is_scl_lo <= 0;
-end
 
 endmodule
