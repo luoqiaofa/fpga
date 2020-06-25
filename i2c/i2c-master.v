@@ -14,6 +14,9 @@ module i2c_master(
     input  [7:0] I_I2CDFSRR
 );
 
+`include "reg-bit-def.v"
+localparam NUM_CLK_1BYTE   =  9;
+
 reg scl;
 reg sda;
 reg scl_low;
@@ -24,40 +27,43 @@ reg sample_clk;
 reg [7:0] clk_sample_div;
 reg [7:0] clk_sample_cnt;
 reg [2:0] bit_cnt;
+reg [3:0] scl_cnt;
 reg [7:0] r_sr;
 reg ignore_first;
 
-`include "reg-bit-def.v"
 
 assign I_I2CSCL = (scl == 0? 0:1'bz);
 assign I_I2CSDA = (sda == 0? 0:1'bz);
 assign I_I2CSR = r_sr;
 
-always @(posedge I_TXRX_DONE)
+always @(negedge I_TXRX_DONE)
 begin
    r_sr[BIT_I2CSR_MCF] <= 1'b0; 
 end
 
 always @(posedge scl)
 begin
-    bit_cnt <= bit_cnt - 1;
-end
-
-always @(negedge scl)
-begin
-    if (!ignore_first)
+    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
+        ;
+    else if (scl_cnt == 0) 
     begin
-        if (bit_cnt == 7)
-            r_sr[BIT_I2CSR_MCF] <= 1'b1; 
+        bit_cnt <= 7;
+        scl_cnt <= NUM_CLK_1BYTE - 1;
+        r_sr[BIT_I2CSR_MCF] <= 1'b1; 
     end
     else
-        ignore_first <= 0;
+    begin
+        scl_cnt <= scl_cnt - 1;
+        if (scl_cnt >= 1)
+            bit_cnt <= bit_cnt - 1;
+    end
 end
-
 
 always @(posedge sample_clk)
 begin
-    if (scl == 1'b0)
+    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
+        ;
+    else if (scl == 1'b0)
         sda <= I_I2CDR[bit_cnt];
     else
         sda <= sda;
@@ -65,14 +71,15 @@ end
 
 always @(posedge I_CLK or negedge I_RSTN)
 begin
-    if (!I_RSTN)
+    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
     begin
+        bit_cnt <= 7;
+        scl_cnt <= NUM_CLK_1BYTE - 1;
         ignore_first <= 1;
         r_sr <= 0;
-        bit_cnt <= 3'h7;
+        sda <= I_I2CDR[7];
         clk_cnt <= 0;
         scl <= 1;
-        sda <= 1;
         clk_div <= (freq_divid_get(I_I2CFDR) >> 1);
         clk_sample_div <= (I_I2CDFSRR >> 1);
         clk_sample_cnt <= 0;

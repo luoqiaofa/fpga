@@ -99,8 +99,10 @@ begin
     I_i2cdr <= 8'h55;
     I_i2cdfsrr <= 8'h10;
     I_wr_done <= 0;
-    # 8
+    # 16
     I_rstn <= 1;
+    # 16
+    I_i2ccr[BIT_I2CCR_MEN] <= 1'b1;
     // # 10000
     // I_i2cfdr <= 8'h1f;
 end
