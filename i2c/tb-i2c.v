@@ -62,7 +62,7 @@ begin
         3: I_i2cdr <= 8'h00;
         default : I_i2cdr <= 8'hff;
     endcase
-    if (bytes_cnt <= 3)
+    if (bytes_cnt <= 4)
         I_wr_done <= 1'b1;
     else
         I_wr_done <= 1'b0;

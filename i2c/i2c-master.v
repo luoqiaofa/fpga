@@ -29,8 +29,19 @@ reg [7:0] clk_sample_cnt;
 reg [2:0] bit_cnt;
 reg [3:0] scl_cnt;
 reg [7:0] r_sr;
-reg ignore_first;
 
+localparam SM_IDLE     = 0;
+localparam SM_START    = 1;
+localparam SM_STOP     = 2;
+localparam SM_ADDR     = 4;
+localparam SM_INS_WAIT = 5;
+localparam SM_ACK      = 6;
+localparam SM_TXB      = 7;
+localparam SM_RXB      = 8;
+localparam SM_BUSY_CHK = 9;
+localparam SM_RESTART  = 10;
+
+reg [7:0] i2c_state ;
 
 assign I_I2CSCL = (scl == 0? 0:1'bz);
 assign I_I2CSDA = (sda == 0? 0:1'bz);
@@ -54,7 +65,7 @@ begin
     else
     begin
         scl_cnt <= scl_cnt - 1;
-        if (scl_cnt >= 1)
+        if (scl_cnt >= 1) 
             bit_cnt <= bit_cnt - 1;
     end
 end
@@ -64,7 +75,14 @@ begin
     if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
         ;
     else if (scl == 1'b0)
-        sda <= I_I2CDR[bit_cnt];
+        if (scl_cnt >= 1) 
+        begin
+            sda <= I_I2CDR[bit_cnt];
+        end
+        else 
+        begin
+            sda <= 1;
+        end
     else
         sda <= sda;
 end
@@ -75,15 +93,16 @@ begin
     begin
         bit_cnt <= 7;
         scl_cnt <= NUM_CLK_1BYTE - 1;
-        ignore_first <= 1;
         r_sr <= 0;
-        sda <= I_I2CDR[7];
+        // sda <= I_I2CDR[7];
+        sda <= 1;
         clk_cnt <= 0;
         scl <= 1;
         clk_div <= (freq_divid_get(I_I2CFDR) >> 1);
         clk_sample_div <= (I_I2CDFSRR >> 1);
         clk_sample_cnt <= 0;
         sample_clk <= 0;
+        i2c_state <= SM_IDLE;
     end
     else 
     begin
