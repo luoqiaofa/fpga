@@ -139,12 +139,12 @@ in the note in the Programmable Registers section.
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0       Module enable. Controls the software reset of the I2C module.                                               |
-|MEN                                                                                                                 |
-|        0 The module is reset and disabled. The module is held in reset, but the registers can still be accessed.   |
-|        1 The I2C module is enabled. MEN must be set before any other control register fields have any effect.      |
-|          All I2C registers for slave receive or master START can be initialized before setting this field,         |
-|          however.                                                                                                  |
+|0      |Module enable. Controls the software reset of the I2C module.                                               |
+|MEN    |                                                                                                            |
+|       |0 The module is reset and disabled. The module is held in reset, but the registers can still be accessed.   |
+|       |1 The I2C module is enabled. MEN must be set before any other control register fields have any effect.      |
+|       |  All I2C registers for slave receive or master START can be initialized before setting this field,         |
+|       |  however.                                                                                                  |
 +-------+------------------------------------------------------------------------------------------------------------+
 |1      |Module interrupt enable. Enables the interrupt to be reported to the interrupt controller and/or            |
 |MIEN   |(ultimately) the CPU.                                                                                       |
