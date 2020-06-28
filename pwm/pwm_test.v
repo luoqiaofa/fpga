@@ -24,18 +24,18 @@ module pwm_test;
     reg         clk_i;
     reg         rst_n_i;
     reg[31:0]   mode;
-    reg[31:0]   period;
+    reg[31:0]   freq_div;
     reg[31:0]   duty;
     wire        pwm_out;
 
     // wire div_2hz_o;
-ax_pwm pwm_obj (
-    .clk(clk_i),
-    .rst(~rst_n_i),
-    .mode(mode),
-    .period(period),
-    .duty(duty),
-    .pwm_out(pwm_out)
+pwm_module pwm_obj (
+    .I_SYS_CLK(clk_i),
+    .I_ASSERT(~rst_n_i),
+    .I_PWM_MODE(mode),
+    .I_PWM_FREQ_DIV(freq_div),
+    .I_PWM_DUTY(duty),
+    .O_PWM_OUT(pwm_out)
     );
 
 
@@ -49,7 +49,7 @@ initial
 begin
     clk_i <= 0;
     rst_n_i <= 0;
-    period <= 10;
+    freq_div <= 10;
     duty   <= 5;
     mode   <= 0;
     #15
@@ -66,18 +66,18 @@ begin
     #500
     duty   <= 0;
     #200
-    period <= 0;
+    freq_div <= 0;
     #200
     duty   <= 10;
     #200
-    period <= 100;
+    freq_div <= 100;
     duty <= 50;
     #10000
     duty   <= 80;
     #10000
     duty   <= 100;
     #5000
-    period <= 100;
+    freq_div <= 100;
     duty   <= 50;
     #5000
     $stop;
