@@ -52,7 +52,7 @@ if __name__ == '__main__' :
             sys.exit(-1)
 
     period_regval = sys_clk_freq // period_freq;
-    duty_regval = (period_regval * 50) // 100
+    duty_regval = (period_regval * duty) // 100
     print("00(mode)  : %08x" % 1)
     print("04(period): %08x" % period_regval)
     print("08(duty)  : %08x" % duty_regval)
