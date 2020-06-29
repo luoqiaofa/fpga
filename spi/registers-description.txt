@@ -329,11 +329,11 @@ ESPI_SPMODE0 field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |2      |Reverse data mode. Determines the receive and transmit character bit order.                                 |
 |REV0   |                                                                                                            |
-|       |0  lsb of the character sent and received first                                                             |                                 
+|       |0  lsb of the character sent and received first                                                             |
 |       |1  msb of the character sent and received first-for 8/16 bits data character only                           |
 +-------+------------------------------------------------------------------------------------------------------------+
-|3      |Divide by 16. Selects the clock source for the eSPI baud rate generator (eSPI BRG) when configured as       | 
-|DIV160 |an eSPI master.                                                                                             |    
+|3      |Divide by 16. Selects the clock source for the eSPI baud rate generator (eSPI BRG) when configured as       |
+|DIV160 |an eSPI master.                                                                                             |
 |       |NOTE: System clock as used here is defined to be platform clock divided by 2.                               |
 |       |0  System clock is the input to the eSPI BRG.                                                               |
 |       |1  System clock/16 is the input to the eSPI BRG.                                                            |

@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`include "timescale.v"
 /*
  * this spi module will compatible to Fresscale powerpc ESPI
  * ESPI normal operation, exclude RapidS
@@ -27,35 +27,40 @@
  * 0  EN
  * ***************************************************************************
  */
-
-module spi_module #
-( 
-    parameter N = 8,
-    parameter N_CS = 4
+module spi_module # (
+    parameter N = 32,
+    parameter NCS = 4
 )
-   (
-    input                   I_CLK,
-    input                   I_RST_N,
-    input                   I_MISO,
-    output                  O_MOSI,
-    output                  O_SCK,
-    output     [N_CS -1 :0] O_CS,
-    input      [N - 1:0]    I_TX_DATA,
-    output reg [N - 1:0]    O_RX_DATA,
-    input      [N - 1:0]    I_SPI_MODE,
-    input      [N - 1:0]    I_SPI_SCK_DIV,
-    output reg [N - 1:0]    O_SPI_STATUS
+(
+    input                I_CLK,
+    input                I_RST_N,
+    input                I_MISO,
+    output               O_MOSI,
+    output               O_SCK,
+    output     [NCS-1:0] O_CS,
+    input      [N-1:0]   I_TX_DATA,
+    output reg [N-1:0]   O_RX_DATA,
+    input      [N-1:0]   I_SPI_MODE,
+    input      [N-1:0]   I_SPI_SCK_DIV,
+    output reg [N-1:0]   O_SPI_STATUS
+
+    input      [N-1:0]   I_SPMODE,
+    output reg [N-1:0]   O_SPIE,
+    input      [N-1:0]   I_SPIM,
+    input      [N-1:0]   I_SPCOM,
+    input      [N-1:0]   I_SPITF,
+    input      [N-1:0]   I_SPIRF,
+    input      [N-1:0]   I_SPMODE0,
+    input      [N-1:0]   I_SPMODE1,
+    input      [N-1:0]   I_SPMODE2,
+    input      [N-1:0]   I_SPMODE3
 );
-// I_SPI_MODE
-localparam BITNO_EN          = 0;
-localparam BITNO_CS_LO       = 1;
-localparam BITNO_CS_HI       = 2;
-localparam BITNO_TRANS_START = 3;
+`include "reg-bit-def.v"
 
 // O_SPI_STATUS
 localparam CHAR_TRANS_DONE   = 0;
 
-localparam CS_HI       = N_CS - 1;
+localparam CS_HI       = NCS - 1;
 
 //value of the ceiling of the log base 2.
 function integer clogb2 (input integer x);
@@ -70,9 +75,9 @@ function integer clogb2 (input integer x);
 endfunction
 
 localparam N_BITS_CNT = clogb2(N);
-localparam N_CS_CNT   = clogb2(N_CS);
+localparam NCS_CNT    = clogb2(NCS);
 // localparam N_BITS_CNT = 3;
-// localparam N_CS_CNT   = 2;
+// localparam NCS_CNT   = 2;
 
 reg r_sck;
 reg [N - 1:0] sck_hlf_cnt;
@@ -83,17 +88,17 @@ reg [N_BITS_CNT - 1 : 0] r_bit_cnt;
 reg r_en;
 reg r_mosi;
 reg r_miso;
-reg [N_CS - 1:0] r_cs;
+reg [NCS - 1:0] r_cs;
 
 assign O_MOSI = r_mosi;
 assign O_SCK = r_sck;
-assign O_CS[N_CS - 1:0] = r_cs[N_CS - 1:0];
+assign O_CS[NCS - 1:0] = r_cs[NCS - 1:0];
 // assign O_SPI_STATUS = r_status;
 
 
-always @(posedge I_SPI_MODE[BITNO_TRANS_START])
+always @(posedge I_SPI_MODE[BIT_TRANS_START])
 begin
-    if (I_SPI_MODE[BITNO_TRANS_START])
+    if (I_SPI_MODE[BIT_TRANS_START])
         O_SPI_STATUS[CHAR_TRANS_DONE] <= 1'b0;
 end
 
@@ -139,7 +144,7 @@ begin
         r_mosi <= I_TX_DATA[N - 1];
         r_en <= 0;
         r_sck <= 0;
-        r_cs <= {N_CS{1'b1}};
+        r_cs <= {NCS{1'b1}};
         sck_hlf_cnt <= {N{1'b0}};
         r_hlf_div <= {N{1'b0}};
         r_bit_cnt <= N - 1;
@@ -148,12 +153,12 @@ begin
     else
     begin
         r_hlf_div  <= (I_SPI_SCK_DIV >> 1);
-        r_en <= I_SPI_MODE[BITNO_EN];
+        r_en <= I_SPI_MODE[BIT_EN];
 
         if (sck_hlf_cnt == (r_hlf_div - 1)) begin
             sck_hlf_cnt <= {N{1'b0}};
             if (!O_SPI_STATUS[CHAR_TRANS_DONE]) 
-                if (I_SPI_MODE[BITNO_EN])
+                if (I_SPI_MODE[BIT_EN])
                     r_sck <= ~r_sck;
                 else
                     r_sck <= 1;
@@ -165,15 +170,15 @@ begin
         r_mosi <= I_TX_DATA[r_bit_cnt];
         r_miso <= I_MISO;
         
-        if (I_SPI_MODE[BITNO_EN])
-            case (I_SPI_MODE[BITNO_CS_HI:BITNO_CS_LO])
-                2'h0 : r_cs[N_CS - 1:0] <= {{N_CS - 1{1'b1}}, 1'b0};
-                2'h1 : r_cs[N_CS - 1:0] <= {{N_CS - 2{1'b1}}, 1'b0, {1{1'b1}}};
-                2'h2 : r_cs[N_CS - 1:0] <= {{N_CS - 3{1'b1}}, 1'b0, {2{1'b1}}};
-                2'h3 : r_cs[N_CS - 1:0] <= {{N_CS - 4{1'b1}}, 1'b0, {3{1'b1}}};
+        if (I_SPI_MODE[BIT_EN])
+            case (I_SPI_MODE[BIT_CS_HI:BIT_CS_LO])
+                2'h0 : r_cs[NCS - 1:0] <= {{NCS - 1{1'b1}}, 1'b0};
+                2'h1 : r_cs[NCS - 1:0] <= {{NCS - 2{1'b1}}, 1'b0, {1{1'b1}}};
+                2'h2 : r_cs[NCS - 1:0] <= {{NCS - 3{1'b1}}, 1'b0, {2{1'b1}}};
+                2'h3 : r_cs[NCS - 1:0] <= {{NCS - 4{1'b1}}, 1'b0, {3{1'b1}}};
             endcase
         else
-            r_cs[N_CS - 1:0] <= {N_CS{1'b1}};
+            r_cs[NCS - 1:0] <= {NCS{1'b1}};
     end
 end
 endmodule
