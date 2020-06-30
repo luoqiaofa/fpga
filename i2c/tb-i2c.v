@@ -53,7 +53,7 @@ i2c_master u1_i2c_master(
     .I_I2CDFSRR(I_i2cdfsrr)
 );
 
-always @(posedge I_i2csr[BIT_I2CSR_MCF] )
+always @(posedge I_i2csr[BIT_SR_MCF] )
 begin
     case (bytes_cnt)
         0: I_i2cdr <= 8'haa;
@@ -91,7 +91,7 @@ begin
     # 16
     I_rstn <= 1;
     # 16
-    I_i2ccr[BIT_I2CCR_MEN] <= 1'b1;
+    I_i2ccr[BIT_CR_MEN] <= 1'b1;
     // # 10000
     // I_i2cfdr <= 8'h1f;
     #100000

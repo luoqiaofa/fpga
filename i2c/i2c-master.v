@@ -49,18 +49,18 @@ assign I_I2CSR = r_sr;
 
 always @(negedge I_TXRX_DONE)
 begin
-   r_sr[BIT_I2CSR_MCF] <= 1'b0; 
+   r_sr[BIT_SR_MCF] <= 1'b0;
 end
 
 always @(posedge scl)
 begin
-    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
+    if ((!I_RSTN) || (!I_I2CCR[BIT_CR_MEN]))
         ;
     else if (scl_cnt == 0) 
     begin
         bit_cnt <= 7;
         scl_cnt <= NUM_CLK_1BYTE - 1;
-        r_sr[BIT_I2CSR_MCF] <= 1'b1; 
+        r_sr[BIT_SR_MCF] <= 1'b1;
     end
     else
     begin
@@ -72,7 +72,7 @@ end
 
 always @(posedge sample_clk)
 begin
-    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
+    if ((!I_RSTN) || (!I_I2CCR[BIT_CR_MEN]))
         ;
     else if (scl == 1'b0)
         if (scl_cnt >= 1) 
@@ -89,7 +89,7 @@ end
 
 always @(posedge I_CLK or negedge I_RSTN)
 begin
-    if ((!I_RSTN) || (!I_I2CCR[BIT_I2CCR_MEN]))
+    if ((!I_RSTN) || (!I_I2CCR[BIT_CR_MEN]))
     begin
         bit_cnt <= 7;
         scl_cnt <= NUM_CLK_1BYTE - 1;
@@ -109,7 +109,7 @@ begin
         clk_div <= (freq_divid_get(I_I2CFDR) >> 1);
         if  (clk_cnt >= clk_div) 
         begin
-            if (!I_I2CSR[BIT_I2CSR_MCF]) 
+            if (!I_I2CSR[BIT_SR_MCF])
             begin
                 scl <= ~scl;
             end
