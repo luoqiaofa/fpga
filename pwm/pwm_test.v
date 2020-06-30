@@ -42,7 +42,7 @@ pwm_module pwm_obj (
 initial
 begin
     $dumpfile("wave.vcd");    //生成的vcd文件名称
-    $dumpvars(0, pwm_test);   //tb模块名称
+    $dumpvars(0);   //tb模块名称
 end
 
 initial
