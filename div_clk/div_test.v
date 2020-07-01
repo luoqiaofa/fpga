@@ -47,12 +47,12 @@ module div_test(
  );
 
 initial
-begin            
+begin
     $dumpfile("wave.vcd");    //生成的vcd文件名称
-    $dumpvars(0, div_test);   //tb模块名称
-end 
+    $dumpvars(0);   //tb模块名称
+end
 
-initial 
+initial
 begin
      clk_i = 0;
      rst_n_i = 0;
