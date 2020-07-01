@@ -33,20 +33,11 @@ begin
     end
     else
     begin
-        if (!I_EN || cnt_zero)
+        if (!I_EN || cnt_zero || !I_GO)
             cnt   <= I_DIVIDER;
         else
             cnt <= cnt - {{N-1{1'b0}}, 1'b1};
     end
-end
-
-always @(posedge I_SYS_CLK or negedge I_RST_N)
-begin
-    if (!I_RST_N || !I_EN)
-        in_process <= 0;
-    else
-        if (I_GO)
-            in_process <= 1'b1;
 end
 
 // clock out
@@ -55,7 +46,7 @@ begin
     if (!I_RST_N || !I_EN)
         O_CLK <= I_CPOL;
     else
-        if (in_process)
+        if (I_GO)
             O_CLK <= (I_EN && cnt_zero && (!I_LAST_CLK || O_CLK)) ? ~O_CLK : O_CLK;
         else
             O_CLK <= I_CPOL;
@@ -71,7 +62,7 @@ begin
     end
     else
     begin
-        O_POS_EGDE <= (I_EN && !O_CLK && cnt_one) && (!I_LAST_CLK);
+        O_POS_EGDE <= (I_EN && !O_CLK && cnt_one) || (!(|I_DIVIDER) && O_CLK) || (!(|I_DIVIDER) && I_GO && !I_EN);
         O_NEG_EGDE <= (I_EN && O_CLK && cnt_one) || (!(|I_DIVIDER) && !O_CLK && I_EN);
     end
 end

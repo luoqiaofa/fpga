@@ -13,7 +13,30 @@ module spi_tb;
     wire O_CLK;         // clock output
     wire O_POS_EGDE;    // positive edge flag
     wire O_NEG_EGDE;     // negtive edge flag
+    reg [4:0] bit_cnt;
 
+always @(negedge O_NEG_EGDE or negedge I_RST_N)
+begin
+    if (!I_RST_N || !I_EN)
+        ;
+    else if (I_LAST_CLK & I_GO & (!I_CPOL)) begin
+        I_GO <= 0;
+        I_LAST_CLK <= 0;
+    end
+end
+
+always @(posedge O_CLK or negedge I_RST_N)
+begin
+    if (!I_RST_N || !I_EN)
+        bit_cnt <= 5'h7;
+    else if (bit_cnt == 5'h0) begin
+        bit_cnt <= 5'h7;
+    end
+    else
+        bit_cnt <= bit_cnt - 5'h1;
+        if (bit_cnt == 5'h0)
+            I_LAST_CLK <= 1;
+end
 initial
 begin            
     $dumpfile("wave.vcd");        //生成的vcd文件名称
@@ -40,11 +63,12 @@ always @(I_SYS_CLK)
 
 initial
 begin            
+    bit_cnt    <= 5'h7;
     I_SYS_CLK  <= 0;      // system clock input
     I_RST_N    <= 0;      // module reset
     I_EN       <= 0;      // module enable
     I_GO       <= 0;      // start transmit
-    I_CPOL     <= 1;      // clock polarity
+    I_CPOL     <= 0;      // clock polarity
     I_CPHA     <= 0;      // clock phase
     I_LAST_CLK <= 0;      // last clock 
     I_DIVIDER  <= 0;      // divider;
@@ -57,7 +81,6 @@ begin
     #30
     I_GO       <= 1;      // start transmit
     #1630
-    I_LAST_CLK <= 1;      // last clock 
     #50
     I_EN       <= 0;      // module enable
     // O_CLK,         // clock output
@@ -68,11 +91,6 @@ begin
     $stop;
 end
 
-always @(posedge I_SYS_CLK)
-begin
-    if (I_GO)
-        I_GO <= 0;
-end
 
 /*
     reg I_sysclk;
