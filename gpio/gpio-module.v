@@ -49,8 +49,8 @@ begin
     if (!reset_n_i) 
     begin
         rd_data   <= {{32{1'b0}}};
-        GPIO_DATA <= {{32{1'b0}}}; // reset as all val;
-        GPIO_DIRS <= {{32{1'b1}}}; // reset as all input
+        GPIO_DATA <= {{32{1'b0}}}; // all pin output low;
+        GPIO_DIRS <= {{32{1'b0}}}; // reset as all output;
     end
     else
     begin
