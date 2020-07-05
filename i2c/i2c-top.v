@@ -10,7 +10,7 @@ module i2c_top_module(
     input  wire [4:0]    rd_addr_i, // read address input
     output wire [7:0]    rd_data_o, // read date output
     inout  wire          scl_pin,   // scl pad pin
-    inout  wire          sda_pin    // sda pad pin 
+    inout  wire          sda_pin    // sda pad pin
 );
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
@@ -31,6 +31,9 @@ wire scl_o;
 reg  scl_oen;
 
 assign rd_data_o = data_out;
+
+pullup scl_pu(scl_pin);
+pullup sda_pu(sda_pin);
 
 iobuf sda(
     .T  (sda_oen),
@@ -175,3 +178,124 @@ end
 endfunction
 
 endmodule
+
+// the follow copy from https://www.cnblogs.com/lyc-seu/p/12864956.html
+
+module div_fsm #(
+    parameter DATA_WIDTH = 16
+)
+(
+    input                        clk,
+    input                        rstn,
+    input                        en,
+    output wire                  ready,
+    input       [DATA_WIDTH-1:0] dividend ,
+    input       [DATA_WIDTH-1:0] divisor  ,
+    output wire [DATA_WIDTH-1:0] quotient ,
+    output wire [DATA_WIDTH-1:0] remainder,
+    output wire                  vld_out
+);
+
+reg [DATA_WIDTH*2-1:0] dividend_e ;
+reg [DATA_WIDTH*2-1:0] divisor_e  ;
+reg [DATA_WIDTH-1:0]   quotient_e ;
+reg [DATA_WIDTH-1:0]   remainder_e;
+
+reg [1:0] current_state,next_state;
+
+reg [DATA_WIDTH-1:0] count;
+
+parameter IDLE  = 2'b00;
+parameter SUB   = 2'b01;
+parameter SHIFT = 2'b10;
+parameter DONE  = 2'b11;
+
+always@(posedge clk or negedge rstn)
+begin
+    if(!rstn)
+        current_state <= IDLE;
+    else
+        current_state <= next_state;
+end
+
+always @(*)
+begin
+    next_state <= 2'bx;
+    case(current_state)
+        IDLE:
+        begin
+            if(en)
+                next_state <= SUB;
+            else
+                next_state <= IDLE;
+        end
+        SUB:  next_state <= SHIFT;
+        SHIFT:
+        begin
+            if(count < DATA_WIDTH)
+                next_state <= SUB;
+            else
+                next_state <= DONE;
+        end
+        DONE: next_state <= IDLE;
+    endcase
+end
+
+always@(posedge clk or negedge rstn)
+begin
+    if(!rstn)
+    begin
+        dividend_e  <= 0;
+        divisor_e   <= 0;
+        quotient_e  <= 0;
+        remainder_e <= 0;
+        count       <= 0;
+    end
+    else
+    begin
+    case(current_state)
+        IDLE:
+        begin
+            dividend_e <= {{DATA_WIDTH{1'b0}},dividend};
+            divisor_e  <= {divisor,{DATA_WIDTH{1'b0}}};
+        end
+        SUB:
+        begin
+            if(dividend_e>=divisor_e)
+            begin
+                quotient_e <= {quotient_e[DATA_WIDTH-2:0],1'b1};
+                dividend_e <= dividend_e-divisor_e;
+            end
+            else
+            begin
+                quotient_e <= {quotient_e[DATA_WIDTH-2:0],1'b0};
+                dividend_e <= dividend_e;
+            end
+        end
+        SHIFT:
+        begin
+            if(count < DATA_WIDTH)
+            begin
+                dividend_e <= dividend_e<<1;
+                count      <= count+1;
+            end
+            else begin
+                remainder_e <= dividend_e[DATA_WIDTH*2-1:DATA_WIDTH];
+            end
+        end
+        DONE:
+        begin
+            count <= 0;
+        end
+    endcase
+end
+end
+
+assign quotient  = quotient_e;
+assign remainder = remainder_e;
+
+assign ready   = (current_state == IDLE)? 1'b1:1'b0;
+assign vld_out = (current_state == DONE)? 1'b1:1'b0;
+
+endmodule
+

@@ -12,9 +12,9 @@ module i2c_bit_ctl(
     input [3:0]    cmd_i,
     output reg     cmd_ack,    // cmd compelete ack
     output reg     busy_o,     // bus busy
-    output reg     arbloss_o,  // arbitration lost
+    output reg     arblost_o,  // arbitration lost
     
-    input  reg     bit_i,
+    input          bit_i,
     output         bit_o,
 
     input          scl_i,
@@ -22,7 +22,7 @@ module i2c_bit_ctl(
     output reg     scl_oen,
     input          sda_i,
     output         sda_o,
-    output reg     sda_oen,
+    output reg     sda_oen
 );
 `include "i2c-def.v"
 
