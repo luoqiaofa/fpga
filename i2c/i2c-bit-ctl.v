@@ -7,7 +7,7 @@ module i2c_bit_ctl(
     input          nRst_i,     // async reset
 
     input [15:0]   prescale_i, // clock prescale cnt
-    input [ 7:0]   filter_cnt, // sample clk cnt
+    input [15:0]   filter_cnt, // sample clk cnt
 
     input [3:0]    cmd_i,
     output reg     cmd_ack,    // cmd compelete ack

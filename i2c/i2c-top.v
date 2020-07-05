@@ -6,7 +6,7 @@ module i2c_top_module(
     input                wr_ena_i,  // write enable
     input  wire [4:0]    wr_addr_i, // write address
     input  wire [7:0]    wr_data_i, // write date input
-    input  wire          rd_ena_i,  // read enable input
+    input                rd_ena_i,  // read enable input
     input  wire [4:0]    rd_addr_i, // read address input
     output wire [7:0]    rd_data_o, // read date output
     inout  wire          scl_pin,   // scl pad pin

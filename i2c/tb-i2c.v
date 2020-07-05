@@ -1,108 +1,66 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2020/05/28 17:57:09
-// Design Name: 
-// Module Name: div_test
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-`timescale 1ns / 1ps
-
+`include "timescale.v"
 
 module tb_i2c;
-    reg       I_rstn;
-    reg       I_clk;
-    wire      I_i2cscl;
-    wire      I_i2csda;
-    reg [7:0] I_i2cadr;
-    reg [7:0] I_i2cfdr;
-    reg [7:0] I_i2ccr;
-    wire [7:0] I_i2csr;
-    reg [7:0] I_i2cdr;
-    reg [7:0] I_i2cdfsrr;
-    reg I_wr_done ;
-    reg [3:0] bytes_cnt;
+`include "i2c-def.v"
+`include "i2c-reg-def.v"
 
-    localparam NUM_BYTES_TX = 3;
+reg           sysclk_i;  // system clock input
+reg           reset_n_i; // module reset input
+reg           wr_ena_i;  // write enable
+wire [4:0]    wr_addr_i; // write address
+wire [7:0]    wr_data_i; // write date input
+reg           rd_ena_i;  // read enable input
+wire [4:0]    rd_addr_i; // read address input
+wire [7:0]    rd_data_o; // read date output
+wire          scl_pin;   // scl pad pin
+wire          sda_pin;    // sda pad pin
 
-`include "reg-bit-def.v"
+reg  [4:0]    wr_addr;
+reg  [7:0]    wr_data;
+reg  [4:0]    rd_addr;
+reg  [7:0]    rd_data;
 
-i2c_master u1_i2c_master(
-    .I_RSTN(I_rstn),
-    .I_CLK(I_clk),
-    .I_TXRX_DONE(I_wr_done),
-    .I_I2CSCL(I_i2cscl),
-    .I_I2CSDA(I_i2csda),
-    .I_I2CADR(I_i2cadr),
-    .I_I2CFDR(I_i2cfdr),
-    .I_I2CCR(I_i2ccr),
-    .I_I2CSR(I_i2csr),
-    .I_I2CDR(I_i2cdr),
-    .I_I2CDFSRR(I_i2cdfsrr)
+assign wr_addr_i = wr_addr;
+assign wr_data_i = wr_data;
+assign rd_addr_i = rd_addr;
+assign rd_data_i = rd_data;
+
+i2c_top_module i2c_master_u1(
+    .sysclk_i(sysclk_i),   // system clock input
+    .reset_n_i(reset_n_i), // module reset input
+    .wr_ena_i(wr_ena_i),   // write enable
+    .wr_addr_i(wr_addr_i), // write address
+    .wr_data_i(wr_data_i), // write date input
+    .rd_ena_i(rd_ena_i),   // read enable input
+    .rd_addr_i(rd_addr_i), // read address input
+    .rd_data_o(rd_data_o), // read date output
+    .scl_pin(scl_pin),     // scl pad pin
+    .sda_pin(sda_pin)      // sda pad pin
 );
-
-always @(posedge I_i2csr[BIT_SR_MCF] )
-begin
-    case (bytes_cnt)
-        0: I_i2cdr <= 8'haa;
-        1: I_i2cdr <= 8'h12;
-        2: I_i2cdr <= 8'h34;
-        3: I_i2cdr <= 8'h00;
-        default : I_i2cdr <= 8'hff;
-    endcase
-    if (bytes_cnt <= 4)
-        I_wr_done <= 1'b1;
-    else
-        I_wr_done <= 1'b0;
-    bytes_cnt <= bytes_cnt + 1;
-end
-
-always @(posedge I_clk)
-begin
-    I_wr_done <= 1'b0;
-end
-
-initial
-begin
-    bytes_cnt <= 0;
-    I_rstn <= 0;
-    I_clk <= 1;
-    // I_i2cscl <= 1;
-    // I_i2csda <= 1;
-    I_i2cadr <= 7'h50;
-    I_i2cfdr <= 8'h00;
-    I_i2ccr <= 8'h00;
-    // I_i2csr <= 8'h81;
-    I_i2cdr <= 8'h55;
-    I_i2cdfsrr <= 8'h10;
-    I_wr_done <= 0;
-    # 16
-    I_rstn <= 1;
-    # 16
-    I_i2ccr[BIT_CR_MEN] <= 1'b1;
-    // # 10000
-    // I_i2cfdr <= 8'h1f;
-    #100000
-    $stop;
-end
-always #2 I_clk = ~I_clk;
 
 initial
 begin            
-    $dumpfile("wave.vcd");    //生成的vcd文件名称
-    $dumpvars(0, tb_i2c);   //tb模块名称
+$dumpfile("wave.vcd");    //生成的vcd文件名称
+$dumpvars(0);   //tb模块名称
 end 
+
+initial
+begin
+    sysclk_i <= 0;
+    reset_n_i <= 0;
+    wr_ena_i <= 0;
+    rd_ena_i <= 0;
+
+    wr_addr <= 0;
+    wr_data <= 0;
+    rd_addr <= 0;
+    rd_data <= 0;
+
+    #100000
+    $stop;
+    $finish;
+end
+
+always #5 sysclk_i = ~sysclk_i;
 
 endmodule
