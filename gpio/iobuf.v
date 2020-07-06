@@ -1,5 +1,5 @@
 module iobuf(
-    input  wire  T,
+    input         T,
     inout  wire  IO,
     input  wire  I,
     output wire  O
@@ -11,7 +11,7 @@ endmodule
 
 module iosbuf #(parameter integer NUM_IO = 2)
 (
-    input  wire [NUM_IO-1:0] Ts,
+    input       [NUM_IO-1:0] Ts,
     inout  wire [NUM_IO-1:0] IOs,
     input  wire [NUM_IO-1:0] Is,
     output wire [NUM_IO-1:0] Os

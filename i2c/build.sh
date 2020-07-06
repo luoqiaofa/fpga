@@ -7,5 +7,5 @@ vvp -n wave -lxt2
 echo "生成波形文件"
 # cp wave.vcd wave.lxt
 # echo "打开波形文件"
-gtkwave wave.vcd
-[ $? -eq 0 ] || exit 3
+# gtkwave wave.vcd
+# [ $? -eq 0 ] || exit 3

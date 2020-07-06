@@ -25,10 +25,10 @@ reg [7:0] data_out;
 
 wire sda_i;
 wire sda_o;
-reg  sda_oen;
+wire  sda_oen;
 wire scl_i;
 wire scl_o;
-reg  scl_oen;
+wire  scl_oen;
 
 assign rd_data_o = data_out;
 
@@ -49,12 +49,62 @@ iobuf scl(
     .O  (scl_i)
 );
 
+
+wire enable_i;   // iic enable
+
+reg [15:0] prescale_i; // clock prescale cnt
+reg [15:0] dfsr_cnt;   // Digital Filter Sampling Rate cnt
+
+reg [2:0] i2c_cmd_i;
+
+wire cmd_ack_o;
+wire i2c_ack_o;
+wire i2c_al_o;   // arbitration lost output
+wire i2c_busy_o; // i2c bus busy output
+
+wire [7:0] data_i;
+wire [7:0] data_o;
+
+assign enable_i = I2CCR[BIT_MIEN];
+
+i2c_master_byte_ctl u1_byte_ctl(
+    .sysclk_i  (sysclk_i),
+    .reset_n_i (reset_n_i),  // sync reset
+
+    .enable_i  (enable_i),   // iic enable
+
+    .prescale_i(prescale_i), // clock prescale cnt
+    .dfsr_cnt  (dfsr_cnt),   // Digital Filter Sampling Rate cnt
+
+    .i2c_cmd_i (i2c_cmd_i),
+    
+    .cmd_ack_o (cmd_ack_o),
+    .i2c_ack_o (i2c_ack_o),
+    .i2c_al_o  (i2c_al_o),   // arbitration lost output
+    .i2c_busy_o(i2c_busy_o), // i2c bus busy output
+
+    .data_i    (I2CDR),
+    .data_o    (data_o),
+
+    .scl_i     (scl_i),
+    .scl_o     (scl_o),
+    .scl_oen   (scl_oen),
+    .sda_i     (sda_i),
+    .sda_o     (sda_o),
+    .sda_oen   (sda_oen)
+);
+
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
     if (~reset_n_i)
     begin
-        scl_oen <= 1;
-        sda_oen <= 1;
+        ;
+    end
+    else 
+    begin
+        prescale_i <= 384;
+        dfsr_cnt <= 384/16;
+        i2c_cmd_i <= CMD_IDLE;
     end
 end
 

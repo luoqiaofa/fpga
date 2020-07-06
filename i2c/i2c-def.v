@@ -14,6 +14,7 @@ localparam CMD_WRITE  = 3'd3;
 localparam CMD_READ   = 3'd4;
 localparam CMD_WR_ACK = 3'd5;
 localparam CMD_RD_ACK = 3'd6;
+localparam CMD_NOP    = 3'd7;
 
 // iic byte state machine
 localparam SM_IDLE    = 3'd0;
