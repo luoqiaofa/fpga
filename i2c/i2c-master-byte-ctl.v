@@ -29,6 +29,30 @@ module i2c_master_byte_ctl(
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
 
+reg bit_i;
+// reg bit_o;
+reg [7:0] shift_r;
+
+
+always @(posedge sysclk_i or negedge reset_n_i)
+begin
+    if (!reset_n_i)
+    begin
+        bit_i  <= 1'b1;
+        shift_r <= 8'hff;
+    end
+    else 
+    begin
+        if (i2c_cmd_i != CMD_WRITE)
+            shift_r <= data_i;
+        if (cmd_ack_o && (i2c_cmd_i == CMD_WRITE))
+        begin
+            bit_i <= shift_r[7];
+            shift_r = {shift_r[6:0], 1'b0};
+        end
+    end
+end
+
 
 i2c_bit_ctl bit_controller(
     .sysclk_i   (sysclk_i),   // system clock input
@@ -39,7 +63,7 @@ i2c_bit_ctl bit_controller(
     .dfsr_cnt   (dfsr_cnt), // sample clk cnt
 
     .cmd_i      (i2c_cmd_i),
-    .cmd_ack    (cmd_ack),    // cmd compelete ack
+    .cmd_ack    (cmd_ack_o),    // cmd compelete ack
     .busy_o     (busy_o),     // bus busy
     .arblost_o  (arblost_o),  // arbitration lost
  

@@ -1,10 +1,3 @@
-// i2c registers address define
-localparam ADDR_ADR    = 3'd0;
-localparam ADDR_FDR    = 3'd1;
-localparam ADDR_CR     = 3'd2;
-localparam ADDR_SR     = 3'd3;
-localparam ADDR_DR     = 3'd4;
-localparam ADDR_DFSRR  = 3'd5;
 
 // iic byte command to bit ctl
 localparam CMD_IDLE   = 3'd0;

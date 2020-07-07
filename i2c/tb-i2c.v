@@ -56,11 +56,26 @@ begin
     rd_addr <= 0;
     rd_data <= 0;
 
+    #50
+    reset_n_i <= 1;
+    #10
+    wr_addr <= (1 << 2);
+    wr_ena_i  <= 1;
+    wr_data   <= 8'h07;
+    #20;
+    wr_ena_i  <= 0;
+    #100
+    wr_data   <= 8'hb0;
+    wr_addr <= (ADDR_CR << 2);
+    wr_ena_i  <= 1;
+    #20;
+    wr_ena_i  <= 0;
+    // [BIT_MIEN] & I2CCR[BIT_MSTA]
     #100000
     $stop;
     $finish;
 end
 
-always #5 sysclk_i = ~sysclk_i;
+always #2 sysclk_i = ~sysclk_i;
 
 endmodule

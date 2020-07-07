@@ -36,8 +36,8 @@ begin
     if (!reset_n_i)
     begin
         clk_en <= 1'b0;
-        cnt <= {{16{1'b1}}};
-        filter_cnt <= ((1<<16)/16);
+        cnt <= 16'd384;
+        filter_cnt <= ((384)/16);
     end
     else if (!enable_i)
     begin
@@ -48,10 +48,13 @@ begin
     begin
         cnt <= cnt - 1;
         filter_cnt <= filter_cnt - 1;
-        if (0 == cnt) 
+        if (filter_cnt == 0)
         begin
+            filter_cnt <= dfsr_cnt;
             clk_en <= 1'b1;
         end
+        if (clk_en == 1'b1)
+            clk_en <= 1'b0;
     end
 end
 
@@ -59,7 +62,7 @@ reg [4:0] bit_state;
 
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
-    if ((!reset_n_i) | (!arblost_o))
+    if (!reset_n_i)
     begin
         scl_oen <= 1'b1;
         sda_oen <= 1'b1;
@@ -67,6 +70,7 @@ begin
         cmd_ack <= 1'b0;
         busy_o  <= 1'b0;
         arblost_o <= 1'b0;
+        bit_state <= BCTL_IDLE;
     end
     else if (!enable_i)
     begin
@@ -94,13 +98,13 @@ begin
                         CMD_RD_ACK :bit_state <= BCTL_R_ACK_A;
                         default    :bit_state <= BCTL_IDLE;
                     endcase
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b1;
+                    scl_oen <= scl_oen;
+                    sda_oen <= sda_oen;
                     sda_chk <= 1'b0;
                 end
                 BCTL_START_A : 
                 begin
-                    scl_oen <= 1'b1;
+                    scl_oen <= scl_oen;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                     bit_state <= BCTL_START_B;
@@ -188,7 +192,7 @@ begin
                 begin
                     scl_oen <= 1'b1;
                     sda_oen <= bit_i;
-                    sda_chk <= 1'b0;
+                    sda_chk <= 1'b1;
 
                     bit_state <= BCTL_WRITE_D;
                 end
@@ -197,7 +201,7 @@ begin
                     scl_oen <= 1'b0;
                     sda_oen <= bit_i;
                     sda_chk <= 1'b0;
-                    sda_ck  <= 1'b0;
+
                     cmd_ack <= 1'b1;
                     bit_state <= BCTL_IDLE;
                 end
@@ -211,7 +215,7 @@ begin
                 end
                 BCTL_READ_B  : 
                 begin
-                    scl_oen <= 1'b0;
+                    scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
@@ -220,82 +224,85 @@ begin
                 BCTL_READ_C  : 
                 begin
                     scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
                     bit_state <= BCTL_READ_D;
                 end
                 BCTL_READ_D  : 
                 begin
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
+                    cmd_ack <= 1'b1;
                     bit_state <= BCTL_IDLE;
                 end
                 BCTL_W_ACK_A : 
                 begin
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b0;
+                    sda_oen <= bit_i;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_W_ACK_B;
                 end
                 BCTL_W_ACK_B : 
                 begin
                     scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    sda_oen <= bit_i;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_W_ACK_C;
                 end
                 BCTL_W_ACK_C : 
                 begin
                     scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
-                    sda_chk <= 1'b0;
+                    sda_oen <= bit_i;
+                    sda_chk <= 1'b1;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_W_ACK_D;
                 end
                 BCTL_W_ACK_D : 
                 begin
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b0;
+                    sda_oen <= bit_i;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    cmd_ack <= 1'b1;
+                    bit_state <= BCTL_IDLE;
                 end
                 BCTL_R_ACK_A : 
                 begin
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_R_ACK_B;
                 end
                 BCTL_R_ACK_B : 
                 begin
                     scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_R_ACK_C;
                 end
                 BCTL_R_ACK_C : 
                 begin
                     scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    bit_state <= BCTL_R_ACK_D;
                 end
                 BCTL_R_ACK_D : 
                 begin
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
 
-                    bit_state <= BCTL_STOP_D;
+                    cmd_ack <= 1'b1;
+                    bit_state <= BCTL_IDLE;
                 end
                 default : bit_state <= BCTL_IDLE;
             endcase

@@ -65,7 +65,7 @@ wire i2c_busy_o; // i2c bus busy output
 wire [7:0] data_i;
 wire [7:0] data_o;
 
-assign enable_i = I2CCR[BIT_MIEN];
+assign enable_i = I2CCR[BIT_MEN];
 
 i2c_master_byte_ctl u1_byte_ctl(
     .sysclk_i  (sysclk_i),
@@ -94,29 +94,84 @@ i2c_master_byte_ctl u1_byte_ctl(
     .sda_oen   (sda_oen)
 );
 
+wire div_ready;
+reg  div_ena;
+reg  [15:0] divisor;
+wire [15:0] quotient;
+wire [15:0] remainder;
+wire div_done;
+
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
-    if (~reset_n_i)
+    if (!reset_n_i)
     begin
-        ;
+        prescale_i <= 16'd384;
+        div_ena <= 0;
+        dfsr_cnt <= 16'd24;
     end
     else 
     begin
-        prescale_i <= 384;
-        dfsr_cnt <= 384/16;
+        prescale_i <= freq_divid_get(I2CFDR);
+        divisor    <= {{10{1'b0}}, I2CDFSRR[5:0]};
+        if (div_ready)
+        begin
+            div_ena  <= 1'b1;
+        end
+        else if (div_done)
+        begin
+            dfsr_cnt <= quotient;
+            div_ena  <= 1'b0;
+        end
+    end
+end
+
+div_fsm #(
+    .DATA_WIDTH(16)
+)
+dfsr_div_u1
+(
+    /* input                        */ .clk      (sysclk_i),
+    /* input                        */ .rstn     (reset_n_i),
+    /* input                        */ .en       (div_ena),
+    /* output wire                  */ .ready    (div_ready),
+    /* input       [DATA_WIDTH-1:0] */ .dividend (prescale_i),
+    /* input       [DATA_WIDTH-1:0] */ .divisor  (divisor),
+    /* output wire [DATA_WIDTH-1:0] */ .quotient (quotient),
+    /* output wire [DATA_WIDTH-1:0] */ .remainder(remainder),
+    /* output wire                  */ .vld_out  (div_done)
+);
+
+
+always @(posedge sysclk_i or negedge reset_n_i)
+begin
+    if (!reset_n_i)
+    begin
         i2c_cmd_i <= CMD_IDLE;
+    end
+    else 
+    begin
+        if (i2c_cmd_i == CMD_IDLE)
+        begin
+            if (I2CCR[BIT_MEN] & I2CCR[BIT_MSTA])
+                i2c_cmd_i <= CMD_START;
+        end
+        
+        if (cmd_ack_o && (i2c_cmd_i == CMD_START))
+        begin
+            i2c_cmd_i <= CMD_WRITE;
+        end
     end
 end
 
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
-    if (~reset_n_i)
+    if (!reset_n_i)
     begin
         I2CADR   <= 8'h00;
         I2CFDR   <= 8'h00;
         I2CCR    <= 8'h00;
         I2CSR    <= 8'h81;
-        I2CDR    <= 8'h00;
+        I2CDR    <= 8'h50;
         I2CDFSRR <= 8'h10;
         data_out <= {{8{1'b0}}};
     end
@@ -149,10 +204,10 @@ begin
     end
 end
 
-function [31:0] freq_divid_get(
+function [15:0] freq_divid_get(
     input [7:0] fdr
 );
-reg [31:0] freq_div;
+reg [15:0] freq_div;
 
 begin
 
@@ -255,10 +310,10 @@ reg [1:0] current_state,next_state;
 
 reg [DATA_WIDTH-1:0] count;
 
-parameter IDLE  = 2'b00;
-parameter SUB   = 2'b01;
-parameter SHIFT = 2'b10;
-parameter DONE  = 2'b11;
+localparam IDLE  = 2'b00;
+localparam SUB   = 2'b01;
+localparam SHIFT = 2'b10;
+localparam DONE  = 2'b11;
 
 always@(posedge clk or negedge rstn)
 begin
