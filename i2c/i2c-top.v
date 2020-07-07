@@ -23,12 +23,15 @@ reg [7:0] I2CDR;
 reg [7:0] I2CDFSRR;
 reg [7:0] data_out;
 
+reg [2:0] i2c_state;
+
 wire sda_i;
 wire sda_o;
 wire sda_oen;
 wire scl_i;
 wire scl_o;
 wire scl_oen;
+
 
 assign rd_data_o = data_out;
 
@@ -147,19 +150,36 @@ begin
     if (!reset_n_i)
     begin
         i2c_cmd_i <= CMD_IDLE;
+        i2c_state <= SM_IDLE;
     end
     else 
     begin
-        if (i2c_cmd_i == CMD_IDLE)
+        if (I2CCR[BIT_MEN])
         begin
-            if (I2CCR[BIT_MEN] & I2CCR[BIT_MSTA])
-                i2c_cmd_i <= CMD_START;
-        end
-        
-        if (cmd_ack_o && (i2c_cmd_i == CMD_START))
-        begin
-            i2c_cmd_i <= CMD_WRITE;
-        end
+            case (i2c_state)
+                SM_IDLE:
+                begin
+                if (I2CCR[BIT_MEN] & I2CCR[BIT_MSTA])
+                    i2c_cmd_i <= CMD_START;
+                    i2c_state <= SM_START;
+                end
+                SM_START  :
+                begin
+                    if (cmd_ack_o && (i2c_cmd_i == CMD_START))
+                        i2c_cmd_i <= CMD_WRITE;
+                end
+                SM_STOP   :;
+                SM_WRITE  :;
+                SM_READ   :; 
+                SM_WR_ACK :;
+                SM_RD_ACK :;
+                default:
+                begin
+                    i2c_state <= SM_IDLE;
+                    i2c_cmd_i <= CMD_IDLE;
+                end
+            endcase
+    end
     end
 end
 
@@ -171,7 +191,7 @@ begin
         I2CFDR   <= 8'h00;
         I2CCR    <= 8'h00;
         I2CSR    <= 8'h81;
-        I2CDR    <= 8'h50;
+        I2CDR    <= 8'h5a;
         I2CDFSRR <= 8'h10;
         data_out <= {{8{1'b0}}};
     end

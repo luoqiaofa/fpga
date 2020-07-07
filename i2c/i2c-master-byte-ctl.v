@@ -29,26 +29,52 @@ module i2c_master_byte_ctl(
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
 
-reg bit_i;
+reg  bit_i;
+wire bit_done;
+reg  cmd_done;
 // reg bit_o;
 reg [7:0] shift_r;
+reg [2:0] bit_cnt;
 
-
+assign cmd_ack_o = cmd_done;
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
     if (!reset_n_i)
     begin
         bit_i  <= 1'b1;
         shift_r <= 8'hff;
+        bit_cnt <= 3'h7;
+        cmd_done <= 0;
     end
     else 
     begin
-        if (i2c_cmd_i != CMD_WRITE)
-            shift_r <= data_i;
-        if (cmd_ack_o && (i2c_cmd_i == CMD_WRITE))
+        cmd_done <= 1'b0;
+        bit_i <= shift_r[bit_cnt];
+        // cmd_done <= 1'b0;
+        if (bit_done) 
         begin
-            bit_i <= shift_r[7];
-            shift_r = {shift_r[6:0], 1'b0};
+            case (i2c_cmd_i)
+                CMD_IDLE:
+                begin
+                    shift_r = data_i;
+                end
+                CMD_START:
+                begin
+                    cmd_done <= 1'b1;
+                    shift_r = data_i;
+                end
+                CMD_WRITE:
+                begin
+                    bit_cnt <= bit_cnt - 1;
+                    if (bit_cnt == 1'b0)
+                        cmd_done <= 1'b1;
+                end
+                CMD_READ:;
+                CMD_WR_ACK:;
+                CMD_RD_ACK:;
+                CMD_STOP:;
+                default :;
+            endcase
         end
     end
 end
@@ -63,7 +89,7 @@ i2c_bit_ctl bit_controller(
     .dfsr_cnt   (dfsr_cnt), // sample clk cnt
 
     .cmd_i      (i2c_cmd_i),
-    .cmd_ack    (cmd_ack_o),    // cmd compelete ack
+    .cmd_ack    (bit_done),    // cmd compelete ack
     .busy_o     (busy_o),     // bus busy
     .arblost_o  (arblost_o),  // arbitration lost
  
