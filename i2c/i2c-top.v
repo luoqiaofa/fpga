@@ -25,10 +25,10 @@ reg [7:0] data_out;
 
 wire sda_i;
 wire sda_o;
-wire  sda_oen;
+wire sda_oen;
 wire scl_i;
 wire scl_o;
-wire  scl_oen;
+wire scl_oen;
 
 assign rd_data_o = data_out;
 
