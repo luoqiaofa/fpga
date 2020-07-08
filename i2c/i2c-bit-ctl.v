@@ -25,6 +25,7 @@ module i2c_bit_ctl(
 );
 `include "i2c-def.v"
 
+reg [4:0] bit_state;
 reg [15:0] cnt;
 reg [15:0] filter_cnt;
 reg clk_en;
@@ -37,7 +38,7 @@ begin
     begin
         clk_en <= 1'b0;
         cnt <= 16'd384;
-        filter_cnt <= ((384)/16);
+        filter_cnt <= {3'b0, dfsr_cnt[15:3]};
     end
     else if (!enable_i)
     begin
@@ -50,7 +51,12 @@ begin
         filter_cnt <= filter_cnt - 1;
         if (filter_cnt == 0)
         begin
-            filter_cnt <= dfsr_cnt;
+            if (bit_state == BCTL_IDLE) begin
+                filter_cnt <= {3'b0, dfsr_cnt[15:3]};
+            end
+            else begin
+                filter_cnt <= dfsr_cnt;
+            end
             clk_en <= 1'b1;
         end
         if (clk_en == 1'b1)
@@ -58,7 +64,6 @@ begin
     end
 end
 
-reg [4:0] bit_state;
 
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
