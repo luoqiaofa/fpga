@@ -30,37 +30,45 @@ reg [15:0] cnt;
 reg [15:0] filter_cnt;
 reg clk_en;
 reg sda_chk;
+reg fSCL;
 // reg scl_chk;
 
 always @(posedge sysclk_i or negedge reset_n_i)
 begin
     if (!reset_n_i)
     begin
-        clk_en <= 1'b0;
-        cnt <= 16'd384;
-        filter_cnt <= {3'b0, dfsr_cnt[15:3]};
+        fSCL <= 0;
+        clk_en <= 1'b1;
+        cnt <= 16'd192;
+        filter_cnt <= (192/16);
     end
     else if (!enable_i)
     begin
-        cnt <= prescale_i;
-        filter_cnt <= dfsr_cnt;
+        clk_en <= 1'b1;
+        cnt <= {2'b0, prescale_i[15:2]};
+        filter_cnt <= {1'b0, dfsr_cnt[15:1]};
     end
     else 
     begin
         cnt <= cnt - 1;
         filter_cnt <= filter_cnt - 1;
-        if (filter_cnt == 0)
+        if (filter_cnt == 0) begin
+            fSCL <= ~fSCL;
+            filter_cnt <= {1'b0, dfsr_cnt[15:1]};
+        end
+        if (cnt == 0)
         begin
             if (bit_state == BCTL_IDLE) begin
-                filter_cnt <= {3'b0, dfsr_cnt[15:3]};
+                cnt <= {4'b0, prescale_i[15:4]};
             end
             else begin
-                filter_cnt <= dfsr_cnt;
+                cnt <= {2'b0, prescale_i[15:2]};
             end
             clk_en <= 1'b1;
         end
-        if (clk_en == 1'b1)
+        else begin
             clk_en <= 1'b0;
+        end
     end
 end
 
