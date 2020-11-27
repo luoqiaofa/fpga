@@ -1,5 +1,5 @@
 echo "开始编译"
-iverilog -o wave tb-gpio.v gpio-module.v iobuf.v
+iverilog -o wave tb-gpio.v gpio-module.v iobuf.v iosbuf.v
 [ $? -eq 0 ] || exit 1
 echo "编译完成"
 vvp -n wave -lxt2

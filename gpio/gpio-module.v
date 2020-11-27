@@ -1,5 +1,5 @@
 module gpio_module #(
-    parameter GPIO_WIDTH = 2
+    parameter NUM_GPIOS = 2
 )
 (
     input  wire                  sysclk_i,
@@ -11,7 +11,7 @@ module gpio_module #(
     input  wire                  rd_ena_i,
     input  wire [3:0]            rd_addr_i,
     output wire [31:0]           rd_data_o,
-    inout  wire [GPIO_WIDTH-1:0] gpios_io
+    inout  wire [NUM_GPIOS-1:0]  gpios_io
 );
 
 localparam ADDR_DATA  = 4'h0; // gpio data register
@@ -20,11 +20,11 @@ localparam ADDR_DIRS  = 4'h1; // gpio input/output 3-state control regester
 reg [31:0] GPIO_DATA;
 reg [31:0] GPIO_DIRS;
 reg [31:0] rd_data;
-wire [GPIO_WIDTH-1:0] io_t;
-wire [GPIO_WIDTH-1:0] io_i;
-wire [GPIO_WIDTH-1:0] io_o;
+wire [NUM_GPIOS-1:0] io_t;
+wire [NUM_GPIOS-1:0] io_i;
+wire [NUM_GPIOS-1:0] io_o;
 
-iosbuf #(.NUM_IO(GPIO_WIDTH)) 
+iosbuf #(.NUM_IO(NUM_GPIOS)) 
         iosbuf_u1 (
             .Ts  (io_t),
             .IOs (gpios_io),
@@ -37,7 +37,7 @@ integer pin, byte_idx;
 
 genvar idx;
 generate
-for (idx = 0; idx < GPIO_WIDTH; idx = idx + 1)
+for (idx = 0; idx < NUM_GPIOS; idx = idx + 1)
 begin : dir_tris_ctl
     assign io_t[idx] = GPIO_DIRS[idx];
     assign io_o[idx] = GPIO_DATA[idx];
@@ -80,7 +80,7 @@ begin
                 default   : rd_data <= GPIO_DATA;
             endcase
         end
-        for (pin = 0; pin < GPIO_WIDTH; pin = pin + 1)
+        for (pin = 0; pin < NUM_GPIOS; pin = pin + 1)
         begin
             if (GPIO_DIRS[pin])
                 GPIO_DATA[pin] <= io_i[pin];

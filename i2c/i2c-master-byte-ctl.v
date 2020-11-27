@@ -81,20 +81,20 @@ end
 
 
 i2c_bit_ctl bit_controller(
-    .sysclk_i   (sysclk_i),   // system clock input
-    .reset_n_i  (reset_n_i),  // sync reset
-    .enable_i   (enable_i),   // iic enable
+    .sysclk     (sysclk_i),   // system clock input
+    .nReset     (reset_n_i),  // sync reset
+    .enable     (enable_i),   // iic enable
 
-    .prescale_i (prescale_i), // clock prescale cnt
-    .dfsr_cnt   (dfsr_cnt), // sample clk cnt
+    .prescale   (prescale_i), // clock prescale cnt
+    .dfsr       (dfsr_cnt), // sample clk cnt
 
-    .cmd_i      (i2c_cmd_i),
+    .cmd        (i2c_cmd_i),
     .cmd_ack    (bit_done),    // cmd compelete ack
-    .busy_o     (busy_o),     // bus busy
-    .arblost_o  (arblost_o),  // arbitration lost
+    .busy       (busy_o),     // bus busy
+    .arblost    (arblost_o),  // arbitration lost
  
-    .bit_i      (bit_i),
-    .bit_o      (bit_o),
+    .din        (bit_i),
+    .dout       (bit_o),
 
     .scl_i      (scl_i),
     .scl_o      (scl_o),
