@@ -56,6 +56,10 @@ begin
             fSCL <= ~fSCL;
             filter_cnt <= {1'b0, dfsr[15:1]};
         end
+        else
+        begin
+            fSCL <= fSCL;
+        end
         if (cnt == 0)
         begin
             if (c_state == B_IDLE) begin

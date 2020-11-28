@@ -56,22 +56,30 @@ begin
     rd_addr <= 0;
     rd_data <= 0;
 
-    #50
+    #20
     reset_n_i <= 1;
     #10
     wr_addr <= (ADDR_FDR << 2);
     wr_ena_i  <= 1;
     wr_data   <= 8'h07;
-    #20;
+    #10;
     wr_ena_i  <= 0;
     #100
     wr_data   <= 8'hb0;
     wr_addr <= (ADDR_CR << 2);
     wr_ena_i  <= 1;
-    #20;
+    #10;
     wr_ena_i  <= 0;
+    wr_addr <= (ADDR_CR << 2);
+    wr_ena_i <= (1 << CCR_MEN); 
+    wr_ena_i  <= 1;
+    #10;
+    wr_ena_i <= 0;
+    wr_addr <= (ADDR_CR << 2);
+    wr_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+    wr_ena_i  <= 1;
     // [BIT_MIEN] & I2CCR[BIT_MSTA]
-    #200000
+    #300000
     $stop;
     $finish;
 end

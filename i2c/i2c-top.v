@@ -68,20 +68,16 @@ wire i2c_busy_o; // i2c bus busy output
 wire [7:0] data_i;
 wire [7:0] data_o;
 
-assign enable_i = I2CCR[BIT_MEN];
+assign enable_i = I2CCR[CCR_MEN];
 
 i2c_master_byte_ctl u1_byte_ctl(
-    .sysclk_i  (sysclk_i),
-    .reset_n_i (reset_n_i),  // sync reset
-
-    .enable_i  (enable_i),   // iic enable
-
-    .prescale_i(prescale_i), // clock prescale cnt
-    .dfsr_cnt  (dfsr_cnt),   // Digital Filter Sampling Rate cnt
-
-    .i2c_cmd_i (i2c_cmd_i),
-    
-    .cmd_ack_o (cmd_ack_o),
+    .sysclk    (sysclk_i),
+    .nReset    (reset_n_i),  // sync reset
+    .enable    (enable_i),   // iic enable
+    .prescale  (prescale_i), // clock prescale cnt
+    .dfsr      (dfsr_cnt),   // Digital Filter Sampling Rate cnt
+    .cmd       (i2c_cmd_i),
+    .cmd_ack   (cmd_ack_o),
     .i2c_ack_o (i2c_ack_o),
     .i2c_al_o  (i2c_al_o),   // arbitration lost output
     .i2c_busy_o(i2c_busy_o), // i2c bus busy output
@@ -154,20 +150,18 @@ begin
     end
     else 
     begin
-        if (I2CCR[BIT_MEN])
+        if (I2CCR[CCR_MIEN] & I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
         begin
             case (i2c_state)
                 SM_IDLE:
                 begin
-                if (I2CCR[BIT_MEN] & I2CCR[BIT_MSTA])
-                    i2c_cmd_i <= CMD_START;
-                    i2c_state <= SM_START;
+                    if (I2CCR[CCR_MTX])
+                    begin
+                        i2c_cmd_i <= CMD_START;
+                        i2c_state <= SM_START;
+                    end
                 end
-                SM_START  :
-                begin
-                    if (cmd_ack_o && (i2c_cmd_i == CMD_START))
-                        i2c_cmd_i <= CMD_WRITE;
-                end
+                SM_START:;
                 SM_STOP   :;
                 SM_WRITE  :;
                 SM_READ   :; 
@@ -179,7 +173,64 @@ begin
                     i2c_cmd_i <= CMD_IDLE;
                 end
             endcase
-    end
+            if (cmd_ack_o)
+            begin
+                case (i2c_state)
+                    SM_IDLE:;
+                    SM_START:
+                    begin
+                        if (I2CCR[CCR_MTX])
+                        begin
+                            i2c_state = SM_WRITE;
+                            i2c_cmd_i <= CMD_WRITE;
+                        end
+                        else
+                        begin
+                            i2c_state = SM_READ;
+                            i2c_cmd_i <= CMD_READ;
+                        end
+                    end
+                    SM_STOP   :
+                    begin
+                        i2c_state = SM_IDLE;
+                        i2c_cmd_i <= CMD_IDLE;
+                    end
+                    SM_WRITE  :
+                    begin
+                        i2c_state = SM_RD_ACK;
+                        i2c_cmd_i <= CMD_RD_ACK;
+                    end
+                    SM_READ   :
+                        if (I2CCR[CCR_TXAK])
+                        begin
+                            i2c_state = SM_WR_ACK;
+                            i2c_cmd_i <= CMD_WR_ACK;
+                        end
+                        else
+                        begin
+                            i2c_state = SM_STOP;
+                            i2c_cmd_i <= CMD_STOP;
+                        end
+                    SM_WR_ACK :
+                        if (I2CCR[CCR_TXAK])
+                        begin
+                            i2c_state = SM_READ;
+                            i2c_cmd_i <= CMD_READ;
+                        end
+                    SM_RD_ACK :
+                        if (I2CCR[CCR_MTX])
+                        begin
+                            i2c_state = SM_WRITE;
+                            i2c_cmd_i <= CMD_WRITE;
+                        end
+                    default:
+                    begin
+                        i2c_state <= SM_IDLE;
+                        i2c_cmd_i <= CMD_IDLE;
+                    end
+                endcase
+            end
+        end
     end
 end
 
