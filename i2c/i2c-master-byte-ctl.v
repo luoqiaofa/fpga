@@ -9,8 +9,9 @@ module i2c_master_byte_ctl(
     input      [15:0] prescale, // clock prescale cnt
     input      [15:0] dfsr,     // Digital Filter Sampling Rate cnt
 
+    input             go,
     input      [2:0]  cmd,
-    
+
     output            cmd_ack,
     output            i2c_ack_o,
     output            i2c_al_o,   // arbitration lost output
@@ -55,13 +56,14 @@ begin
     end
     else 
     begin
+        // bit_ack = bit_o;
         cmd_done <= 1'b0;
         bit_i <= shift_r[bit_cnt];
         // cmd_done <= 1'b0;
         if (bit_done)
         begin
             bit_cmd <= CMD_IDLE;
-            case (cmd)
+            case (c_state)
                 CMD_START:
                 begin
                     cmd_done <= 1'b1;
@@ -70,15 +72,18 @@ begin
                 end
                 CMD_WRITE:
                 begin
+                    bit_cmd <= c_state;
                     bit_cnt <= bit_cnt - 1;
                     if (bit_cnt == 1'b0)
                     begin
                         cmd_done <= 1'b1;
                         bit_cnt <= 3'h7;
+                        shift_r = data_i;
                     end
                 end
                 CMD_READ:
                 begin
+                    bit_cmd <= c_state;
                     bit_cnt <= bit_cnt - 1;
                     if (bit_cnt == 1'b0)
                     begin
@@ -94,67 +99,56 @@ begin
                 end
                 CMD_RD_ACK:
                 begin
-                    bit_ack = bit_o;
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
                     shift_r = data_i;
                 end
-                CMD_STOP: c_state <= SM_IDLE;
+                CMD_STOP: c_state <= CMD_IDLE;
                 default : bit_cmd <= CMD_IDLE;
             endcase
         end
-        else
+        if (go)
         begin
-            if (c_state == SM_IDLE)
-            begin
-                case (cmd)
-                    CMD_IDLE:
-                    begin
-                        bit_cmd <= CMD_IDLE;
-                    end
-                    CMD_START:
-                    begin
-                        bit_cmd <= cmd;
-                        c_state <= cmd;
-                    end
-                    CMD_NOP: 
-                    begin
-                        bit_cmd <= CMD_IDLE;
-                        c_state <= SM_NOP;
-                    end
-                    default :;
-                endcase
-            end
-            else
-            begin
-                c_state <= cmd;
-                if (bit_cmd == CMD_IDLE)
+            c_state <= cmd;
+            case (cmd)
+                CMD_IDLE:
                 begin
-                    shift_r = data_i;
-                    case (cmd)
-                        CMD_START:;
-                        CMD_WRITE:
-                        begin
-                            bit_cmd <= cmd;
-                        end
-                        CMD_READ:
-                        begin
-                            bit_cmd <= cmd;
-                        end
-                        CMD_WR_ACK:
-                        begin
-                            bit_i  <= 1'b0;
-                            bit_cmd <= CMD_WRITE;
-                        end
-                        CMD_RD_ACK:
-                        begin
-                            bit_cmd <= CMD_READ;
-                        end
-                        CMD_STOP: c_state <= SM_IDLE;
-                        default : bit_cmd <= cmd;
-                    endcase
+                    bit_cmd <= CMD_IDLE;
                 end
-            end
+                CMD_START:
+                begin
+                    bit_cmd <= cmd;
+                end
+                CMD_WRITE:
+                begin
+                    bit_cmd <= cmd;
+                end
+                CMD_READ:
+                begin
+                    bit_cmd <= cmd;
+                end
+                CMD_RD_ACK:
+                begin
+                    bit_cnt <= 3'h7;
+                    shift_r = data_i;
+                    bit_cmd <= CMD_READ;
+                end
+                CMD_WR_ACK:
+                begin
+                    bit_i <= 0;
+                    bit_cmd <= CMD_WRITE;
+                end
+                CMD_NOP: 
+                begin
+                    bit_cmd <= CMD_IDLE;
+                    c_state <= SM_NOP;
+                end
+                CMD_STOP: 
+                begin
+                    bit_cmd <= CMD_STOP;
+                end
+                default :;
+            endcase
         end
     end
 end
