@@ -120,7 +120,7 @@ begin
                         CMD_STOP   :c_state <= B_STOP_A;
                         CMD_WRITE  :c_state <= B_WRITE_A;
                         CMD_READ   :c_state <= B_READ_A;
-                        CMD_WR_ACK :c_state <= B_RESTART_A;
+                        CMD_RESTART:c_state <= B_RESTART_A;
                         default    :c_state <= B_IDLE;
                     endcase
                     scl_oen <= scl_oen;
@@ -258,14 +258,14 @@ begin
                 begin
                     c_state <= B_RESTART_B;
                     scl_oen <= 1'b0;
-                    sda_oen <= 1'b0;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
                 B_RESTART_B : 
                 begin
                     c_state <= B_RESTART_C;
-                    scl_oen <= 1'b0;
-                    sda_oen <= 1'b0;
+                    scl_oen <= 1'b1;
+                    sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
                 B_RESTART_C : 
@@ -273,15 +273,15 @@ begin
                     c_state <= B_RESTART_D;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b0;
-                    sda_chk <= 1'b0;
+                    sda_chk <= 1'b1;
                 end
                 B_RESTART_D : 
                 begin
                     c_state <= B_IDLE;
                     cmd_ack <= 1'b1;
-                    scl_oen <= 1'b1;
-                    sda_oen <= 1'b1;
-                    sda_chk <= 1'b1;
+                    scl_oen <= 1'b0;
+                    sda_oen <= 1'b0;
+                    sda_chk <= 1'b0;
                 end
 
                 default : c_state <= B_IDLE;

@@ -173,11 +173,8 @@ begin
                 SM_READ   :; 
                 SM_WR_ACK :;
                 SM_RD_ACK :;
-                default:
-                begin
-                    i2c_state <= SM_IDLE;
-                    i2c_cmd_i <= CMD_IDLE;
-                end
+                SM_RESTART:;
+                default   :;
             endcase
             if (cmd_ack_o)
             begin
@@ -187,20 +184,20 @@ begin
                     begin
                         if (I2CCR[CCR_MTX])
                         begin
-                            i2c_state = SM_WRITE;
+                            i2c_state <= SM_WRITE;
                             i2c_cmd_i <= CMD_WRITE;
                             go <= 1;
                         end
                         else
                         begin
-                            i2c_state = SM_READ;
+                            i2c_state <= SM_READ;
                             i2c_cmd_i <= CMD_READ;
                             go <= 1;
                         end
                     end
                     SM_STOP   :
                     begin
-                        i2c_state = SM_IDLE;
+                        i2c_state <= SM_IDLE;
                         i2c_cmd_i <= CMD_IDLE;
                     end
                     SM_WRITE  :
@@ -213,47 +210,52 @@ begin
                     SM_READ   :
                         if (I2CCR[CCR_TXAK])
                         begin
-                            i2c_state = SM_WR_ACK;
+                            i2c_state <= SM_WR_ACK;
                             i2c_cmd_i <= CMD_WR_ACK;
                             go <= 1;
                         end
                         else
                         begin
-                            i2c_state = SM_STOP;
+                            i2c_state <= SM_STOP;
                             i2c_cmd_i <= CMD_STOP;
                             go <= 1;
                         end
                     SM_WR_ACK :
                         if (I2CCR[CCR_TXAK])
                         begin
-                            i2c_state = SM_READ;
+                            i2c_state <= SM_READ;
                             i2c_cmd_i <= CMD_READ;
                             go <= 1;
                         end
                     SM_RD_ACK :
                     begin
+                        go <= 1;
                         if (I2CCR[CCR_MTX])
                         begin
-                            I2CDR     <= byte_cnt;
+                            I2CDR    <= byte_cnt;
                             byte_cnt <= byte_cnt + 1;
-                            if (byte_cnt == 8'h57)
+                            if (byte_cnt == 8'h56)
                             begin
-                                i2c_state = SM_STOP;
-                                i2c_cmd_i <= CMD_STOP;
+                                i2c_state <=  SM_RESTART;
+                                i2c_cmd_i <= CMD_RESTART;
                             end
                             else
                             begin
-                                i2c_state = SM_WRITE;
+                                i2c_state <= SM_WRITE;
                                 i2c_cmd_i <= CMD_WRITE;
                             end
-                            go <= 1;
                         end
                         else
                         begin
-                            i2c_state = SM_STOP;
+                            i2c_state <=  SM_STOP;
                             i2c_cmd_i <= CMD_STOP;
-                            go <= 1;
                         end
+                    end
+                    SM_RESTART :
+                    begin
+                        // I2CCR <= 8'h00;
+                        // i2c_state <= SM_IDLE;
+                        // i2c_cmd_i <= CMD_IDLE;
                     end
                     default:
                     begin

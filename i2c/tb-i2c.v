@@ -82,6 +82,10 @@ begin
     wr_ena_i  <= 0;
     // [BIT_MIEN] & I2CCR[BIT_MSTA]
     #400000
+    wr_ena_i  <= 1;
+    wr_data <= 8'h00;
+    #10;
+    wr_ena_i  <= 0;
     $stop;
     $finish;
 end

@@ -103,6 +103,12 @@ begin
                     bit_cnt <= 3'h7;
                     shift_r = data_i;
                 end
+                CMD_RESTART:
+                begin
+                    bit_cmd <= CMD_IDLE;
+                    c_state <= CMD_IDLE;
+                    cmd_done <= 1'b1;
+                end
                 CMD_STOP: c_state <= CMD_IDLE;
                 default : bit_cmd <= CMD_IDLE;
             endcase
@@ -138,9 +144,9 @@ begin
                     bit_i <= 0;
                     bit_cmd <= CMD_WRITE;
                 end
-                CMD_NOP: 
+                CMD_RESTART:
                 begin
-                    bit_cmd <= CMD_IDLE;
+                    bit_cmd <= CMD_RESTART;
                 end
                 CMD_STOP: 
                 begin

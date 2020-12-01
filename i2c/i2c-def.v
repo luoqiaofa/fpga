@@ -1,22 +1,22 @@
 // iic byte command to bit ctl
-localparam CMD_IDLE   = 3'd0;
-localparam CMD_START  = 3'd1;
-localparam CMD_STOP   = 3'd2;
-localparam CMD_WRITE  = 3'd3;
-localparam CMD_READ   = 3'd4;
-localparam CMD_WR_ACK = 3'd5;
-localparam CMD_RD_ACK = 3'd6;
-localparam CMD_NOP    = 3'd7;
+localparam CMD_IDLE    = 3'd0;
+localparam CMD_START   = 3'd1;
+localparam CMD_STOP    = 3'd2;
+localparam CMD_WRITE   = 3'd3;
+localparam CMD_READ    = 3'd4;
+localparam CMD_WR_ACK  = 3'd5;
+localparam CMD_RD_ACK  = 3'd6;
+localparam CMD_RESTART = 3'd7;
 
 // iic byte state machine
-localparam SM_IDLE    = 3'd0;
-localparam SM_START   = 3'd1;
-localparam SM_STOP    = 3'd2;
-localparam SM_WRITE   = 3'd3;
-localparam SM_READ    = 3'd4;
-localparam SM_WR_ACK  = 3'd5;
-localparam SM_RD_ACK  = 3'd6;
-localparam SM_NOP     = 3'd7;
+localparam SM_IDLE     = 3'd0;
+localparam SM_START    = 3'd1;
+localparam SM_STOP     = 3'd2;
+localparam SM_WRITE    = 3'd3;
+localparam SM_READ     = 3'd4;
+localparam SM_WR_ACK   = 3'd5;
+localparam SM_RD_ACK   = 3'd6;
+localparam SM_RESTART  = 3'd7;
 
 // iic bit control state machine
 localparam B_IDLE      = 5'd0;
@@ -41,3 +41,4 @@ localparam B_RESTART_A = 5'd18;
 localparam B_RESTART_B = 5'd19;
 localparam B_RESTART_C = 5'd20;
 localparam B_RESTART_D = 5'd21;
+
