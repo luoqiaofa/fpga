@@ -52,7 +52,7 @@ begin
         shift_r <= 8'hff;
         bit_cnt <= 3'h7;
         cmd_done <= 0;
-        c_state <= SM_IDLE;
+        c_state <= CMD_IDLE;
     end
     else 
     begin
@@ -141,7 +141,6 @@ begin
                 CMD_NOP: 
                 begin
                     bit_cmd <= CMD_IDLE;
-                    c_state <= SM_NOP;
                 end
                 CMD_STOP: 
                 begin
