@@ -35,14 +35,17 @@ reg  [2:0] c_state;
 wire bit_done;
 reg  cmd_done;
 wire bit_o;
+reg  bit_ack;
 reg [7:0] shift_r;
 reg [2:0] bit_cnt;
 
 assign cmd_ack = cmd_done;
+assign i2c_ack_o = bit_ack;
 always @(posedge sysclk or negedge nReset)
 begin
     if (!nReset || !enable)
     begin
+        bit_ack <= 1;
         bit_cmd <= CMD_IDLE;
         bit_i  <= 1'b1;
         shift_r <= 8'hff;
@@ -57,43 +60,43 @@ begin
         // cmd_done <= 1'b0;
         if (bit_done)
         begin
+            bit_cmd <= CMD_IDLE;
             case (cmd)
                 CMD_START:
                 begin
                     cmd_done <= 1'b1;
                     shift_r = data_i;
-                    bit_cmd <= CMD_IDLE;
                     bit_cnt <= 3'h7;
                 end
                 CMD_WRITE:
                 begin
-                    bit_cmd <= CMD_WRITE;
                     bit_cnt <= bit_cnt - 1;
                     if (bit_cnt == 1'b0)
                     begin
                         cmd_done <= 1'b1;
                         bit_cnt <= 3'h7;
-                        bit_cmd <= CMD_IDLE;
                     end
                 end
                 CMD_READ:
                 begin
-                    cmd_done <= 1'b1;
-                    bit_cnt <= 3'h7;
-                    bit_cmd <= CMD_IDLE;
+                    bit_cnt <= bit_cnt - 1;
+                    if (bit_cnt == 1'b0)
+                    begin
+                        cmd_done <= 1'b1;
+                        bit_cnt <= 3'h7;
+                    end
                 end
                 CMD_WR_ACK:
                 begin
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
-                    bit_cmd <= CMD_IDLE;
                     shift_r = data_i;
                 end
                 CMD_RD_ACK:
                 begin
+                    bit_ack = bit_o;
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
-                    bit_cmd <= CMD_IDLE;
                     shift_r = data_i;
                 end
                 CMD_STOP: c_state <= SM_IDLE;
@@ -138,8 +141,15 @@ begin
                         begin
                             bit_cmd <= cmd;
                         end
-                        CMD_WR_ACK:;
-                        CMD_RD_ACK:;
+                        CMD_WR_ACK:
+                        begin
+                            bit_i  <= 1'b0;
+                            bit_cmd <= CMD_WRITE;
+                        end
+                        CMD_RD_ACK:
+                        begin
+                            bit_cmd <= CMD_READ;
+                        end
                         CMD_STOP: c_state <= SM_IDLE;
                         default : bit_cmd <= cmd;
                     endcase
