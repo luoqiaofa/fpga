@@ -22,6 +22,7 @@ reg [7:0] I2CSR;
 reg [7:0] I2CDR;
 reg [7:0] I2CDFSRR;
 reg [7:0] data_out;
+reg [7:0] byte_cnt;
 
 reg [2:0] i2c_state;
 
@@ -222,6 +223,8 @@ begin
                         begin
                             i2c_state = SM_WRITE;
                             i2c_cmd_i <= CMD_WRITE;
+                            I2CDR     <= byte_cnt;
+                            byte_cnt <= byte_cnt + 1;
                         end
                     default:
                     begin
@@ -245,6 +248,7 @@ begin
         I2CDR    <= 8'h5a;
         I2CDFSRR <= 8'h10;
         data_out <= {{8{1'b0}}};
+        byte_cnt <= 8'h55;
     end
     else
     begin

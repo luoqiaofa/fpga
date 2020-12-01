@@ -25,14 +25,14 @@ localparam CCR_RSTA = 2;
 localparam CCR_BCST = 0;
 
 // I2CSR
-localparam SR_MCF   = 7;
-localparam SR_MAAS  = 6;
-localparam SR_MBB   = 5;
-localparam SR_MAL   = 4;
-localparam SR_BCSTM = 3;
-localparam SR_SRW   = 2;
-localparam SR_MIF   = 1;
-localparam SR_RXAK  = 0;
+localparam CSR_MCF   = 7;
+localparam CSR_MAAS  = 6;
+localparam CSR_MBB   = 5;
+localparam CSR_MAL   = 4;
+localparam CSR_BCSTM = 3;
+localparam CSR_SRW   = 2;
+localparam CSR_MIF   = 1;
+localparam CSR_RXAK  = 0;
 // I2CDR
 // I2CDFSR
 localparam BIT_DFSR_HI = 6;

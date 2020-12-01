@@ -31,12 +31,14 @@ reg [15:0] filter_cnt;
 reg clk_en;
 reg sda_chk;
 reg fSCL;
+reg sSda;
 // reg scl_chk;
 
 always @(posedge sysclk or negedge nReset)
 begin
     if (!nReset)
     begin
+        sSda <= 0;
         fSCL <= 0;
         clk_en <= 1'b1;
         cnt <= 16'd192;
@@ -44,6 +46,7 @@ begin
     end
     else if (!enable)
     begin
+        sSda <= 0;
         clk_en <= 1'b1;
         cnt <= {2'b0, prescale[15:2]};
         filter_cnt <= {1'b0, dfsr[15:1]};
@@ -59,6 +62,10 @@ begin
         else
         begin
             fSCL <= fSCL;
+        end
+        if (sda_oen)
+        begin
+            sSda <= sda_i;
         end
         if (cnt == 0)
         begin
@@ -280,11 +287,10 @@ begin
 
                 B_R_ACK_A : 
                 begin
+                    c_state <= B_R_ACK_B;
                     scl_oen <= 1'b0;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
-
-                    c_state <= B_R_ACK_B;
                 end
                 B_R_ACK_B : 
                 begin
@@ -317,6 +323,8 @@ end
 
 assign scl_o = scl_oen;
 assign sda_o = sda_oen;
+
+assign dout = sSda;
 
 endmodule
 

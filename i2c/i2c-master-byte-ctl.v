@@ -34,7 +34,7 @@ reg  [2:0] bit_cmd;
 reg  [2:0] c_state;
 wire bit_done;
 reg  cmd_done;
-// reg bit_o;
+wire bit_o;
 reg [7:0] shift_r;
 reg [2:0] bit_cnt;
 
@@ -76,9 +76,26 @@ begin
                         bit_cmd <= CMD_IDLE;
                     end
                 end
-                CMD_READ:;
-                CMD_WR_ACK:;
-                CMD_RD_ACK:;
+                CMD_READ:
+                begin
+                    cmd_done <= 1'b1;
+                    bit_cnt <= 3'h7;
+                    bit_cmd <= CMD_IDLE;
+                end
+                CMD_WR_ACK:
+                begin
+                    cmd_done <= 1'b1;
+                    bit_cnt <= 3'h7;
+                    bit_cmd <= CMD_IDLE;
+                    shift_r = data_i;
+                end
+                CMD_RD_ACK:
+                begin
+                    cmd_done <= 1'b1;
+                    bit_cnt <= 3'h7;
+                    bit_cmd <= CMD_IDLE;
+                    shift_r = data_i;
+                end
                 CMD_STOP: c_state <= SM_IDLE;
                 default : bit_cmd <= CMD_IDLE;
             endcase
@@ -94,8 +111,8 @@ begin
                     end
                     CMD_START:
                     begin
-                        bit_cmd <= CMD_START;
-                        c_state <= SM_NOP;
+                        bit_cmd <= cmd;
+                        c_state <= cmd;
                     end
                     CMD_NOP: 
                     begin
@@ -108,6 +125,25 @@ begin
             else
             begin
                 c_state <= cmd;
+                if (bit_cmd == CMD_IDLE)
+                begin
+                    shift_r = data_i;
+                    case (cmd)
+                        CMD_START:;
+                        CMD_WRITE:
+                        begin
+                            bit_cmd <= cmd;
+                        end
+                        CMD_READ:
+                        begin
+                            bit_cmd <= cmd;
+                        end
+                        CMD_WR_ACK:;
+                        CMD_RD_ACK:;
+                        CMD_STOP: c_state <= SM_IDLE;
+                        default : bit_cmd <= cmd;
+                    endcase
+                end
             end
         end
     end
