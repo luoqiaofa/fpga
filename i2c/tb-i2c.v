@@ -77,6 +77,14 @@ begin
     wr_ena_i <= 0;
     wr_addr <= (ADDR_CR << 2);
     wr_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+    #10;
+    wr_ena_i  <= 1;
+    #10;
+    wr_ena_i <= 0;
+    #15000;
+    wr_addr <= (ADDR_DR << 2);
+    wr_data <= 8'h50;
+    #10;
     wr_ena_i  <= 1;
     #10;
     wr_ena_i  <= 0;

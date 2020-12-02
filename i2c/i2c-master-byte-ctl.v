@@ -127,6 +127,7 @@ begin
                 end
                 CMD_WRITE:
                 begin
+                    shift_r = data_i;
                     bit_cmd <= cmd;
                 end
                 CMD_READ:
