@@ -39,24 +39,26 @@ wire bit_o;
 reg  bit_ack;
 reg [7:0] shift_r;
 reg [2:0] bit_cnt;
+reg [7:0] data_read;
 
 assign cmd_ack = cmd_done;
 assign i2c_ack_o = bit_ack;
+assign data_o = data_read;
 always @(posedge sysclk or negedge nReset)
 begin
     if (!nReset || !enable)
     begin
-        bit_ack <= 1;
+        bit_ack <= 0;
         bit_cmd <= CMD_IDLE;
         bit_i  <= 1'b1;
         shift_r <= 8'hff;
         bit_cnt <= 3'h7;
         cmd_done <= 0;
         c_state <= CMD_IDLE;
+        data_read <= 8'hff;
     end
     else 
     begin
-        // bit_ack = bit_o;
         cmd_done <= 1'b0;
         bit_i <= shift_r[bit_cnt];
         // cmd_done <= 1'b0;
@@ -83,12 +85,14 @@ begin
                 end
                 CMD_READ:
                 begin
+                    shift_r[bit_cnt] <= bit_o;
                     bit_cmd <= c_state;
                     bit_cnt <= bit_cnt - 1;
                     if (bit_cnt == 1'b0)
                     begin
                         cmd_done <= 1'b1;
                         bit_cnt <= 3'h7;
+                        data_read <= shift_r;
                     end
                 end
                 CMD_WR_ACK:
@@ -99,6 +103,7 @@ begin
                 end
                 CMD_RD_ACK:
                 begin
+                    bit_ack = bit_o;
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
                     shift_r = data_i;
@@ -109,7 +114,11 @@ begin
                     c_state <= CMD_IDLE;
                     cmd_done <= 1'b1;
                 end
-                CMD_STOP: c_state <= CMD_IDLE;
+                CMD_STOP: 
+                    begin
+                        c_state <= CMD_IDLE;
+                        data_read <= 8'hff;
+                    end
                 default : bit_cmd <= CMD_IDLE;
             endcase
         end
@@ -170,8 +179,8 @@ i2c_bit_ctl bit_controller(
 
     .cmd        (bit_cmd),
     .cmd_ack    (bit_done),    // cmd compelete ack
-    .busy       (busy_o),     // bus busy
-    .arblost    (arblost_o),  // arbitration lost
+    .busy       (i2c_busy_o),     // bus busy
+    .arblost    (i2c_al_o),  // arbitration lost
 
     .din        (bit_i),
     .dout       (bit_o),
