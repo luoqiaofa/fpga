@@ -51,7 +51,7 @@ begin
         cnt <= {2'b0, prescale[15:2]};
         filter_cnt <= {1'b0, dfsr[15:1]};
     end
-    else 
+    else
     begin
         cnt <= cnt - 1;
         filter_cnt <= filter_cnt - 1;
@@ -106,13 +106,13 @@ begin
         arblost <= 1'b0;
         c_state <= B_IDLE;
     end
-    else 
+    else
     begin
         cmd_ack <= 1'b0;
         if (clk_en)
         begin
             case (c_state)
-                B_IDLE    : 
+                B_IDLE    :
                 begin
                     case (cmd)
                         CMD_IDLE   :c_state <= B_IDLE;
@@ -127,35 +127,35 @@ begin
                     sda_oen <= sda_oen;
                     sda_chk <= 1'b0;
                 end
-                B_START_A : 
+                B_START_A :
                 begin
                     c_state <= B_START_B;
                     scl_oen <= scl_oen;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_START_B : 
+                B_START_B :
                 begin
                     c_state <= B_START_C;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_START_C : 
+                B_START_C :
                 begin
                     c_state <= B_START_D;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b0;
                     sda_chk <= 1'b0;
                 end
-                B_START_D : 
+                B_START_D :
                 begin
                     c_state <= B_START_E;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b0;
                     sda_chk <= 1'b0;
                 end
-                B_START_E : 
+                B_START_E :
                 begin
                     c_state <= B_IDLE;
                     cmd_ack <= 1'b1;
@@ -164,28 +164,28 @@ begin
                     sda_chk <= 1'b0;
                 end
 
-                B_STOP_A  : 
+                B_STOP_A  :
                 begin
                     c_state <= B_STOP_B;
                     scl_oen <= 1'b0;
                     sda_oen <= 1'b0;
                     sda_chk <= 1'b0;
                 end
-                B_STOP_B  : 
+                B_STOP_B  :
                 begin
                     c_state <= B_STOP_C;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b0;
                     sda_chk <= 1'b0;
                 end
-                B_STOP_C  : 
+                B_STOP_C  :
                 begin
                     c_state <= B_STOP_D;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b1;
                 end
-                B_STOP_D  : 
+                B_STOP_D  :
                 begin
                     c_state <= B_IDLE;
                     scl_oen <= 1'b1;
@@ -194,28 +194,28 @@ begin
                     sda_chk <= 1'b0;
                 end
 
-                B_READ_A  : 
+                B_READ_A  :
                 begin
                     c_state <= B_READ_B;
                     scl_oen <= 1'b0;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_READ_B  : 
+                B_READ_B  :
                 begin
                     c_state <= B_READ_C;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_READ_C  : 
+                B_READ_C  :
                 begin
                     c_state <= B_READ_D;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_READ_D  : 
+                B_READ_D  :
                 begin
                     c_state <= B_IDLE;
                     cmd_ack <= 1'b1;
@@ -224,28 +224,28 @@ begin
                     sda_chk <= 1'b0;
                 end
 
-                B_WRITE_A : 
+                B_WRITE_A :
                 begin
                     c_state <= B_WRITE_B;
                     scl_oen <= 1'b0;
                     sda_oen <= din;
                     sda_chk <= 1'b0;
                 end
-                B_WRITE_B : 
+                B_WRITE_B :
                 begin
                     c_state <= B_WRITE_C;
                     scl_oen <= 1'b1;
                     sda_oen <= din;
                     sda_chk <= 1'b0;
                 end
-                B_WRITE_C : 
+                B_WRITE_C :
                 begin
                     c_state <= B_WRITE_D;
                     scl_oen <= 1'b1;
                     sda_oen <= din;
                     sda_chk <= 1'b1;
                 end
-                B_WRITE_D : 
+                B_WRITE_D :
                 begin
                     c_state <= B_IDLE;
                     cmd_ack <= 1'b1;
@@ -254,28 +254,28 @@ begin
                     sda_chk <= 1'b0;
                 end
 
-                B_RESTART_A : 
+                B_RESTART_A :
                 begin
                     c_state <= B_RESTART_B;
                     scl_oen <= 1'b0;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_RESTART_B : 
+                B_RESTART_B :
                 begin
                     c_state <= B_RESTART_C;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b1;
                     sda_chk <= 1'b0;
                 end
-                B_RESTART_C : 
+                B_RESTART_C :
                 begin
                     c_state <= B_RESTART_D;
                     scl_oen <= 1'b1;
                     sda_oen <= 1'b0;
                     sda_chk <= 1'b1;
                 end
-                B_RESTART_D : 
+                B_RESTART_D :
                 begin
                     c_state <= B_IDLE;
                     cmd_ack <= 1'b1;
