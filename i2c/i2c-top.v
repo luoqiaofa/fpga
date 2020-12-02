@@ -9,6 +9,7 @@ module i2c_top_module(
     input                rd_ena_i,  // read enable input
     input  wire [4:0]    rd_addr_i, // read address input
     output wire [7:0]    rd_data_o, // read date output
+    output wire          data_ready_o, // data ready to read
     inout  wire          scl_pin,   // scl pad pin
     inout  wire          sda_pin    // sda pad pin
 );
@@ -22,6 +23,7 @@ reg [7:0] I2CSR;
 reg [7:0] I2CDR;
 reg [7:0] I2CDFSRR;
 reg [7:0] data_out;
+reg go;
 reg go_read;
 reg go_write;
 
@@ -36,6 +38,7 @@ wire scl_oen;
 
 
 assign rd_data_o = data_out;
+assign data_ready_o = I2CSR[CSR_MCF];
 
 pullup scl_pu(scl_pin);
 pullup sda_pu(sda_pin);
@@ -69,7 +72,6 @@ wire i2c_busy_o; // i2c bus busy output
 
 wire [7:0] data_i;
 wire [7:0] data_o;
-reg  go;
 
 assign enable_i = I2CCR[CCR_MEN];
 
@@ -112,7 +114,7 @@ begin
         div_ena <= 0;
         dfsr_cnt <= 16'd24;
     end
-    else 
+    else
     begin
         prescale_i <= freq_divid_get(I2CFDR);
         divisor    <= {{10{1'b0}}, I2CDFSRR[5:0]};
@@ -158,7 +160,7 @@ begin
             SM_START  :;
             SM_STOP   :;
             SM_WRITE  :;
-            SM_READ   :; 
+            SM_READ   :;
             SM_WR_ACK :;
             SM_RD_ACK :;
             SM_RESTART:;
@@ -211,7 +213,7 @@ begin
         i2c_cmd_i <= CMD_IDLE;
         i2c_state <= SM_IDLE;
     end
-    else 
+    else
     begin
         go <= 0;
         if (/* I2CCR[CCR_MIEN] & */ I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
@@ -222,9 +224,12 @@ begin
                     SM_IDLE   :;
                     SM_START  :
                     begin
+                        I2CSR[CSR_MBB] <= 1'b1;
                     end
                     SM_STOP   :
                     begin
+                        I2CSR[CSR_MBB] <= 1'b0;
+                        I2CSR[CSR_MCF] <= 1'b1;
                         i2c_state <= SM_IDLE;
                         i2c_cmd_i <= CMD_IDLE;
                     end
@@ -249,27 +254,28 @@ begin
                     end
                     SM_WR_ACK :
                         begin
-                            I2CSR[CSR_RXAK] = i2c_busy_o;
-                            I2CSR[CSR_RXAK] = i2c_ack_o;
-                            I2CSR[CSR_MAL]  = i2c_al_o;
-                            I2CSR[CSR_MIF] = 1'b1;
+                            I2CSR[CSR_MCF]  <= 1'b1;
+                            // I2CSR[CSR_MAAS] <= 1'b0;
+                            // I2CSR[CSR_MBB] <= i2c_busy_o;
+                            I2CSR[CSR_MAL]  <= i2c_al_o;
+                            // I2CSR[CSR_BCSTM] <= 1'b0;
+                            I2CSR[CSR_SRW] <= i2c_ack_o;
+                            I2CSR[CSR_MIF]  <= 1'b1;
+                            I2CSR[CSR_RXAK] <= i2c_ack_o;
                         end
                     SM_RD_ACK :
                     begin
-                        I2CSR[CSR_RXAK] = i2c_busy_o;
-                        I2CSR[CSR_RXAK] = i2c_ack_o;
-                        I2CSR[CSR_MAL]  = i2c_al_o;
-                        I2CSR[CSR_MIF] = 1'b1;
+                        I2CSR[CSR_MCF]  <= 1'b1;
+                        // I2CSR[CSR_MAAS] <= 1'b0;
+                        // I2CSR[CSR_MBB] <= i2c_busy_o;
+                        I2CSR[CSR_MAL]  <= i2c_al_o;
+                        // I2CSR[CSR_BCSTM] <= 1'b0;
+                        I2CSR[CSR_SRW] <= i2c_ack_o;
+                        I2CSR[CSR_MIF]  <= 1'b1;
+                        I2CSR[CSR_RXAK] <= i2c_ack_o;
                     end
                     SM_RESTART :
                     begin
-                        // I2CDR    <= 8'h5a;
-                        // i2c_state <= SM_WRITE;
-                        // i2c_cmd_i <= CMD_WRITE;
-                        // go <= 1;
-                        // I2CCR <= 8'h00;
-                        // i2c_state <= SM_IDLE;
-                        // i2c_cmd_i <= CMD_IDLE;
                     end
                     default:
                     begin
@@ -303,9 +309,15 @@ begin
         if (wr_ena_i)
         begin
             case (wr_addr_i[4:2])
-                ADDR_ADR   : I2CADR   <= wr_data_i;
-                ADDR_FDR   : I2CFDR   <= wr_data_i;
-                ADDR_CR    : 
+                ADDR_ADR   :
+                begin
+                    I2CADR   <= wr_data_i;
+                end
+                ADDR_FDR   :
+                begin
+                    I2CFDR   <= wr_data_i;
+                end
+                ADDR_CR    :
                 begin
                     I2CCR    <= wr_data_i;
                     if (wr_data_i[CCR_RSTA] & wr_data_i[CCR_MEN] & wr_data_i[CCR_MSTA] & wr_data_i[CCR_MTX])
@@ -315,7 +327,7 @@ begin
                             SM_START  :;
                             SM_STOP   :;
                             SM_WRITE  :;
-                            SM_READ   :; 
+                            SM_READ   :;
                             SM_WR_ACK :
                             begin
                                 i2c_cmd_i <= CMD_RESTART;
@@ -333,11 +345,21 @@ begin
                         endcase
                     end
                 end
-                ADDR_SR    : I2CSR    <= wr_data_i;
-                ADDR_DR    : 
+                ADDR_SR    :
                 begin
-                    I2CDR    <= wr_data_i;
-                    go_write <= 1'b1;
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
+                    begin
+                        I2CSR[CSR_MAL] <= wr_data_i[CSR_MAL];
+                        I2CSR[CSR_MIF] <= wr_data_i[CSR_MIF];
+                    end
+                end
+                ADDR_DR    :
+                begin
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
+                    begin
+                        I2CSR[CSR_MCF] <= 1'b0;
+                        go_write <= 1'b1;
+                    end
                 end
                 ADDR_DFSRR : I2CDFSRR <= wr_data_i;
                 default    : I2CSR    <= I2CSR;
@@ -346,16 +368,39 @@ begin
         if (rd_ena_i)
         begin
             case (rd_addr_i[4:2])
-                ADDR_ADR   : data_out <= I2CADR  ;
-                ADDR_FDR   : data_out <= I2CFDR  ;
-                ADDR_CR    : data_out <= I2CCR   ;
-                ADDR_SR    : data_out <= I2CSR   ;
-                ADDR_DR    : 
+                ADDR_ADR   :
                 begin
-                    go_read <= 1'b1;
+                    data_out <= I2CADR  ;
                 end
-                ADDR_DFSRR : data_out <= I2CDFSRR;
-                default    : data_out <= I2CSR   ;
+                ADDR_FDR   :
+                begin
+                    data_out <= I2CFDR  ;
+                end
+                ADDR_CR    :
+                begin
+                    data_out <= I2CCR   ;
+                end
+                ADDR_SR    :
+                begin
+                    data_out <= I2CSR   ;
+                end
+                ADDR_DR    :
+                begin
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
+                    begin
+                        I2CSR[CSR_MCF] <= 1'b0;
+                        I2CDR <= data_i;
+                        go_read <= 1'b1;
+                    end
+                end
+                ADDR_DFSRR :
+                begin
+                    data_out <= I2CDFSRR;
+                end
+                default    :
+                begin
+                    data_out <= I2CSR   ;
+                end
             endcase
         end
     end
