@@ -20,9 +20,10 @@ reg  [7:0]    wr_data;
 reg  [4:0]    rd_addr;
 reg  [7:0]    rd_data;
 reg  [7:0]    regval; // read date output
+reg  [7:0]    slave_addr;
 reg  [8:0]    tmp_data;
-reg  [3:0]    state; // read date output
-reg  [3:0]    next_state; // read date output
+reg  [4:0]    state; // read date output
+reg  [4:0]    next_state; // read date output
 
 // localparam SM_IDLE     = 3'd0;
 // localparam SM_START    = 3'd1;
@@ -32,6 +33,8 @@ reg  [3:0]    next_state; // read date output
 // localparam SM_WR_ACK   = 3'd5;
 // localparam SM_RD_ACK   = 3'd6;
 // localparam SM_RESTART  = 3'd7;
+localparam SM_ADDR_READ   = 4'd8;
+localparam SM_ADDR_WRITE  = 4'd9;
 
 assign wr_addr_i = wr_addr;
 assign wr_data_i = wr_data;
@@ -61,6 +64,7 @@ initial
 begin
     state <= SM_IDLE;
     next_state <= SM_IDLE;
+    slave_addr <= 8'h50;
     tmp_data <= 8'h50;
     regval <= 8'h00;
     sysclk_i <= 0;
@@ -92,13 +96,7 @@ begin
     wr_ena_i  <= 1;
     #10;
     wr_ena_i <= 0;
-    wr_addr <= (ADDR_CR << 2);
-    wr_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
-    #10;
     next_state <= SM_START;
-    wr_ena_i  <= 1;
-    #10;
-    wr_ena_i <= 0;
     // [BIT_MIEN] & I2CCR[BIT_MSTA]
     #500000
     wr_ena_i  <= 1;
@@ -116,7 +114,6 @@ begin
     rd_ena_i <= 0;
     #10
     rd_addr <= (ADDR_SR << 2);
-    rd_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
     rd_ena_i <= 1;
     #10
     rd_ena_i <= 0;
@@ -132,16 +129,14 @@ begin
             begin
                 wr_ena_i <= 0;
                 #10;
-                wr_addr <= (ADDR_DR << 2);
-                wr_data <= tmp_data;
+                wr_addr <= (ADDR_CR << 2);
+                wr_data <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
                 #10;
                 wr_ena_i  <= 1;
                 #10;
-                wr_ena_i  <= 0;
-                #10;
-                next_state <= SM_WRITE;
-                tmp_data <= tmp_data + 1;
+                wr_ena_i <= 0;
                 // regval[CSR_MIF]
+                next_state <= SM_ADDR_WRITE;
             end
             SM_STOP     :
             begin
@@ -154,6 +149,34 @@ begin
                 #10;
                 wr_ena_i  <= 0;
                 #10;
+            end
+            SM_ADDR_READ :
+            begin
+                wr_ena_i <= 0;
+                #10;
+                wr_addr <= (ADDR_DR << 2);
+                wr_data <= {slave_addr[6:0], 1'b1};
+                #10;
+                wr_ena_i  <= 1;
+                #10;
+                wr_ena_i  <= 0;
+                #10;
+                next_state <= SM_READ;
+                tmp_data <= tmp_data + 1;
+            end
+            SM_ADDR_WRITE :
+            begin
+                wr_ena_i <= 0;
+                #10;
+                wr_addr <= (ADDR_DR << 2);
+                wr_data <= {slave_addr[6:0], 1'b0};
+                #10;
+                wr_ena_i  <= 1;
+                #10;
+                wr_ena_i  <= 0;
+                #10;
+                next_state <= SM_WRITE;
+                tmp_data <= tmp_data + 1;
             end
             SM_WRITE    :
             begin
@@ -177,16 +200,47 @@ begin
                     wr_ena_i <= 0;
                     next_state <= SM_WRITE;
                     tmp_data <= tmp_data + 1;
-                    if (tmp_data == 8'h52)
+                    if (tmp_data == 8'h51)
                     begin
-                        next_state <= SM_STOP;
+                        next_state <= SM_RESTART;
                     end
                 end
             end
-            SM_READ     :;
-            SM_WR_ACK   :;
-            SM_RD_ACK   :;
-            SM_RESTART  :;
+            SM_READ     :
+            begin
+                rd_ena_i <= 0;
+                #10
+                rd_addr <= (ADDR_DR << 2);
+                #10
+                rd_ena_i <= 1;
+                #10
+                rd_ena_i <= 0;
+                next_state <= SM_READ;
+                regval <= rd_data_o;
+                next_state <= SM_READ;
+            end
+            SM_RESTART  :
+            begin
+                if (regval[CSR_MIF])
+                begin
+                    wr_ena_i <= 0;
+                    #10;
+                    wr_addr <= (ADDR_SR << 2);
+                    wr_data <= 8'h81;
+                    wr_ena_i <= 1;
+                    #10;
+                    wr_ena_i <= 0;
+                    #10;
+                    wr_addr <= (ADDR_CR << 2);
+                    wr_data <= (1 << CCR_RSTA) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                    #10;
+                    wr_ena_i  <= 1;
+                    #10;
+                    wr_ena_i <= 0;
+                    #10000;
+                    next_state <= SM_ADDR_READ;
+                end
+            end
             default   :;
         endcase
     end

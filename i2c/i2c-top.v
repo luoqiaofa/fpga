@@ -24,6 +24,7 @@ reg [7:0] I2CDR;
 reg [7:0] I2CDFSRR;
 reg [7:0] data_out;
 reg go;
+reg go_go;
 reg go_read;
 reg go_write;
 
@@ -81,7 +82,7 @@ i2c_master_byte_ctl u1_byte_ctl(
     .enable    (enable_i),   // iic enable
     .prescale  (prescale_i), // clock prescale cnt
     .dfsr      (dfsr_cnt),   // Digital Filter Sampling Rate cnt
-    .go        (go),
+    .go        (go | go_go),
     .cmd       (i2c_cmd_i),
     .cmd_ack   (cmd_ack_o),
     .i2c_ack_o (i2c_ack_o),
@@ -201,7 +202,12 @@ begin
                 i2c_cmd_i <= CMD_WRITE;
                 go <= 1;
             end
-            SM_RESTART:;
+            SM_RESTART:
+            begin
+                i2c_state <= SM_WRITE;
+                i2c_cmd_i <= CMD_WRITE;
+                go <= 1;
+            end
             default   :;
         endcase
     end
@@ -209,14 +215,11 @@ end
 
 always @(posedge go_read)
 begin
-    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & !I2CCR[CCR_TXAK])
+    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
     begin
-        if (i2c_state == SM_START)
-        begin
-            i2c_state <= SM_READ;
-            i2c_cmd_i <= CMD_READ;
-            go <= 1;
-        end
+        i2c_state <= SM_READ;
+        i2c_cmd_i <= CMD_READ;
+        go <= 1;
     end
 end
 
@@ -314,13 +317,16 @@ begin
         I2CDR    <= 8'h00;
         I2CDFSRR <= 8'h10;
         data_out <= {{8{1'b1}}};
+        go_go <= 0;
         go_read  <= 0;
         go_write <= 0;
     end
     else
     begin
+        go_go <= 0;
         go_read <= 1'b0;
         go_write <= 1'b0;
+        data_out <= data_out;
         if (wr_ena_i)
         begin
             case (wr_addr_i[4:2])
@@ -348,12 +354,14 @@ begin
                                 i2c_cmd_i <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
+                                go_go <= 1'b1;
                             end
                             SM_RD_ACK :
                             begin
                                 i2c_cmd_i <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
+                                go_go <= 1'b1;
                             end
                             SM_RESTART:;
                             default   :;
