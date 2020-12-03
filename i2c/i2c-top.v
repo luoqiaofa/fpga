@@ -370,7 +370,7 @@ begin
                 end
                 ADDR_DR    :
                 begin
-                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF] & (!I2CSR[CSR_MIF]))
                     begin
                         I2CSR[CSR_MCF] <= 1'b0;
                         I2CDR    <= wr_data_i;
