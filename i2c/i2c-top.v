@@ -183,12 +183,27 @@ always @(posedge go_write)
 begin
     if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & I2CCR[CCR_MTX])
     begin
-        if (i2c_state == SM_START)
-        begin
-            i2c_state <= SM_WRITE;
-            i2c_cmd_i <= CMD_WRITE;
-            go <= 1;
-        end
+        case (i2c_state)
+            SM_IDLE   :;
+            SM_START  :
+            begin
+                i2c_state <= SM_WRITE;
+                i2c_cmd_i <= CMD_WRITE;
+                go <= 1;
+            end
+            SM_STOP   :;
+            SM_WRITE  :;
+            SM_READ   :;
+            SM_WR_ACK :;
+            SM_RD_ACK :
+            begin
+                i2c_state <= SM_WRITE;
+                i2c_cmd_i <= CMD_WRITE;
+                go <= 1;
+            end
+            SM_RESTART:;
+            default   :;
+        endcase
     end
 end
 
@@ -259,7 +274,7 @@ begin
                             // I2CSR[CSR_MBB] <= i2c_busy_o;
                             I2CSR[CSR_MAL]  <= i2c_al_o;
                             // I2CSR[CSR_BCSTM] <= 1'b0;
-                            I2CSR[CSR_SRW] <= i2c_ack_o;
+                            // I2CSR[CSR_SRW] <= 1'b0;
                             I2CSR[CSR_MIF]  <= 1'b1;
                             I2CSR[CSR_RXAK] <= i2c_ack_o;
                         end
@@ -270,7 +285,7 @@ begin
                         // I2CSR[CSR_MBB] <= i2c_busy_o;
                         I2CSR[CSR_MAL]  <= i2c_al_o;
                         // I2CSR[CSR_BCSTM] <= 1'b0;
-                        I2CSR[CSR_SRW] <= i2c_ack_o;
+                        // I2CSR[CSR_SRW] <= 1'b0;
                         I2CSR[CSR_MIF]  <= 1'b1;
                         I2CSR[CSR_RXAK] <= i2c_ack_o;
                     end
@@ -296,7 +311,7 @@ begin
         I2CFDR   <= 8'h00;
         I2CCR    <= 8'h00;
         I2CSR    <= 8'h81;
-        I2CDR    <= 8'h5a;
+        I2CDR    <= 8'h00;
         I2CDFSRR <= 8'h10;
         data_out <= {{8{1'b1}}};
         go_read  <= 0;
@@ -358,6 +373,7 @@ begin
                     if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
                     begin
                         I2CSR[CSR_MCF] <= 1'b0;
+                        I2CDR    <= wr_data_i;
                         go_write <= 1'b1;
                     end
                 end

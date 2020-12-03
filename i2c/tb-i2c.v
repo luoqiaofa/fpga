@@ -19,6 +19,19 @@ reg  [4:0]    wr_addr;
 reg  [7:0]    wr_data;
 reg  [4:0]    rd_addr;
 reg  [7:0]    rd_data;
+reg  [7:0]    regval; // read date output
+reg  [8:0]    tmp_data;
+reg  [3:0]    state; // read date output
+reg  [3:0]    next_state; // read date output
+
+// localparam SM_IDLE     = 3'd0;
+// localparam SM_START    = 3'd1;
+// localparam SM_STOP     = 3'd2;
+// localparam SM_WRITE    = 3'd3;
+// localparam SM_READ     = 3'd4;
+// localparam SM_WR_ACK   = 3'd5;
+// localparam SM_RD_ACK   = 3'd6;
+// localparam SM_RESTART  = 3'd7;
 
 assign wr_addr_i = wr_addr;
 assign wr_data_i = wr_data;
@@ -46,6 +59,10 @@ end
 
 initial
 begin
+    state <= SM_IDLE;
+    next_state <= SM_IDLE;
+    tmp_data <= 8'h50;
+    regval <= 8'h00;
     sysclk_i <= 0;
     reset_n_i <= 0;
     wr_ena_i <= 0;
@@ -78,18 +95,12 @@ begin
     wr_addr <= (ADDR_CR << 2);
     wr_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
     #10;
+    next_state <= SM_START;
     wr_ena_i  <= 1;
     #10;
     wr_ena_i <= 0;
-    #15000;
-    wr_addr <= (ADDR_DR << 2);
-    wr_data <= 8'h50;
-    #10;
-    wr_ena_i  <= 1;
-    #10;
-    wr_ena_i  <= 0;
     // [BIT_MIEN] & I2CCR[BIT_MSTA]
-    #400000
+    #500000
     wr_ena_i  <= 1;
     wr_data <= 8'h00;
     #10;
@@ -99,5 +110,89 @@ begin
 end
 
 always #5 sysclk_i = ~sysclk_i;
+
+always @(posedge sysclk_i)
+begin
+    rd_ena_i <= 0;
+    #10
+    rd_addr <= (ADDR_SR << 2);
+    rd_data <= (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+    rd_ena_i <= 1;
+    #10
+    rd_ena_i <= 0;
+    #10
+    regval <= rd_data_o;
+    state <= next_state;
+    // tmp_data <= tmp_data;
+    if (rd_data_o[CSR_MBB] & rd_data_o[CSR_MCF])
+    begin
+        case (state)
+            SM_IDLE     :;
+            SM_START    :
+            begin
+                wr_ena_i <= 0;
+                #10;
+                wr_addr <= (ADDR_DR << 2);
+                wr_data <= tmp_data;
+                #10;
+                wr_ena_i  <= 1;
+                #10;
+                wr_ena_i  <= 0;
+                #10;
+                next_state <= SM_WRITE;
+                tmp_data <= tmp_data + 1;
+                // regval[CSR_MIF]
+            end
+            SM_STOP     :
+            begin
+                #10;
+                wr_ena_i <= 0;
+                wr_addr <= (ADDR_CR << 2);
+                wr_data <= (1 << CCR_MIEN);
+                #10;
+                wr_ena_i  <= 1;
+                #10;
+                wr_ena_i  <= 0;
+                #10;
+            end
+            SM_WRITE    :
+            begin
+                if (regval[CSR_MIF])
+                begin
+                    wr_ena_i <= 0;
+                    #10;
+                    wr_addr <= (ADDR_SR << 2);
+                    wr_data <= 8'h81;
+                    wr_ena_i <= 1;
+                    #10;
+                    wr_ena_i <= 0;
+                    #10;
+                end
+                else
+                begin
+                    wr_ena_i <= 0;
+                    #10;
+                    wr_addr <= (ADDR_DR << 2);
+                    wr_data <= tmp_data;
+                    #10;
+                    wr_ena_i  <= 1;
+                    #10;
+                    wr_ena_i <= 0;
+                    next_state <= SM_WRITE;
+                    tmp_data <= tmp_data + 1;
+                    if (tmp_data == 8'h52)
+                    begin
+                        next_state <= SM_STOP;
+                    end
+                end
+            end
+            SM_READ     :;
+            SM_WR_ACK   :;
+            SM_RD_ACK   :;
+            SM_RESTART  :;
+            default   :;
+        endcase
+    end
+end
 
 endmodule
