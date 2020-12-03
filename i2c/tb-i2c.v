@@ -148,7 +148,7 @@ begin
                 #10;
                 wr_ena_i <= 0;
                 wr_addr <= (ADDR_CR << 2);
-                wr_data <= (1 << CCR_MIEN);
+                wr_data <= (1 << CCR_MEN);
                 #10;
                 wr_ena_i  <= 1;
                 #10;
