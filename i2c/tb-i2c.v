@@ -167,9 +167,6 @@ begin
                     #10;
                     wr_ena_i <= 0;
                     #10;
-                end
-                else
-                begin
                     wr_ena_i <= 0;
                     #10;
                     wr_addr <= (ADDR_DR << 2);
