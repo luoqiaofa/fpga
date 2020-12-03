@@ -24,6 +24,7 @@ reg  [7:0]    slave_addr;
 reg  [8:0]    tmp_data;
 reg  [4:0]    state; // read date output
 reg  [4:0]    next_state; // read date output
+reg  [7:0]    num_bytes;
 
 // localparam SM_IDLE     = 3'd0;
 // localparam SM_START    = 3'd1;
@@ -62,6 +63,7 @@ end
 
 initial
 begin
+    num_bytes <= 0;
     state <= SM_IDLE;
     next_state <= SM_IDLE;
     slave_addr <= 8'h50;
@@ -98,7 +100,7 @@ begin
     wr_ena_i <= 0;
     next_state <= SM_START;
     // [BIT_MIEN] & I2CCR[BIT_MSTA]
-    #500000
+    #600000
     wr_ena_i  <= 1;
     wr_data <= 8'h00;
     #10;
@@ -208,16 +210,30 @@ begin
             end
             SM_READ     :
             begin
-                rd_ena_i <= 0;
-                #10
-                rd_addr <= (ADDR_DR << 2);
-                #10
-                rd_ena_i <= 1;
-                #10
-                rd_ena_i <= 0;
-                next_state <= SM_READ;
-                regval <= rd_data_o;
-                next_state <= SM_READ;
+                if (regval[CSR_MIF])
+                begin
+                    num_bytes = num_bytes + 1;
+                    regval <= rd_data_o;
+                    wr_ena_i <= 0;
+                    #10;
+                    wr_addr <= (ADDR_SR << 2);
+                    wr_data <= 8'h81;
+                    wr_ena_i <= 1;
+                    #10;
+                    wr_ena_i <= 0;
+                    #10;
+                    rd_ena_i <= 0;
+                    #10
+                    rd_addr <= (ADDR_DR << 2);
+                    #10
+                    rd_ena_i <= 1;
+                    #10
+                    rd_ena_i <= 0;
+                    if (num_bytes == 2)
+                    begin
+                        next_state <= SM_STOP;
+                    end
+                end
             end
             SM_RESTART  :
             begin
