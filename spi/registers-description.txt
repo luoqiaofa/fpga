@@ -43,23 +43,23 @@ ESPI_SPMODE field descriptions
 |       |     internally connected to the receiver input. The receiver and transmitter operate normally, except that |
 |       |     received data is ignored.                                                                              |
 +-------+------------------------------------------------------------------------------------------------------------+
-|2–12   |This field is reserved.                                                                                     |
+|2-12   |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
-|13–15  |Data output hold adjustment. This field can be used for RapidS .                                            |
+|13-15  |Data output hold adjustment. This field can be used for RapidS .                                            |
 |HO_ADJ |000 Output data is not delayed                                                                              |
 |       |nnn Output data is delayed by an extra nnn b platform clock cycles                                          |
 +-------+------------------------------------------------------------------------------------------------------------+
-|16–17  |This field is reserved.                                                                                     |
+|16-17  |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
-|18–23  |Tx FIFO threshold-if Tx FIFO has less than TXTHR bytes, an interrupt can be issued to the core.             |
+|18-23  |Tx FIFO threshold-if Tx FIFO has less than TXTHR bytes, an interrupt can be issued to the core.             |
 |TXTHR  |Valid values: 0-31                                                                                          |
 +-------+------------------------------------------------------------------------------------------------------------+
-|24–26  |This field is reserved.                                                                                     |
+|24-26  |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
-|27–31  |Rx FIFO threshold-if Rx FIFO has more than RXTHR bytes, an interrupt can be issued to the core.             |
+|27-31  |Rx FIFO threshold-if Rx FIFO has more than RXTHR bytes, an interrupt can be issued to the core.             |
 |RXTHR  |Valid values: 0-31                                                                                          |
 +-------+------------------------------------------------------------------------------------------------------------+
  
@@ -77,16 +77,16 @@ ESPI_SPIE field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–1    |This field is reserved.                                                                                     |
+|0-1    |This field is reserved.                                                                                     |
 |-      |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-|2–7    |The current number of full Rx FIFO bytes                                                                    |
+|2-7    |The current number of full Rx FIFO bytes                                                                    |
 |RXCNT  |NOTE: For character lengths of 9 to 16 bits-each character occupies 2 bytes in Rx/Tx FIFO.                  |
 +-------+------------------------------------------------------------------------------------------------------------+
-|8–9    |This field is reserved.                                                                                     |
+|8-9    |This field is reserved.                                                                                     |
 |-      |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-|10–15  |The current number of free Tx FIFO bytes                                                                    |
+|10-15  |The current number of free Tx FIFO bytes                                                                    |
 |TXCNT  |NOTE: For character lengths of 9 to 16 bits-each character occupies 2 bytes in Rx/Tx FIFO                   |
 +-------+------------------------------------------------------------------------------------------------------------+
 |16     |Tx FIFO is empty                                                                                            |
@@ -115,7 +115,7 @@ ESPI_SPIE field descriptions
 |TNF    |0  The transmitter FIFO is full.                                                                            |
 |       |1  The transmitter FIFO is not full.                                                                        |
 +-------+------------------------------------------------------------------------------------------------------------+
-|24–31  | This field is reserved.                                                                                    |
+|24-31  | This field is reserved.                                                                                    |
 |-      | Reserved, should be cleared.                                                                               |
 +-------+------------------------------------------------------------------------------------------------------------+
  
@@ -132,7 +132,7 @@ ESPI_SPIE field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–15   |This field is reserved.                                                                                     |
+|0-15   |This field is reserved.                                                                                     |
 | -     |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
 |16     |Tx FIFO empty interrupt mask                                                                                |
@@ -166,7 +166,7 @@ ESPI_SPIE field descriptions
 |TNF    |0  Not full event will not cause eSPI Interrupt                                                             |
 |       |1  Not full event will cause eSPI Interrupt                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|24–31  |This field is reserved.                                                                                     |
+|24-31  |This field is reserved.                                                                                     |
 |-      |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
 
@@ -183,7 +183,7 @@ ESPI_SPCOM field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–1    |Chip select-chip select for which transaction is destined                                                   |
+|0-1    |Chip select-chip select for which transaction is destined                                                   |
 |CS     |00   SPI_CS0_B                                                                                              |
 |       |01   SPI_CS1_B                                                                                              |
 |       |10   SPI_CS2_B                                                                                              |
@@ -208,10 +208,10 @@ ESPI_SPCOM field descriptions
 |TO     |1 No reception is done for the frame (useful for write transactions)                                        |
 |       |0 Normal operation                                                                                          |
 +-------+------------------------------------------------------------------------------------------------------------+
-|6–7    |This field is reserved.                                                                                     |
+|6-7    |This field is reserved.                                                                                     |
 |-      |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-|8–15   |If (RXSKIP ≠ 0)-Number of characters skipped for reception from frame start.                                |
+|8-15   |If (RXSKIP ≠ 0)-Number of characters skipped for reception from frame start.                               |
 |RxSKIP |Non-zero values of RxSKIP force the eSPI to half-duplex mode, and therefore this causes TRANLEN-            |
 |       |RxSKIP characters to be skipped for transmission.                                                           |
 |       |RXSKIP is useful for reads of SPI flash memories where the first valid read data is received several        |
@@ -220,7 +220,7 @@ ESPI_SPCOM field descriptions
 |       |NOTE: If TO = 1, RxSKIP must be set to 0.                                                                   |
 |       |NOTE: If RXSKIP = 0 and TO = 0, the eSPI changes to full duplex mode.                                       |
 +-------+------------------------------------------------------------------------------------------------------------+
-|16–31  |Transaction length - (number of characters in the frame - 1)                                                |
+|16-31  |Transaction length - (number of characters in the frame - 1)                                                |
 |TRANLEN|                                                                                                            |
 +-------+------------------------------------------------------------------------------------------------------------+
 
@@ -280,7 +280,7 @@ ESPI_SPITF field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–31   |Varies as parameters set                                                                                    |
+|0-31   |Varies as parameters set                                                                                    |
 |DATA   |                                                                                                            |
 +-------+------------------------------------------------------------------------------------------------------------+
 
@@ -305,7 +305,7 @@ ESPI_SPIRF field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–31   |Varies as parameters set                                                                                    |
+|0-31   |Varies as parameters set                                                                                    |
 |DATA   |                                                                                                            |
 +-------+------------------------------------------------------------------------------------------------------------+
 
@@ -339,7 +339,7 @@ ESPI_SPMODE0 field descriptions
 |       |1  System clock/16 is the input to the eSPI BRG.                                                            |
 |       |                                                                                                            |
 +-------+------------------------------------------------------------------------------------------------------------+
-|4–7    |Prescale modulus select. Specifies the divide ratio of the prescale divider in the eSPI clock generator. The|
+|4-7    |Prescale modulus select. Specifies the divide ratio of the prescale divider in the eSPI clock generator. The|
 |PM0    |eSPI baud rate generator clock source (either system clock or system clock divided by 16, depending on      |
 |       |DIV16 bit) is divided by 2 x ([PM] + 1), a range from 2 to 32. For example,if the prescale modulus is set to|
 |       |PM=0x0011 and DIV16 is set, the SPI_CLK/system clock rate will be 16 x (2 x (0x0011 + 1)) = 128             |
@@ -349,9 +349,9 @@ ESPI_SPMODE0 field descriptions
 |ODD0   |                                                                                                            |
 |       |0  Even division - 2 x (PM + 1) x (15 x DIV16 + 1) - 50% duty cycle                                         |
 |       |1  Odd division - (2 x PM + 1) x (15 x DIV16 + 1) (except for PM = 0 where it divides by 2 x (7 x DIV16 +   |
-|       |   1)); duty cycle is (PM + 1) ÷ (2 x PM + 1) for DIV16 = 0; duty cycle is 50% for DIV16 = 1.               |
+|       |   1)); duty cycle is (PM + 1) ÷ (2 x PM + 1) for DIV16 = 0; duty cycle is 50% for DIV16 = 1.              |
 +-------+------------------------------------------------------------------------------------------------------------+
-|9–10   |This field is reserved.                                                                                     |
+|9-10   |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
 |11     |CS0 Polarity.                                                                                               |
@@ -359,23 +359,23 @@ ESPI_SPMODE0 field descriptions
 |       |1  Asserted Low, Negated High                                                                               |
 |       |0  Asserted High, Negated Low.                                                                              |
 +-------+------------------------------------------------------------------------------------------------------------+
-|12–15  |Character length in bits per character. Supports a range from 1-bit to 16-bit data characters.              |
+|12-15  |Character length in bits per character. Supports a range from 1-bit to 16-bit data characters.              |
 |LEN0   |                                                                                                            |
 +-------+------------------------------------------------------------------------------------------------------------+
-|16–19  |CS assertion time in bits before frame start (that is, before clock toggles)                                |
+|16-19  |CS assertion time in bits before frame start (that is, before clock toggles)                                |
 |CS0BEF |                                                                                                            |
 |       |Example: CS0BEF = 0010 inserts 2 bits time gap between CS0 assertion to clock toggle                        |
 +-------+------------------------------------------------------------------------------------------------------------+
-|20–23  |CS assertion time in bits after frame end (that is, after clock finishes toggling)                          |
+|20-23  |CS assertion time in bits after frame end (that is, after clock finishes toggling)                          |
 |CS0AFT |                                                                                                            |
 |       |Example: CS0AFT = 0010 inserts 2 bits time gap between clock stop to CS0 negation                           |
-|24–28  |Clock gap                                                                                                   |
+|24-28  |Clock gap                                                                                                   |
 |CS0CG  |                                                                                                            |
 |       |insert gaps between transmitted frames according to this size (during this time, chip select is negated).   |
 |       |Chip select is negated minimum time of 1 bit time.                                                          |
 |       |Example: CS0CG = 00101 inserts 5 + 1 = 6 bits time gap between every two consecutive frames                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|29–31  |This field is reserved.                                                                                     |
+|29-31  |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
 

@@ -27,7 +27,7 @@ the address-calling cycle when the I2C module is in master mode.
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–6    |Description                                                                                                 |
+|0-6    |Description                                                                                                 |
 |ADDR   |Slave address. The ADDR field specifies the slave address to which the I2C module responds if it is         |
 |       |addressed as a slave. If the I2C is in slave mode and a transaction's calling address matches               |
 |       |I2CADR[ADDR], the module will set I2CSR[MIF], signaling a pending interrupt. (For more information          |
@@ -41,7 +41,7 @@ the address-calling cycle when the I2C module is in master mode.
   The I2C frequency divider register (I2CFDR), shown in the following figure, specifies the
 ratio used to prescale the clock for selecting a specific bit rate.
 For additional guidance about the proper use of I2CFDR and I2CDFSRR on Power
-Architecture® integrated host/communications processors, refer to the application note
+Architecture? integrated host/communications processors, refer to the application note
 AN2919, Determining the I2C Frequency Divider Ratio for SCL.
 Writing to the Reserved Field: While writing to the reserved
 field, always write back the field's original value, as described
@@ -52,10 +52,10 @@ following table.
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–1    |This field is reserved.                                                                                     |
+|0-1    |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
-|2–7    |Frequency divider ratio. Specifies the ratio used to prescale the clock for bit rate selection.             |
+|2-7    |Frequency divider ratio. Specifies the ratio used to prescale the clock for bit rate selection.             |
 | FDR   | The serial bit                                                                                             |
 |       |clock frequency of the SCL is equal to one half the platform clock divided by the designated divider.       |
 |       |However, the frequency divider value can be changed at any point in a program. The serial bit clock         |
@@ -225,7 +225,7 @@ I2Cx_I2CSR field descriptions
 |       |1  The I2C bus is busy.                                                                                     |
 +-------+------------------------------------------------------------------------------------------------------------+
 |3      |Arbitration Lost. MAL is automatically set (value of 1) if arbitration is lost. Note that the device        |
-|MAL     does not automatically retry a failed transfer attempt.                                                     |
+|MAL    |does not automatically retry a failed transfer attempt.                                                     |
 |       |                                                                                                            |
 |       |0  Arbitration is not lost. Can only be cleared by software.                                                |
 |       |1  Arbitration is lost.                                                                                     |
@@ -243,21 +243,21 @@ I2Cx_I2CSR field descriptions
 |       |0  Slave receive mode is selected, with the master writing to the slave.                                    |
 |       |1  Slave transmit mode is selected, with the master reading from the slave. SRW is valid only if both of    |
 |       |   the following conditions are met:                                                                        |
-|       |       • A complete transfer occurred and no other transfers have been initiated.                           |
-|       |       • The I2C module is configured as a slave and has an address match.                                  |
+|       |       ? A complete transfer occurred and no other transfers have been initiated.                           |
+|       |       ? The I2C module is configured as a slave and has an address match.                                  |
 +-------+------------------------------------------------------------------------------------------------------------+
 |6      |Module Interrupt. MIF is set if an interrupt is detected. An interrupt is reported if I2CCR[MIEN] is set.   |
 |MIF    |The interrupts for I2C1 and I2C2 are combined into one interrupt, which is sourced by the dual I2C          |
 |       |module 1;                                                                                                   |
 |       |                                                                                                            |
 |       |similarly, the interrupts for I2C3 is sourced by the dual I2C module 2.(For more information about I2CCR    |
-|       |fields, see I2C control register (I2C_I2CCR).                                                                
+|       |fields, see I2C control register (I2C_I2CCR).                                                               |
 |       |                                                                                                            |
 |       |0  No interrupt is detected. MIF can be cleared only by software.                                           |
 |       |1  An interrupt is detected. MIF is set when one of the following events occurs:                            |
-|       |       • One byte of data is transferred (set at the falling edge of the ninth clock).                      |
-|       |       • The I2CADR value matches with the calling address in Slave Receive mode.                           |
-|       |       • Arbitration is lost.                                                                               |
+|       |       ? One byte of data is transferred (set at the falling edge of the ninth clock).                      |
+|       |       ? The I2CADR value matches with the calling address in Slave Receive mode.                           |
+|       |       ? Arbitration is lost.                                                                               |
 +-------+------------------------------------------------------------------------------------------------------------+
 |7      |Received Acknowledge. The value of SDA during the reception of a bus cycle's acknowledge bit. If RXAK       |
 |RXAK   |= 0, it indicates that an acknowledge signal has been received after the 8 bits of data have been           |
@@ -274,13 +274,13 @@ module (if the I2C is in master or slave receive mode).
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–7    |Specifies data to be transmitted or allows receipt of the next data byte on the I2C module, depending on    |
+|0-7    |Specifies data to be transmitted or allows receipt of the next data byte on the I2C module, depending on    |
 |DATA   |the I2C mode:                                                                                               |
-|       |    • Transmit mode: Data transmission is initiated when data is written to I2CDR. For master transmit      |
+|       |    ? Transmit mode: Data transmission is initiated when data is written to I2CDR. For master transmit      |
 |       |      mode, the first byte of data written to I2CDR is used for the address transfer and is follows the     |
 |       |      format described in Transactions. When bytes are written to I2CDR in transmit mode, they cannot       |
 |       |      be verified by reading them back.                                                                     |
-|       |    • Receive mode: Reading I2CDR allows the I2C module to receive the next byte of data on the I2C         |
+|       |    ? Receive mode: Reading I2CDR allows the I2C module to receive the next byte of data on the I2C         |
 |       |      interface (in addition to reading the contents of I2CDR).                                             |
 |       |                                                                                                            |
 |       |In all cases, the most significant bit is sent first.                                                       |
@@ -295,17 +295,17 @@ module (if the I2C is in master or slave receive mode).
   The digital filter sampling rate register (I2CDFSRR) specifies the sample rate for filtering
   out signal noise.
   For additional guidance about the proper use of I2CFDR and I2CDFSRR on Power
-  Architecture® integrated host/communications processors, refer to the application note
+  Architecture? integrated host/communications processors, refer to the application note
   AN2919, Determining the I2C Frequency Divider Ratio for SCL.
 
 I2Cx_I2CDFSRR field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
 |Field  |Description                                                                                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
-|0–1    |This field is reserved.                                                                                     |
+|0-1    |This field is reserved.                                                                                     |
 |-      |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
-|2–7    |Digital Filter Sampling Rate. Specifies the sample rate for the program to use in filtering out signal noise|
+|2-7    |Digital Filter Sampling Rate. Specifies the sample rate for the program to use in filtering out signal noise|
 |DFSR   |This rate is used to prescale the frequency the digital filter uses to take samples from the I2C bus. The   |
 |       |resulting sampling rate is calculated by dividing one half the platform frequency by the non-zero value of  |
 |       |the DFSR. If I2CDFSRR = 0, the I2C bus sample points to the reset divisor.                                  |
