@@ -14,6 +14,8 @@ wire [4:0]    rd_addr_i; // read address input
 wire [7:0]    rd_data_o; // read date output
 wire          scl_pin;   // scl pad pin
 wire          sda_pin;    // sda pad pin
+wire          read_valid;
+wire          write_valid;
 
 reg  [4:0]    wr_addr;
 reg  [7:0]    wr_data;
@@ -51,6 +53,8 @@ i2c_top_module i2c_master_u1(
     .rd_ena_i(rd_ena_i),   // read enable input
     .rd_addr_i(rd_addr_i), // read address input
     .rd_data_o(rd_data_o), // read date output
+    .read_ready_o (read_valid),      // data ready to read
+    .write_ready_o(write_valid),      // data ready to read
     .scl_pin(scl_pin),     // scl pad pin
     .sda_pin(sda_pin)      // sda pad pin
 );
