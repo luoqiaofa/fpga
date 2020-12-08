@@ -49,7 +49,6 @@ spi_clk_gen # (.N(8)) clk_gen (
     .I_EN(I_EN),              // module enable
     .I_GO(I_GO),              // start transmit
     .I_CPOL(I_CPOL),            // clock polarity
-    .I_CPHA(I_CPHA),            // clock phase
     .I_LAST_CLK(I_LAST_CLK),        // last clock 
     .I_DIVIDER(I_DIVIDER), // divider;
     .O_CLK(O_CLK),         // clock output

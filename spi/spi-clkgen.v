@@ -9,7 +9,6 @@ module spi_clk_gen #
     input  I_EN,              // module enable
     input  I_GO,              // start transmit
     input  I_CPOL,            // clock polarity
-    input  I_CPHA,            // clock phase
     input  I_LAST_CLK,        // last clock 
     input  [N-1:0] I_DIVIDER, // divider;
     output reg O_CLK,         // clock output
