@@ -138,7 +138,7 @@ begin
     rst_n    <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 1;      // clock polarity
+    CPOL       <= 0;      // clock polarity
     CPHA       <= 0;      // clock phase
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
