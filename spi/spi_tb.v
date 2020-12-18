@@ -2,6 +2,7 @@
 
 module spi_tb;
     localparam N = 8;
+    localparam CHAR_NBITS = 16;
     reg sysclk;            // system clock input
     reg rst_n;             // module reset
     reg enable;            // module enable
@@ -39,7 +40,7 @@ begin
                 if (bit_cnt == 5'h0) 
                 begin
                     last_clk <= 1;
-                    bit_cnt <= 5'h7;
+                    bit_cnt <= (CHAR_NBITS - 1);
                 end
             end
             2'b10:
@@ -56,7 +57,7 @@ begin
                 if (bit_cnt == 5'h0) 
                 begin
                     last_clk <= 1;
-                    bit_cnt <= 5'h7;
+                    bit_cnt <= (CHAR_NBITS - 1);
                 end
             end
         endcase
@@ -66,7 +67,7 @@ end
 always @(negedge pos_edge or negedge rst_n)
 begin
     if (!rst_n || !enable)
-        bit_cnt <= 5'h7;
+        bit_cnt <= (CHAR_NBITS - 1);
     else 
     begin
         case (spi_mode)
@@ -76,7 +77,7 @@ begin
                 if (bit_cnt == 5'h0) 
                 begin
                     last_clk <= 1;
-                    bit_cnt <= 5'h7;
+                    bit_cnt <= (CHAR_NBITS - 1);
                 end
             end
             2'b01:
@@ -93,7 +94,7 @@ begin
                 if (bit_cnt == 5'h0) 
                 begin
                     last_clk <= 1;
-                    bit_cnt <= 5'h7;
+                    bit_cnt <= (CHAR_NBITS - 1);
                 end
             end
             2'b11:
@@ -135,7 +136,7 @@ initial
 begin            
     bit_cnt    <= 5'h7;
     sysclk     <= 0;      // system clock input
-    rst_n    <= 0;      // module reset
+    rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
     CPOL       <= 0;      // clock polarity
@@ -143,21 +144,18 @@ begin
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100
-    rst_n    <= 1;      // module reset
+    rst_n    <= 1;        // module reset
     #10
     divider_i  <= 8'h04;  // divider; sys clk % 10 prescaler
     #30
-    enable       <= 1;      // module enable
+    enable       <= 1;    // module enable
     #30
-    go       <= 1;      // start transmit
-    #1000
-    go       <= 1;      // start transmit
-    #1000
+    go       <= 1;        // start transmit
+    #(1000 * CHAR_NBITS / 8)
+    go       <= 1;        // start transmit
+    #(1000 * CHAR_NBITS / 8)
     // #50
-    enable       <= 0;      // module enable
-    // clk_out,         // clock output
-    // pos_edge,    // positive edge flag
-    // neg_edge     // negtive edge flag
+    enable       <= 0;   // module enable
 
     #1000
     $stop;
