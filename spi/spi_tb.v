@@ -14,29 +14,100 @@ module spi_tb;
     wire pos_edge;         // positive edge flag
     wire neg_edge;         // negtive edge flag
     reg [4:0] bit_cnt;
+    wire [1:0] spi_mode;
+
+assign spi_mode = {CPHA, CPOL};
 
 always @(negedge neg_edge or negedge rst_n)
 begin
     if (!rst_n || !enable)
         ;
-    else if (last_clk & go & (!CPOL)) begin
-        go <= 0;
-        last_clk <= 0;
+    else 
+    begin
+        case (spi_mode)
+            2'b00:
+            begin
+                if (last_clk & go) 
+                begin
+                    go <= 0;
+                    last_clk <= 0;
+                end
+            end
+            2'b01:
+            begin
+                bit_cnt <= bit_cnt - 5'h1;
+                if (bit_cnt == 5'h0) 
+                begin
+                    last_clk <= 1;
+                    bit_cnt <= 5'h7;
+                end
+            end
+            2'b10:
+            begin
+                if (last_clk & go) 
+                begin
+                    go <= 0;
+                    last_clk <= 0;
+                end
+            end
+            2'b11:
+            begin
+                bit_cnt <= bit_cnt - 5'h1;
+                if (bit_cnt == 5'h0) 
+                begin
+                    last_clk <= 1;
+                    bit_cnt <= 5'h7;
+                end
+            end
+        endcase
     end
 end
 
-always @(posedge clk_out or negedge rst_n)
+always @(negedge pos_edge or negedge rst_n)
 begin
     if (!rst_n || !enable)
         bit_cnt <= 5'h7;
-    else if (bit_cnt == 5'h0) begin
-        bit_cnt <= 5'h7;
+    else 
+    begin
+        case (spi_mode)
+            2'b00:
+            begin
+                bit_cnt <= bit_cnt - 5'h1;
+                if (bit_cnt == 5'h0) 
+                begin
+                    last_clk <= 1;
+                    bit_cnt <= 5'h7;
+                end
+            end
+            2'b01:
+            begin
+                if (last_clk & go) 
+                begin
+                    go <= 0;
+                    last_clk <= 0;
+                end
+            end
+            2'b10:
+            begin
+                bit_cnt <= bit_cnt - 5'h1;
+                if (bit_cnt == 5'h0) 
+                begin
+                    last_clk <= 1;
+                    bit_cnt <= 5'h7;
+                end
+            end
+            2'b11:
+            begin
+                if (last_clk & go) 
+                begin
+                    go <= 0;
+                    last_clk <= 0;
+                end
+            end
+        endcase
     end
-    else
-        bit_cnt <= bit_cnt - 5'h1;
-        if (bit_cnt == 5'h0)
-            last_clk <= 1;
 end
+
 initial
 begin            
     $dumpfile("wave.vcd");        //生成的vcd文件名称
@@ -67,7 +138,7 @@ begin
     rst_n    <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 0;      // clock polarity
+    CPOL       <= 1;      // clock polarity
     CPHA       <= 0;      // clock phase
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
@@ -79,8 +150,10 @@ begin
     enable       <= 1;      // module enable
     #30
     go       <= 1;      // start transmit
-    #1630
-    #50
+    #1000
+    go       <= 1;      // start transmit
+    #1000
+    // #50
     enable       <= 0;      // module enable
     // clk_out,         // clock output
     // pos_edge,    // positive edge flag
