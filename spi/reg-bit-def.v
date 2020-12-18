@@ -1,67 +1,67 @@
 // 1. SPMODE
-localparam BIT_EN         = 31;
-localparam BIT_LOOP       = 30;
-localparam BIT_HO_ADJ_HI  = 18;
-localparam BIT_HO_ADJ_LO  = 16;
-localparam BIT_TXTHR_HI   = 13;
-localparam BIT_TXTHR_LO   = 8;
-localparam BIT_RXTHR_HI   = 4;
-localparam BIT_RXTHR_LO   = 0;
+localparam SPMODE_EN         = 31;
+localparam SPMODE_LOOP       = 30;
+localparam SPMODE_HO_ADJ_HI  = 18;
+localparam SPMODE_HO_ADJ_LO  = 16;
+localparam SPMODE_TXTHR_HI   = 13;
+localparam SPMODE_TXTHR_LO   = 8;
+localparam SPMODE_RXTHR_HI   = 4;
+localparam SPMODE_RXTHR_LO   = 0;
 
 // 2. SPIE
-localparam BIT_RXCNT_HI   = 29;
-localparam BIT_RXCNT_LO   = 24;
-localparam BIT_TXCNT_HI   = 21;
-localparam BIT_TXCNT_LO   = 16;
-localparam BIT_TXE        = 15;
-localparam BIT_DON        = 14;
-localparam BIT_RXT        = 13;
-localparam BIT_RXF        = 12;
-localparam BIT_TXT        = 11;
-localparam BIT_RNE        = 9;
-localparam BIT_TNF        = 8;
+localparam SPIE_RXCNT_HI   = 29;
+localparam SPIE_RXCNT_LO   = 24;
+localparam SPIE_TXCNT_HI   = 21;
+localparam SPIE_TXCNT_LO   = 16;
+localparam SPIE_TXE        = 15;
+localparam SPIE_DON        = 14;
+localparam SPIE_RXT        = 13;
+localparam SPIE_RXF        = 12;
+localparam SPIE_TXT        = 11;
+localparam SPIE_RNE        = 9;
+localparam SPIE_TNF        = 8;
 
 // 3. SPIM
-localparam BIT_TXE        = 15;
-localparam BIT_DON        = 14;
-localparam BIT_RXT        = 13;
-localparam BIT_RXF        = 12;
-localparam BIT_TXT        = 11;
-localparam BIT_22         = 10;
-localparam BIT_RNE        = 9;
-localparam BIT_TNF        = 8;
+localparam SPIM_TXE        = 15;
+localparam SPIM_DON        = 14;
+localparam SPIM_RXT        = 13;
+localparam SPIM_RXF        = 12;
+localparam SPIM_TXT        = 11;
+localparam SPIM_22         = 10;
+localparam SPIM_RNE        = 9;
+localparam SPIM_TNF        = 8;
 
 // 4. SPCOM
-localparam BIT_CS_HI      = 31;
-localparam BIT_CS_LO      = 30;
-localparam BIT_RxDELAY    = 29;
-localparam BIT_DO         = 28;
-localparam BIT_HLD        = 26;
-localparam BIT_TO         = 27;
-localparam BIT_RxSKIP_HI  = 23;
-localparam BIT_RxSKIP_LO  = 16;
-localparam BIT_TRANLEN_HI = 15;
-localparam BIT_TRANLEN_LO = 0;
+localparam SPCOM_CS_HI      = 31;
+localparam SPCOM_CS_LO      = 30;
+localparam SPCOM_RxDELAY    = 29;
+localparam SPCOM_DO         = 28;
+localparam SPCOM_HLD        = 26;
+localparam SPCOM_TO         = 27;
+localparam SPCOM_RxSKIP_HI  = 23;
+localparam SPCOM_RxSKIP_LO  = 16;
+localparam SPCOM_TRANLEN_HI = 15;
+localparam SPCOM_TRANLEN_LO = 0;
 
 // 5. SPITF
 
 // 6. SPIRF
 
 // 7. ESPI_SPMODE0;
-localparam BIT_CIx        = 31;
-localparam BIT_CPx        = 30;
-localparam BIT_REVx       = 29;
-localparam BIT_DIV16x     = 28;
-localparam BIT_PMx_HI     = 27;
-localparam BIT_PMx_LO     = 24;
-localparam BIT_ODDx       = 23;
-localparam BIT_POLx       = 20;
-localparam BIT_LENx_HI    = 19;
-localparam BIT_LENx_LO    = 16;
-localparam BIT_CSxBEF_HI  = 15;
-localparam BIT_CSxBEF_LO  = 12;
-localparam BIT_CSxAFT_HI  = 11;
-localparam BIT_CSxAFT_LO  = 8;
-localparam BIT_CSxCG_HI   = 7;
-localparam BIT_CSxCG_LO   = 3;
+localparam SPMODEx_CI         = 31;
+localparam SPMODEx_CP         = 30;
+localparam SPMODEx_REV        = 29;
+localparam SPMODEx_DIV16      = 28;
+localparam SPMODEx_PM_HI      = 27;
+localparam SPMODEx_PM_LO      = 24;
+localparam SPMODEx_ODD        = 23;
+localparam SPMODEx_POL        = 20;
+localparam SPMODEx_LEN_HI     = 19;
+localparam SPMODEx_LEN_LO     = 16;
+localparam SPMODEx_CSBEF_HI   = 15;
+localparam SPMODEx_CSBEF_LO   = 12;
+localparam SPMODEx_CSAFT_HI   = 11;
+localparam SPMODEx_CSAFT_LO   = 8;
+localparam SPMODEx_CSCG_HI    = 7;
+localparam SPMODEx_CSCG_LO    = 3;
 
