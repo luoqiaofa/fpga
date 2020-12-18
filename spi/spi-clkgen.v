@@ -4,16 +4,16 @@
 module spi_clk_gen #
 ( parameter N = 8)
 (
-    input  I_SYS_CLK,         // system clock input
-    input  I_RST_N,           // module reset
-    input  I_EN,              // module enable
-    input  I_GO,              // start transmit
-    input  I_CPOL,            // clock polarity
-    input  I_LAST_CLK,        // last clock 
-    input  [N-1:0] I_DIVIDER, // divider;
-    output reg O_CLK,         // clock output
-    output reg O_POS_EGDE,    // positive edge flag
-    output reg O_NEG_EGDE     // negtive edge flag
+    input  sysclk,         // system clock input
+    input  rst_n,           // module reset
+    input  enable,              // module enable
+    input  go,              // start transmit
+    input  CPOL,            // clock polarity
+    input  last_clk,        // last clock 
+    input  [N-1:0] divider_i, // divider;
+    output reg clk_out,         // clock output
+    output reg pos_edge,    // positive edge flag
+    output reg neg_edge     // negtive edge flag
 );
 
 wire cnt_zero;
@@ -24,45 +24,45 @@ reg in_process;
 assign cnt_zero = (cnt == {N{1'b0}});
 assign cnt_one  = (cnt == {{N-1{1'b0}}, 1'b1});
 
-always @(posedge I_SYS_CLK or negedge I_RST_N)
+always @(posedge sysclk or negedge rst_n)
 begin
-    if (!I_RST_N)
+    if (!rst_n)
     begin
         cnt   <= {N{1'b1}};
     end
     else
     begin
-        if (!I_EN || cnt_zero || !I_GO)
-            cnt   <= I_DIVIDER;
+        if (!enable || cnt_zero || !go)
+            cnt   <= divider_i;
         else
             cnt <= cnt - {{N-1{1'b0}}, 1'b1};
     end
 end
 
 // clock out
-always @(posedge I_SYS_CLK or negedge I_RST_N)
+always @(posedge sysclk or negedge rst_n)
 begin
-    if (!I_RST_N || !I_EN)
-        O_CLK <= I_CPOL;
+    if (!rst_n || !enable)
+        clk_out <= CPOL;
     else
-        if (I_GO)
-            O_CLK <= (I_EN && cnt_zero && (!I_LAST_CLK || O_CLK)) ? ~O_CLK : O_CLK;
+        if (go)
+            clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
         else
-            O_CLK <= I_CPOL;
+            clk_out <= CPOL;
 end
 
 // pos neg signals
-always @(posedge I_SYS_CLK or negedge I_RST_N)
+always @(posedge sysclk or negedge rst_n)
 begin
-    if (!I_RST_N || !I_EN)
+    if (!rst_n || !enable)
     begin
-        O_POS_EGDE <= 1'b0;
-        O_NEG_EGDE <= 1'b0;
+        pos_edge <= 1'b0;
+        neg_edge <= 1'b0;
     end
     else
     begin
-        O_POS_EGDE <= (I_EN && !O_CLK && cnt_one) || (!(|I_DIVIDER) && O_CLK) || (!(|I_DIVIDER) && I_GO && !I_EN);
-        O_NEG_EGDE <= (I_EN && O_CLK && cnt_one) || (!(|I_DIVIDER) && !O_CLK && I_EN);
+        pos_edge <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && go && !enable);
+        neg_edge <= (enable && clk_out && cnt_one) || (!(|divider_i) && !clk_out && enable);
     end
 end
 
