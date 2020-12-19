@@ -2,7 +2,7 @@
 
 module spi_tb;
     localparam N = 8;
-    localparam CHAR_NBITS = 16;
+    localparam CHAR_NBITS = 8;
     reg sysclk;            // system clock input
     reg rst_n;             // module reset
     reg enable;            // module enable
@@ -16,7 +16,14 @@ module spi_tb;
     wire neg_edge;         // negtive edge flag
     reg [4:0] bit_cnt;
     wire [1:0] spi_mode;
+    reg [CHAR_NBITS - 1: 0] data_out;
+    reg [4: 0] shift_cnt;
+    reg [CHAR_NBITS:0] shift_reg;
+    reg dout;
+    wire mosi;
 
+
+assign mosi = dout;
 assign spi_mode = {CPHA, CPOL};
 
 always @(negedge neg_edge or negedge rst_n)
@@ -132,15 +139,131 @@ spi_clk_gen # (.N(8)) clk_gen (
 always @(sysclk)
     #5 sysclk <= !sysclk;
 
+always @(posedge sysclk or negedge rst_n)
+begin
+    if (!rst_n || !enable)
+    begin
+    end
+    else
+    begin
+        if (go)
+        begin
+            dout <= shift_reg[shift_cnt];
+        end
+        else
+        begin
+        case (spi_mode)
+            2'b00:
+            begin
+                dout <= 1'b0;
+                shift_cnt <= CHAR_NBITS - 1;
+                shift_reg <= {1'b0, data_out};
+            end
+            2'b01:
+            begin
+                dout <= 1'b0;
+                shift_cnt <= CHAR_NBITS - 1;
+                shift_reg <= {1'b0, data_out};
+            end
+            2'b10:
+            begin
+                dout <= 1'b0;
+                shift_cnt <= CHAR_NBITS;
+                shift_reg <= {1'b0, data_out};
+            end
+            2'b11:
+            begin
+                dout <= 1'b0;
+                shift_cnt <= CHAR_NBITS;
+                shift_reg <= {1'b0, data_out};
+            end
+        endcase
+        end
+    end
+end
+
+always @(posedge pos_edge or negedge rst_n)
+begin
+    if (!rst_n || !enable || !go)
+    begin
+    end
+    else
+    begin
+        case (spi_mode)
+            2'b00:
+            begin
+            end
+            2'b01:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS - 1;
+                end
+            end
+            2'b10:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS;
+                end
+            end
+            2'b11:
+            begin
+            end
+        endcase
+    end
+end
+
+always @(negedge neg_edge or negedge rst_n)
+begin
+    if (!rst_n || !enable || !go)
+    begin
+        dout    <= data_out[CHAR_NBITS-1];
+        shift_cnt <= CHAR_NBITS - 1;
+        dout <= data_out[CHAR_NBITS - 1];
+        shift_reg <= {1'b0, data_out};
+    end
+    else
+    begin
+        case (spi_mode)
+            2'b00:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS - 1;
+                end
+            end
+            2'b01:
+            begin
+            end
+            2'b10:
+            begin
+            end
+            2'b11:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS;
+                end
+            end
+        endcase
+    end
+end
+
 initial
 begin            
+data_out   <= 8'h5a;
     bit_cnt    <= 5'h7;
     sysclk     <= 0;      // system clock input
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
     CPOL       <= 0;      // clock polarity
-    CPHA       <= 0;      // clock phase
+    CPHA       <= 1;      // clock phase
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100
@@ -156,7 +279,7 @@ begin
     #(1000 * CHAR_NBITS / 8)
     // #50
     enable       <= 0;   // module enable
-
+    
     #1000
     $stop;
 end
