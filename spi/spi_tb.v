@@ -216,7 +216,7 @@ begin
     end
 end
 
-always @(negedge neg_edge or negedge rst_n)
+always @(posedge neg_edge or negedge rst_n)
 begin
     if (!rst_n || !enable || !go)
     begin
