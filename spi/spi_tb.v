@@ -9,6 +9,7 @@ module spi_tb;
     reg go;                // start transmit
     reg CPOL;              // clock polarity
     reg CPHA;              // clock phase
+    reg LOOP;              // loop mode test
     reg last_clk;          // last clock 
     reg [N-1:0] divider_i; // divider;
     wire clk_out;          // clock output
@@ -17,14 +18,20 @@ module spi_tb;
     reg [4:0] bit_cnt;
     wire [1:0] spi_mode;
     reg [CHAR_NBITS - 1: 0] data_out;
+    reg [CHAR_NBITS - 1: 0] data_in;
     reg [4: 0] shift_cnt;
-    reg [CHAR_NBITS:0] shift_reg;
+    reg [CHAR_NBITS:0] shift_tx;
+    reg [CHAR_NBITS:0] shift_rx;
     reg dout;
     wire mosi;
-
+    wire miso;
+    wire pos_edge_rx;         // positive edge flag
+    wire neg_edge_rx;         // positive edge flag
 
 assign mosi = dout;
 assign spi_mode = {CPHA, CPOL};
+assign pos_edge_rx = clk_out;
+assign neg_edge_rx = clk_out;
 
 always @(negedge neg_edge or negedge rst_n)
 begin
@@ -139,131 +146,170 @@ spi_clk_gen # (.N(8)) clk_gen (
 always @(sysclk)
     #5 sysclk <= !sysclk;
 
-always @(posedge sysclk or negedge rst_n)
+always @(posedge pos_edge_rx or negedge rst_n)
+begin
+    if (!rst_n || !enable)
+    begin
+        data_in  <= {CHAR_NBITS{1'b1}};
+    end
+    else
+    begin
+        if (enable)
+        begin
+        case (spi_mode)
+            2'b00:
+            begin
+                if (LOOP)
+                begin
+                    shift_rx[shift_cnt] <= dout;
+                end
+                if (0 == shift_cnt)
+                begin
+                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                end
+            end
+            2'b01:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS - 1;
+                end
+            end
+            2'b10:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS;
+                end
+            end
+            2'b11:
+            begin
+                if (LOOP)
+                begin
+                    shift_rx[shift_cnt] <= dout;
+                end
+                if (0 == shift_cnt)
+                begin
+                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                end
+            end
+        endcase
+        end
+    end
+end
+
+always @(negedge neg_edge_rx or negedge rst_n)
 begin
     if (!rst_n || !enable)
     begin
     end
     else
     begin
-        if (go)
+        if (enable)
         begin
-            dout <= shift_reg[shift_cnt];
+        case (spi_mode)
+            2'b00:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS - 1;
+                end
+            end
+            2'b01:
+            begin
+                if (LOOP)
+                begin
+                    shift_rx[shift_cnt] <= dout;
+                end
+                if (0 == shift_cnt)
+                begin
+                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                end
+            end
+            2'b10:
+            begin
+                if (LOOP)
+                begin
+                    shift_rx[shift_cnt] <= dout;
+                end
+                if (0 == shift_cnt)
+                begin
+                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                end
+            end
+            2'b11:
+            begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt)
+                begin
+                    shift_cnt <= CHAR_NBITS;
+                end
+                if (LOOP)
+                begin
+                    shift_rx[shift_cnt] <= dout;
+                end
+            end
+        endcase
+        end
+    end
+end
+
+always @(posedge sysclk or negedge rst_n)
+begin
+    if (!rst_n || !enable)
+    begin
+        dout <= 1'b0;
+        shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
+        shift_tx <= {1'b0, data_out};
+        case (spi_mode)
+            2'b00:
+            begin
+                shift_cnt <= CHAR_NBITS - 1;
+            end
+            2'b01:
+            begin
+                shift_cnt <= CHAR_NBITS - 1;
+            end
+            2'b10:
+            begin
+                shift_cnt <= CHAR_NBITS;
+            end
+            2'b11:
+            begin
+                shift_cnt <= CHAR_NBITS;
+            end
+        endcase
+    end
+    else
+    begin
+        if (enable)
+        begin
+            dout <= shift_tx[shift_cnt];
+            shift_rx <= shift_rx;
+            shift_cnt <= shift_cnt;
         end
         else
         begin
-        case (spi_mode)
-            2'b00:
-            begin
-                dout <= 1'b0;
-                shift_cnt <= CHAR_NBITS - 1;
-                shift_reg <= {1'b0, data_out};
-            end
-            2'b01:
-            begin
-                dout <= 1'b0;
-                shift_cnt <= CHAR_NBITS - 1;
-                shift_reg <= {1'b0, data_out};
-            end
-            2'b10:
-            begin
-                dout <= 1'b0;
-                shift_cnt <= CHAR_NBITS;
-                shift_reg <= {1'b0, data_out};
-            end
-            2'b11:
-            begin
-                dout <= 1'b0;
-                shift_cnt <= CHAR_NBITS;
-                shift_reg <= {1'b0, data_out};
-            end
-        endcase
+            // shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
         end
-    end
-end
-
-always @(posedge pos_edge or negedge rst_n)
-begin
-    if (!rst_n || !enable || !go)
-    begin
-    end
-    else
-    begin
-        case (spi_mode)
-            2'b00:
-            begin
-            end
-            2'b01:
-            begin
-                shift_cnt <= shift_cnt - 1;
-                if (0 == shift_cnt)
-                begin
-                    shift_cnt <= CHAR_NBITS - 1;
-                end
-            end
-            2'b10:
-            begin
-                shift_cnt <= shift_cnt - 1;
-                if (0 == shift_cnt)
-                begin
-                    shift_cnt <= CHAR_NBITS;
-                end
-            end
-            2'b11:
-            begin
-            end
-        endcase
-    end
-end
-
-always @(posedge neg_edge or negedge rst_n)
-begin
-    if (!rst_n || !enable || !go)
-    begin
-        dout    <= data_out[CHAR_NBITS-1];
-        shift_cnt <= CHAR_NBITS - 1;
-        dout <= data_out[CHAR_NBITS - 1];
-        shift_reg <= {1'b0, data_out};
-    end
-    else
-    begin
-        case (spi_mode)
-            2'b00:
-            begin
-                shift_cnt <= shift_cnt - 1;
-                if (0 == shift_cnt)
-                begin
-                    shift_cnt <= CHAR_NBITS - 1;
-                end
-            end
-            2'b01:
-            begin
-            end
-            2'b10:
-            begin
-            end
-            2'b11:
-            begin
-                shift_cnt <= shift_cnt - 1;
-                if (0 == shift_cnt)
-                begin
-                    shift_cnt <= CHAR_NBITS;
-                end
-            end
-        endcase
     end
 end
 
 initial
 begin            
-data_out   <= 8'h5a;
+    data_in    <= 8'hff;
+    data_out   <= 8'h5a;
     bit_cnt    <= 5'h7;
     sysclk     <= 0;      // system clock input
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 0;      // clock polarity
+    CPOL       <= 1;      // clock polarity
     CPHA       <= 1;      // clock phase
+    LOOP       <= 1;
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100
@@ -275,11 +321,30 @@ data_out   <= 8'h5a;
     #30
     go       <= 1;        // start transmit
     #(1000 * CHAR_NBITS / 8)
+    data_in  <= {CHAR_NBITS{1'b1}};
+    case (spi_mode)
+        2'b00:
+        begin
+            shift_cnt <= CHAR_NBITS - 1;
+        end
+        2'b01:
+        begin
+            shift_cnt <= CHAR_NBITS - 1;
+        end
+        2'b10:
+        begin
+            shift_cnt <= CHAR_NBITS;
+        end
+        2'b11:
+        begin
+            shift_cnt <= CHAR_NBITS;
+        end
+    endcase
     go       <= 1;        // start transmit
     #(1000 * CHAR_NBITS / 8)
     // #50
     enable       <= 0;   // module enable
-    
+
     #1000
     $stop;
 end
