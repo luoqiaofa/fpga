@@ -287,13 +287,11 @@ begin
     begin
         if (enable)
         begin
+            // last_clk <= last_clk;
+            // go <= go;
             dout <= shift_tx[shift_cnt];
             shift_rx <= shift_rx;
             shift_cnt <= shift_cnt;
-        end
-        else
-        begin
-            // shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
         end
     end
 end
@@ -307,8 +305,8 @@ begin
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 1;      // clock polarity
-    CPHA       <= 1;      // clock phase
+    CPOL       <= 0;      // clock polarity
+    CPHA       <= 0;      // clock phase
     LOOP       <= 1;
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;

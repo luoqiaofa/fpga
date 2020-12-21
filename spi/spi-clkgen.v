@@ -39,6 +39,12 @@ begin
     end
 end
 
+always @(negedge last_clk or negedge rst_n)
+begin
+    clk_out <= CPOL;
+end
+
+
 // clock out
 always @(posedge sysclk or negedge rst_n)
 begin
