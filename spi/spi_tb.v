@@ -1,7 +1,7 @@
 `include "timescale.v"
 
 module spi_tb;
-    localparam N = 8;
+    localparam C_DIVIDER_WIDTH = 8;
     localparam CHAR_NBITS = 8;
     reg sysclk;            // system clock input
     reg rst_n;             // module reset
@@ -11,7 +11,7 @@ module spi_tb;
     reg CPHA;              // clock phase
     reg LOOP;              // loop mode test
     reg last_clk;          // last clock 
-    reg [N-1:0] divider_i; // divider;
+    reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
     wire clk_out;          // clock output
     wire pos_edge;         // positive edge flag
     wire neg_edge;         // negtive edge flag
@@ -129,7 +129,7 @@ begin
     $dumpvars(0, spi_tb);    //tb模块名称
 end
 
-spi_clk_gen # (.N(8)) clk_gen (
+spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen (
     .sysclk(sysclk),       // system clock input
     .rst_n(rst_n),         // module reset
     .enable(enable),       // module enable
