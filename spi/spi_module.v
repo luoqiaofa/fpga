@@ -199,13 +199,20 @@ begin
         case (spi_mode)
             2'b00:
             begin
-                if (S_LOOP)
-                begin
+                if (S_LOOP) begin
                     shift_rx[shift_cnt] <= dout;
+                end
+                else begin
+                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
                 if (0 == shift_cnt)
                 begin
-                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    if (S_LOOP) begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    end
+                    else begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
+                    end
                 end
             end
             2'b01:
@@ -227,14 +234,21 @@ begin
             end
             2'b11:
             begin
-                if (S_LOOP)
-                begin
+                if (S_LOOP) begin
                     shift_rx[shift_cnt] <= dout;
+                end
+                else begin
+                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
                 if (0 == shift_cnt)
                 begin
                     done <= 1;
+                    if (S_LOOP) begin
                     data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    end
+                    else begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
+                    end
                 end
             end
         endcase
@@ -257,25 +271,39 @@ begin
             end
             2'b01:
             begin
-                if (S_LOOP)
-                begin
+                if (S_LOOP) begin
                     shift_rx[shift_cnt] <= dout;
+                end
+                else begin
+                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
                 if (0 == shift_cnt)
                 begin
-                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    if (S_LOOP) begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    end
+                    else begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
+                    end
                 end
             end
             2'b10:
             begin
-                if (S_LOOP)
-                begin
+                if (S_LOOP) begin
                     shift_rx[shift_cnt] <= dout;
+                end
+                else begin
+                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
                 if (0 == shift_cnt)
                 begin
                     done <= 1;
-                    data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    if (S_LOOP) begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
+                    end
+                    else begin
+                        data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
+                    end
                 end
             end
             2'b11:
@@ -285,9 +313,11 @@ begin
                 begin
                     shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
                 end
-                if (S_LOOP)
-                begin
+                if (S_LOOP) begin
                     shift_rx[shift_cnt] <= dout;
+                end
+                else begin
+                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
             end
         endcase

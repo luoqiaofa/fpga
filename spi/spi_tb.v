@@ -65,6 +65,7 @@ always @(posedge s_done)
 begin
     go <= 0;
     data_tx <= data_tx + 1;
+    data_in <= rdata[7:0];
 end
 
 // 100 MHz axi clock input
@@ -102,25 +103,9 @@ begin
     #30
     go       <= 1;        // start transmit
     #(1000 * CHAR_NBITS / 8)
-    data_in  <= {CHAR_NBITS{1'b1}};
-    case (spi_mode)
-        2'b00:
-        begin
-            shift_cnt <= CHAR_NBITS - 1;
-        end
-        2'b01:
-        begin
-            shift_cnt <= CHAR_NBITS - 1;
-        end
-        2'b10:
-        begin
-            shift_cnt <= CHAR_NBITS;
-        end
-        2'b11:
-        begin
-            shift_cnt <= CHAR_NBITS;
-        end
-    endcase
+    go       <= 1;        // start transmit
+    #(1000 * CHAR_NBITS / 8)
+    // #50
     go       <= 1;        // start transmit
     #(1000 * CHAR_NBITS / 8)
     // #50
