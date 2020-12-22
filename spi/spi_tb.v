@@ -3,6 +3,7 @@
 module spi_tb;
     localparam C_DIVIDER_WIDTH = 8;
     localparam CHAR_NBITS = 8;
+    localparam CHAR_LEN_MAX = 16;
     reg sysclk;            // system clock input
     reg rst_n;             // module reset
     reg enable;            // module enable
@@ -33,6 +34,99 @@ pullup pullup_miso (miso);
 assign spi_mode = {CPHA, CPOL};
 assign pos_edge_rx = clk_out;
 assign neg_edge_rx = clk_out;
+
+wire s_done;
+wire  [CHAR_LEN_MAX -1:0] rdata;
+reg   [CHAR_LEN_MAX -1:0] data_tx;
+spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+inst_spi_trx_ch
+(
+    .S_SYSCLK(sysclk),  // platform clock
+    .S_RESETN(rst_n),  // reset
+    .S_ENABLE(enable),  // enable
+    .S_CPOL(CPOL),    // clock polary
+    .S_CPHA(CPHA),    // clock phase, the first edge or second
+    .S_TX_ONLY(1'b0), // transmit only
+    .S_LOOP(LOOP),    // internal loopback mode
+    .S_REV(1'b0),     // msb first or lsb first
+    .S_CHAR_LEN(4'h7),// characters in bits length
+    .S_NDIVIDER(divider_i),// clock divider
+    .S_SPI_SCK(clk_out),
+    .S_SPI_MISO(miso),
+    .S_SPI_MOSI(mosi),
+    .S_CHAR_GO(go),
+    .S_CHAR_DONE(s_done),
+    .S_WCHAR(data_tx),   // output character
+    .S_RCHAR(rdata)    // input character
+);
+
+always @(posedge s_done)
+begin
+    go <= 0;
+    data_tx <= data_tx + 1;
+end
+
+// 100 MHz axi clock input
+always @(sysclk)
+    #5 sysclk <= !sysclk;
+
+initial
+begin            
+    $dumpfile("wave.vcd");        //生成的vcd文件名称
+    $dumpvars(0, spi_tb);    //tb模块名称
+end
+
+initial
+begin            
+    data_tx    <= 16'h55aa;
+    data_in    <= 8'hff;
+    data_out   <= 8'h5a;
+    bit_cnt    <= 5'h7;
+    sysclk     <= 0;      // system clock input
+    rst_n      <= 0;      // module reset
+    enable     <= 0;      // module enable
+    go         <= 0;      // start transmit
+    CPOL       <= 0;      // clock polarity
+    CPHA       <= 0;      // clock phase
+    LOOP       <= 1;
+    last_clk   <= 0;      // last clock 
+    divider_i  <= 0;      // divider;
+    #100
+    rst_n    <= 1;        // module reset
+    #10
+    divider_i  <= 8'h04;  // divider; sys clk % 10 prescaler
+    #30
+    enable       <= 1;    // module enable
+    #30
+    go       <= 1;        // start transmit
+    #(1000 * CHAR_NBITS / 8)
+    data_in  <= {CHAR_NBITS{1'b1}};
+    case (spi_mode)
+        2'b00:
+        begin
+            shift_cnt <= CHAR_NBITS - 1;
+        end
+        2'b01:
+        begin
+            shift_cnt <= CHAR_NBITS - 1;
+        end
+        2'b10:
+        begin
+            shift_cnt <= CHAR_NBITS;
+        end
+        2'b11:
+        begin
+            shift_cnt <= CHAR_NBITS;
+        end
+    endcase
+    go       <= 1;        // start transmit
+    #(1000 * CHAR_NBITS / 8)
+    // #50
+    enable       <= 0;   // module enable
+
+    #1000
+    $stop;
+end
 
 // always @(negedge neg_edge or negedge rst_n)
 // begin
@@ -123,57 +217,6 @@ assign neg_edge_rx = clk_out;
 //         endcase
 //     end
 // end
-
-initial
-begin            
-    $dumpfile("wave.vcd");        //生成的vcd文件名称
-    $dumpvars(0, spi_tb);    //tb模块名称
-end
-
-//spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen (
-//    .sysclk(sysclk),       // system clock input
-//    .rst_n(rst_n),         // module reset
-//    .enable(enable),       // module enable
-//    .go(go),               // start transmit
-//    .CPOL(CPOL),           // clock polarity
-//    .last_clk(last_clk),   // last clock 
-//    .divider_i(divider_i), // divider;
-//    .clk_out(clk_out),     // clock output
-//    .pos_edge(pos_edge),   // positive edge flag
-//    .neg_edge(neg_edge)    // negtive edge flag
-//);
-wire s_done;
-wire  [15:0] rdata;
-spi_trx_one_char #(.CHAR_LEN_MAX(16))
-inst_spi_trx_ch
-(
-    .S_SYSCLK(sysclk),  // platform clock
-    .S_RESETN(rst_n),  // reset
-    .S_ENABLE(enable),  // enable
-    .S_CPOL(CPOL),    // clock polary
-    .S_CPHA(CPHA),    // clock phase, the first edge or second
-    .S_TX_ONLY(1'b0), // transmit only
-    .S_LOOP(LOOP),    // internal loopback mode
-    .S_REV(1'b0),     // msb first or lsb first
-    .S_CHAR_LEN(4'h7),// characters in bits length
-    .S_NDIVIDER(divider_i),// clock divider
-    .S_SPI_SCK(clk_out),
-    .S_SPI_MISO(miso),
-    .S_SPI_MOSI(mosi),
-    .S_CHAR_GO(go),
-    .S_CHAR_DONE(s_done),
-    .S_WCHAR(16'h55aa),   // output character
-    .S_RCHAR(rdata)    // input character
-);
-
-always @(posedge s_done)
-begin
-    go <= 0;
-end
-
-// 100 MHz axi clock input
-always @(sysclk)
-    #5 sysclk <= !sysclk;
 
 // always @(posedge pos_edge_rx or negedge rst_n)
 // begin
@@ -324,58 +367,18 @@ always @(sysclk)
 //         end
 //     end
 // end
-
-initial
-begin            
-    data_in    <= 8'hff;
-    data_out   <= 8'h5a;
-    bit_cnt    <= 5'h7;
-    sysclk     <= 0;      // system clock input
-    rst_n      <= 0;      // module reset
-    enable     <= 0;      // module enable
-    go         <= 0;      // start transmit
-    CPOL       <= 0;      // clock polarity
-    CPHA       <= 1;      // clock phase
-    LOOP       <= 1;
-    last_clk   <= 0;      // last clock 
-    divider_i  <= 0;      // divider;
-    #100
-    rst_n    <= 1;        // module reset
-    #10
-    divider_i  <= 8'h04;  // divider; sys clk % 10 prescaler
-    #30
-    enable       <= 1;    // module enable
-    #30
-    go       <= 1;        // start transmit
-    #(1000 * CHAR_NBITS / 8)
-    data_in  <= {CHAR_NBITS{1'b1}};
-    case (spi_mode)
-        2'b00:
-        begin
-            shift_cnt <= CHAR_NBITS - 1;
-        end
-        2'b01:
-        begin
-            shift_cnt <= CHAR_NBITS - 1;
-        end
-        2'b10:
-        begin
-            shift_cnt <= CHAR_NBITS;
-        end
-        2'b11:
-        begin
-            shift_cnt <= CHAR_NBITS;
-        end
-    endcase
-    go       <= 1;        // start transmit
-    #(1000 * CHAR_NBITS / 8)
-    // #50
-    enable       <= 0;   // module enable
-
-    #1000
-    $stop;
-end
-
-
+//
+// spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen (
+//    .sysclk(sysclk),       // system clock input
+//    .rst_n(rst_n),         // module reset
+//    .enable(enable),       // module enable
+//    .go(go),               // start transmit
+//    .CPOL(CPOL),           // clock polarity
+//    .last_clk(last_clk),   // last clock 
+//    .divider_i(divider_i), // divider;
+//    .clk_out(clk_out),     // clock output
+//    .pos_edge(pos_edge),   // positive edge flag
+//    .neg_edge(neg_edge)    // negtive edge flag
+//);
 endmodule
 

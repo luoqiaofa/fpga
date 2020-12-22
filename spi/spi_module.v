@@ -1,5 +1,5 @@
 module spi_trx_one_char
-#(parameter integer CHAR_LEN_MAX = 16)
+#(parameter integer CHAR_NBITS = 16)
 (
     input  wire        S_SYSCLK,  // platform clock
     input  wire        S_RESETN,  // reset
@@ -16,11 +16,10 @@ module spi_trx_one_char
     output wire        S_SPI_MOSI,
     input  wire        S_CHAR_GO,
     output wire        S_CHAR_DONE,
-    input  wire [15:0] S_WCHAR,   // output character
-    output wire [15:0] S_RCHAR    // input character
+    input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character
+    output wire [CHAR_NBITS-1:0] S_RCHAR    // input character
 );
 `include "reg-bit-def.v"
-localparam CHAR_NBITS = CHAR_LEN_MAX;
 
 reg go;        // start transmit
 reg done;
@@ -28,7 +27,7 @@ reg last_clk;  // last clock
 reg dout;
 reg [CHAR_NBITS - 1: 0] data_in;
 reg [4:0] bit_cnt;
-reg [4: 0] shift_cnt;
+reg [4:0] shift_cnt;
 reg [CHAR_NBITS:0] shift_tx;
 reg [CHAR_NBITS:0] shift_rx;
 wire [1:0] spi_mode;
@@ -57,6 +56,11 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen_char (
     .neg_edge(neg_edge)    // negtive edge flag
 );
 
+always @(posedge S_CHAR_GO)
+begin
+    shift_tx <= {1'b0, {CHAR_NBITS{S_WCHAR}}};
+end
+
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
@@ -74,6 +78,7 @@ begin
     else
     begin
         done <= 0;
+        data_in  <= data_in;
         if (S_ENABLE)
         begin
             // last_clk <= last_clk;
@@ -83,22 +88,23 @@ begin
             shift_cnt <= shift_cnt;
             if (!go)
             begin
+                bit_cnt   <= {1'b0, S_CHAR_LEN};
                 case (spi_mode)
                     2'b00:
                     begin
-                        shift_cnt <= CHAR_NBITS - 1;
+                        shift_cnt <= {1'b0, S_CHAR_LEN};
                     end
                     2'b01:
                     begin
-                        shift_cnt <= CHAR_NBITS - 1;
+                        shift_cnt <= {1'b0, S_CHAR_LEN};
                     end
                     2'b10:
                     begin
-                        shift_cnt <= CHAR_NBITS;
+                        shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
                     end
                     2'b11:
                     begin
-                        shift_cnt <= CHAR_NBITS;
+                        shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
                     end
                 endcase // case (spi_mode)
             end // end of (0 == S_ENABLE)
@@ -123,7 +129,7 @@ begin
             if (bit_cnt == 5'h0) 
             begin
                 last_clk <= 1;
-                bit_cnt <= (CHAR_NBITS - 1);
+                bit_cnt <= {1'b0, S_CHAR_LEN};
             end
         end
         2'b10:
@@ -140,7 +146,7 @@ begin
             if (bit_cnt == 5'h0) 
             begin
                 last_clk <= 1;
-                bit_cnt <= (CHAR_NBITS - 1);
+                bit_cnt <= {1'b0, S_CHAR_LEN};
             end
         end
     endcase
@@ -155,7 +161,7 @@ begin
             if (bit_cnt == 5'h0) 
             begin
                 last_clk <= 1;
-                bit_cnt <= (CHAR_NBITS - 1);
+                bit_cnt <= {1'b0, S_CHAR_LEN};
             end
         end
         2'b01:
@@ -172,7 +178,7 @@ begin
             if (bit_cnt == 5'h0) 
             begin
                 last_clk <= 1;
-                bit_cnt <= (CHAR_NBITS - 1);
+                bit_cnt <= {1'b0, S_CHAR_LEN};
             end
         end
         2'b11:
@@ -208,7 +214,7 @@ begin
                 if (0 == shift_cnt)
                 begin
                     done <= 1;
-                    shift_cnt <= CHAR_NBITS - 1;
+                    shift_cnt <= {1'b0, S_CHAR_LEN};
                 end
             end
             2'b10:
@@ -216,7 +222,7 @@ begin
                 shift_cnt <= shift_cnt - 1;
                 if (0 == shift_cnt)
                 begin
-                    shift_cnt <= CHAR_NBITS;
+                    shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
                 end
             end
             2'b11:
@@ -246,7 +252,7 @@ begin
                 if (0 == shift_cnt)
                 begin
                     done <= 1;
-                    shift_cnt <= CHAR_NBITS - 1;
+                    shift_cnt <= {1'b0, S_CHAR_LEN};
                 end
             end
             2'b01:
@@ -277,7 +283,7 @@ begin
                 shift_cnt <= shift_cnt - 1;
                 if (0 == shift_cnt)
                 begin
-                    shift_cnt <= CHAR_NBITS;
+                    shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
                 end
                 if (S_LOOP)
                 begin
