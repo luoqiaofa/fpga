@@ -1,4 +1,4 @@
-iverilog -o wave spi-clkgen.v spi_tb.v timescale.v spi_module.v
+iverilog -o wave spi-clkgen.v spi_tb.v timescale.v spi_module.v spi_slave_model.v
 # reg-bit-def.v
 # spi_module.v
 [ $? -eq 0 ] || exit 1

@@ -91,7 +91,7 @@ begin
     go         <= 0;      // start transmit
     CPOL       <= 0;      // clock polarity
     CPHA       <= 0;      // clock phase
-    LOOP       <= 1;
+    LOOP       <= 0;
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100
@@ -114,6 +114,24 @@ begin
     #1000
     $stop;
 end
+
+spi_slave_model #(.CHAR_NBITS(16))
+inst_slave
+(
+    .S_SYSCLK(sysclk),  // platform clock
+    .S_RESETN(rst_n),  // reset
+    .S_ENABLE(enable),  // enable
+    .S_CPOL(CPOL),    // clock polary
+    .S_CPHA(CPHA),    // clock phase, the first edge or second
+    .S_TX_ONLY(1'b0), // transmit only
+    .S_REV(1'b0),     // msb first or lsb first
+    .S_CHAR_LEN(char_len),// characters in bits length
+    .S_SPI_SCK(clk_out),
+    .S_SPI_MISO(miso),
+    .S_SPI_MOSI(mosi),
+    .S_CHAR_GO(go),
+    .S_CHAR_DONE(s_done)
+);
 
 // always @(negedge neg_edge or negedge rst_n)
 // begin
