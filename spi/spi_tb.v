@@ -28,6 +28,7 @@ module spi_tb;
     wire miso;
     wire pos_edge_rx;         // positive edge flag
     wire neg_edge_rx;         // positive edge flag
+    reg [3:0] char_len;
 
 pullup pullup_miso (miso);
 // assign mosi = dout;
@@ -49,7 +50,7 @@ inst_spi_trx_ch
     .S_TX_ONLY(1'b0), // transmit only
     .S_LOOP(LOOP),    // internal loopback mode
     .S_REV(1'b0),     // msb first or lsb first
-    .S_CHAR_LEN(4'h7),// characters in bits length
+    .S_CHAR_LEN(char_len),// characters in bits length
     .S_NDIVIDER(divider_i),// clock divider
     .S_SPI_SCK(clk_out),
     .S_SPI_MISO(miso),
@@ -78,6 +79,7 @@ end
 
 initial
 begin            
+    char_len   <= 7;
     data_tx    <= 16'h55aa;
     data_in    <= 8'hff;
     data_out   <= 8'h5a;

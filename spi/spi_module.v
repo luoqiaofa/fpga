@@ -56,7 +56,7 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen_char (
     .neg_edge(neg_edge)    // negtive edge flag
 );
 
-always @(posedge S_CHAR_GO)
+always @(posedge go)
 begin
     shift_tx <= {1'b0, {CHAR_NBITS{S_WCHAR}}};
 end
