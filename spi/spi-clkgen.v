@@ -2,7 +2,7 @@
 
 
 module spi_clk_gen #
-( parameter N = 8)
+(parameter integer C_DIVIDER_WIDTH = 8)
 (
     input  sysclk,         // system clock input
     input  rst_n,           // module reset
@@ -10,7 +10,7 @@ module spi_clk_gen #
     input  go,              // start transmit
     input  CPOL,            // clock polarity
     input  last_clk,        // last clock 
-    input  [N-1:0] divider_i, // divider;
+    input  [C_DIVIDER_WIDTH-1:0] divider_i, // divider;
     output reg clk_out,         // clock output
     output reg pos_edge,    // positive edge flag
     output reg neg_edge     // negtive edge flag
@@ -18,24 +18,24 @@ module spi_clk_gen #
 
 wire cnt_zero;
 wire cnt_one;
-reg [N-1:0] cnt;
+reg [C_DIVIDER_WIDTH-1:0] cnt;
 reg in_process;
 
-assign cnt_zero = (cnt == {N{1'b0}});
-assign cnt_one  = (cnt == {{N-1{1'b0}}, 1'b1});
+assign cnt_zero = (cnt == {C_DIVIDER_WIDTH{1'b0}});
+assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 
 always @(posedge sysclk or negedge rst_n)
 begin
     if (!rst_n)
     begin
-        cnt   <= {N{1'b1}};
+        cnt   <= {C_DIVIDER_WIDTH{1'b1}};
     end
     else
     begin
         if (!enable || cnt_zero || !go)
             cnt   <= divider_i;
         else
-            cnt <= cnt - {{N-1{1'b0}}, 1'b1};
+            cnt <= cnt - {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1};
     end
 end
 
