@@ -21,6 +21,7 @@ module spi_slave_model
 reg [4:0] shift_cnt;
 reg [CHAR_NBITS:0] data_miso;    // input character
 reg [CHAR_NBITS:0] data_mosi;    // input character
+reg [4:0] cnt_max;
 
 reg miso;
 wire sck_neg_edge;
@@ -36,6 +37,7 @@ begin
         data_mosi <= 16'hffff;
         data_miso <= 16'haa50;
         shift_cnt <= CHAR_NBITS - 1;
+        cnt_max <= CHAR_NBITS - 1;
     end
     else begin
         shift_cnt <= shift_cnt;
@@ -47,24 +49,51 @@ end
 always @(posedge S_CHAR_GO)
 begin
     data_miso <= data_miso + 1;
-    case (spi_mode)
-        2'b00:
-        begin
-            shift_cnt <= {1'b0, S_CHAR_LEN};
-        end
-        2'b01:
-        begin
-            shift_cnt <= {1'b0, S_CHAR_LEN};
-        end
-        2'b10:
-        begin
-            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-        end
-        2'b11:
-        begin
-            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-        end
-    endcase
+    if (S_REV) begin
+        case (spi_mode)
+            2'b00:
+            begin
+                shift_cnt <= {1'b0, S_CHAR_LEN};
+            end
+            2'b01:
+            begin
+                shift_cnt <= {1'b0, S_CHAR_LEN};
+            end
+            2'b10:
+            begin
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
+            2'b11:
+            begin
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
+        endcase
+    end
+    else begin
+        case (spi_mode)
+            2'b00:
+            begin
+                shift_cnt <= 0;
+                cnt_max = {1'b0, S_CHAR_LEN};
+            end
+            2'b01:
+            begin
+                cnt_max = {1'b0, S_CHAR_LEN};
+                shift_cnt <= 0;
+                cnt_max = {1'b0, S_CHAR_LEN};
+            end
+            2'b10:
+            begin
+                cnt_max = {1'b0, S_CHAR_LEN} + 1;
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
+            2'b11:
+            begin
+                cnt_max = {1'b0, S_CHAR_LEN} + 1;
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
+        endcase
+    end
 end
 
 always @(posedge S_SPI_SCK)
@@ -76,16 +105,35 @@ begin
         end
         2'b01:
         begin
-            shift_cnt <= shift_cnt - 1;
-            if (0 == shift_cnt) begin
-                shift_cnt <= {1'b0, S_CHAR_LEN};
+            cnt_max <= cnt_max;
+            if (S_REV) begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt) begin
+                    shift_cnt <= {1'b0, S_CHAR_LEN};
+                end
+            end
+            else begin
+                shift_cnt <= shift_cnt + 1;
+                if (cnt_max == shift_cnt) begin
+                    shift_cnt <= 0;
+                end
             end
         end
         2'b10:
         begin
-            shift_cnt <= shift_cnt - 1;
-            if (0 == shift_cnt) begin
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            if (S_REV) begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt) begin
+                    shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+                end
+            end
+            else begin
+                if (cnt_max == shift_cnt) begin
+                    shift_cnt <= 0;
+                end
+                else begin
+                    shift_cnt <= shift_cnt + 1;
+                end
             end
         end
         2'b11:
@@ -100,9 +148,17 @@ begin
     case (spi_mode)
         2'b00:
         begin
-            shift_cnt <= shift_cnt - 1;
-            if (0 == shift_cnt) begin
-                shift_cnt <= {1'b0, S_CHAR_LEN};
+            if (S_REV) begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt) begin
+                    shift_cnt <= {1'b0, S_CHAR_LEN};
+                end
+            end
+            else begin
+                shift_cnt <= shift_cnt + 1;
+                if (cnt_max == shift_cnt) begin
+                    shift_cnt <= 0;
+                end
             end
         end
         2'b01:
@@ -115,9 +171,19 @@ begin
         end
         2'b11:
         begin
-            shift_cnt <= shift_cnt - 1;
-            if (0 == shift_cnt) begin
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            if (S_REV) begin
+                shift_cnt <= shift_cnt - 1;
+                if (0 == shift_cnt) begin
+                    shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+                end
+            end
+            else begin
+                if (cnt_max == shift_cnt) begin
+                    shift_cnt <= 0;
+                end 
+                else begin
+                    shift_cnt <= shift_cnt + 1;
+                end
             end
         end
     endcase // case (spi_mode)

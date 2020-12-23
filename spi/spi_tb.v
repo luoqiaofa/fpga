@@ -11,6 +11,7 @@ module spi_tb;
     reg CPOL;              // clock polarity
     reg CPHA;              // clock phase
     reg LOOP;              // loop mode test
+    reg MSB_FIRST;
     reg last_clk;          // last clock 
     reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
     wire clk_out;          // clock output
@@ -49,7 +50,7 @@ inst_spi_trx_ch
     .S_CPHA(CPHA),    // clock phase, the first edge or second
     .S_TX_ONLY(1'b0), // transmit only
     .S_LOOP(LOOP),    // internal loopback mode
-    .S_REV(1'b0),     // msb first or lsb first
+    .S_REV(MSB_FIRST),     // msb first or lsb first
     .S_CHAR_LEN(char_len),// characters in bits length
     .S_NDIVIDER(divider_i),// clock divider
     .S_SPI_SCK(clk_out),
@@ -92,6 +93,7 @@ begin
     CPOL       <= 0;      // clock polarity
     CPHA       <= 0;      // clock phase
     LOOP       <= 0;
+    MSB_FIRST  <= 0;
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100
@@ -124,7 +126,7 @@ inst_slave
     .S_CPOL(CPOL),    // clock polary
     .S_CPHA(CPHA),    // clock phase, the first edge or second
     .S_TX_ONLY(1'b0), // transmit only
-    .S_REV(1'b0),     // msb first or lsb first
+    .S_REV(MSB_FIRST),     // msb first or lsb first
     .S_CHAR_LEN(char_len),// characters in bits length
     .S_SPI_SCK(clk_out),
     .S_SPI_MISO(miso),
