@@ -90,10 +90,10 @@ begin
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 0;      // clock polarity
-    CPHA       <= 0;      // clock phase
+    CPOL       <= 1;      // clock polarity
+    CPHA       <= 1;      // clock phase
     LOOP       <= 0;
-    MSB_FIRST  <= 0;
+    MSB_FIRST  <= 1;
     last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
     #100

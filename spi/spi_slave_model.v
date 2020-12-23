@@ -35,11 +35,12 @@ begin
     if (!S_RESETN) begin
         miso <= 1'b1;
         data_mosi <= 16'hffff;
-        data_miso <= 16'haa50;
+        data_miso <= 16'haa0a;
         shift_cnt <= CHAR_NBITS - 1;
         cnt_max <= CHAR_NBITS - 1;
     end
     else begin
+        cnt_max <= cnt_max;
         shift_cnt <= shift_cnt;
         miso <= data_miso[shift_cnt];
         data_mosi <= data_mosi;
@@ -105,7 +106,6 @@ begin
         end
         2'b01:
         begin
-            cnt_max <= cnt_max;
             if (S_REV) begin
                 shift_cnt <= shift_cnt - 1;
                 if (0 == shift_cnt) begin
