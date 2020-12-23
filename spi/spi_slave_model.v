@@ -19,8 +19,8 @@ module spi_slave_model
 );
 
 reg [4:0] shift_cnt;
-reg [CHAR_NBITS-1:0] data_miso;    // input character
-reg [CHAR_NBITS-1:0] data_mosi;    // input character
+reg [CHAR_NBITS:0] data_miso;    // input character
+reg [CHAR_NBITS:0] data_mosi;    // input character
 
 reg miso;
 wire sck_neg_edge;
@@ -33,19 +33,38 @@ always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN) begin
         miso <= 1'b1;
+        data_mosi <= 16'hffff;
         data_miso <= 16'haa50;
         shift_cnt <= CHAR_NBITS - 1;
     end
     else begin
         shift_cnt <= shift_cnt;
         miso <= data_miso[shift_cnt];
+        data_mosi <= data_mosi;
     end
 end
 
 always @(posedge S_CHAR_GO)
 begin
     data_miso <= data_miso + 1;
-    shift_cnt <= {1'b0, S_CHAR_LEN};
+    case (spi_mode)
+        2'b00:
+        begin
+            shift_cnt <= {1'b0, S_CHAR_LEN};
+        end
+        2'b01:
+        begin
+            shift_cnt <= {1'b0, S_CHAR_LEN};
+        end
+        2'b10:
+        begin
+            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+        end
+        2'b11:
+        begin
+            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+        end
+    endcase
 end
 
 always @(posedge S_SPI_SCK)
@@ -53,16 +72,25 @@ begin
     case (spi_mode)
         2'b00:
         begin
-            miso <= data_miso[shift_cnt];
+            data_mosi[shift_cnt] <= S_SPI_MOSI;
         end
         2'b01:
         begin
+            shift_cnt <= shift_cnt - 1;
+            if (0 == shift_cnt) begin
+                shift_cnt <= {1'b0, S_CHAR_LEN};
+            end
         end
         2'b10:
         begin
+            shift_cnt <= shift_cnt - 1;
+            if (0 == shift_cnt) begin
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
         end
         2'b11:
         begin
+            data_mosi[shift_cnt] <= S_SPI_MOSI;
         end
     endcase // case (spi_mode)
 end
@@ -79,12 +107,18 @@ begin
         end
         2'b01:
         begin
+            data_mosi[shift_cnt] <= S_SPI_MOSI;
         end
         2'b10:
         begin
+            data_mosi[shift_cnt] <= S_SPI_MOSI;
         end
         2'b11:
         begin
+            shift_cnt <= shift_cnt - 1;
+            if (0 == shift_cnt) begin
+                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+            end
         end
     endcase // case (spi_mode)
 end
