@@ -11,13 +11,13 @@ module spi_trx_one_char
     input  wire        S_REV,     // msb first or lsb first
     input  wire [3:0]  S_CHAR_LEN,// characters in bits length
     input  wire [7:0]  S_NDIVIDER,// clock divider
-    output wire        S_SPI_SCK,
-    input  wire        S_SPI_MISO,
-    output wire        S_SPI_MOSI,
     input  wire        S_CHAR_GO,
     output wire        S_CHAR_DONE,
     input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character
-    output wire [CHAR_NBITS-1:0] S_RCHAR    // input character
+    output wire [CHAR_NBITS-1:0] S_RCHAR,   // input character
+    output wire        S_SPI_SCK,
+    input  wire        S_SPI_MISO,
+    output wire        S_SPI_MOSI
 );
 `include "reg-bit-def.v"
 

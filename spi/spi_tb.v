@@ -12,62 +12,21 @@ module spi_tb;
     reg CPHA;              // clock phase
     reg LOOP;              // loop mode test
     reg MSB_FIRST;
-    reg last_clk;          // last clock 
     reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
-    wire clk_out;          // clock output
-    wire pos_edge;         // positive edge flag
-    wire neg_edge;         // negtive edge flag
-    reg [4:0] bit_cnt;
-    wire [1:0] spi_mode;
-    reg [CHAR_NBITS - 1: 0] data_out;
     reg [CHAR_NBITS - 1: 0] data_in;
-    reg [4: 0] shift_cnt;
-    reg [CHAR_NBITS:0] shift_tx;
-    reg [CHAR_NBITS:0] shift_rx;
-    reg dout;
-    wire mosi;
-    wire miso;
-    wire pos_edge_rx;         // positive edge flag
-    wire neg_edge_rx;         // positive edge flag
     reg [3:0] char_len;
 
-pullup pullup_miso (miso);
-// assign mosi = dout;
-assign spi_mode = {CPHA, CPOL};
-assign pos_edge_rx = clk_out;
-assign neg_edge_rx = clk_out;
+
+wire SPI_SCK;
+wire SPI_MISO;
+wire SPI_MOSI;
+wire [3:0] SPI_CS_B;
+
+pullup pullup_miso (SPI_MISO);
 
 wire s_done;
-wire  [CHAR_LEN_MAX -1:0] rdata;
+wire  [CHAR_LEN_MAX -1:0] data_rx;
 reg   [CHAR_LEN_MAX -1:0] data_tx;
-spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
-inst_spi_trx_ch
-(
-    .S_SYSCLK(sysclk),  // platform clock
-    .S_RESETN(rst_n),  // reset
-    .S_ENABLE(enable),  // enable
-    .S_CPOL(CPOL),    // clock polary
-    .S_CPHA(CPHA),    // clock phase, the first edge or second
-    .S_TX_ONLY(1'b0), // transmit only
-    .S_LOOP(LOOP),    // internal loopback mode
-    .S_REV(MSB_FIRST),     // msb first or lsb first
-    .S_CHAR_LEN(char_len),// characters in bits length
-    .S_NDIVIDER(divider_i),// clock divider
-    .S_SPI_SCK(clk_out),
-    .S_SPI_MISO(miso),
-    .S_SPI_MOSI(mosi),
-    .S_CHAR_GO(go),
-    .S_CHAR_DONE(s_done),
-    .S_WCHAR(data_tx),   // output character
-    .S_RCHAR(rdata)    // input character
-);
-
-always @(posedge s_done)
-begin
-    go <= 0;
-    data_tx <= data_tx + 1;
-    data_in <= rdata[7:0];
-end
 
 // 100 MHz axi clock input
 always @(sysclk)
@@ -81,11 +40,9 @@ end
 
 initial
 begin            
-    char_len   <= 7;
+    char_len   <= 4'h7;
     data_tx    <= 16'h55aa;
     data_in    <= 8'hff;
-    data_out   <= 8'h5a;
-    bit_cnt    <= 5'h7;
     sysclk     <= 0;      // system clock input
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
@@ -94,9 +51,8 @@ begin
     CPHA       <= 0;      // clock phase
     LOOP       <= 0;
     MSB_FIRST  <= 1;
-    last_clk   <= 0;      // last clock 
     divider_i  <= 0;      // divider;
-    #100
+    #50
     rst_n    <= 1;        // module reset
     #10
     divider_i  <= 8'h04;  // divider; sys clk % 10 prescaler
@@ -117,6 +73,191 @@ begin
     $stop;
 end
 
+reg [REG_WIDTH-1: 0] SPMODE;
+reg [REG_WIDTH-1: 0] SPIE;
+reg [REG_WIDTH-1: 0] SPIM;
+reg [REG_WIDTH-1: 0] SPCOM;
+reg [REG_WIDTH-1: 0] SPITF;
+reg [REG_WIDTH-1: 0] SPIRF;
+reg [REG_WIDTH-1: 0] SPIREV1;
+reg [REG_WIDTH-1: 0] SPIREV2;
+reg [REG_WIDTH-1: 0] SPMODE0;
+reg [REG_WIDTH-1: 0] SPMODE1;
+reg [REG_WIDTH-1: 0] SPMODE2;
+reg [REG_WIDTH-1: 0] SPMODE3;
+
+reg S_WVALID;
+reg S_AWVALID;
+reg S_ARVALID;
+reg S_RREADY;
+reg [3:0] S_WSTRB;
+reg [7:0] S_ARADDR;
+reg [7:0] S_AWADDR;
+reg [31:0] S_WDATA;
+
+wire S_ARREADY;
+wire [31 : 0] S_RDATA;
+wire S_RVALID;
+wire [1 : 0] S_RRESP;
+wire S_WREADY;
+wire S_AWREADY;
+
+wire S_SPI_SCK;
+wire S_SPI_MISO;
+wire S_SPI_MOSI;
+wire [3:0 ] S_SPI_CS_B;
+
+reg S_BREADY;
+wire S_BVALID;
+
+`include "reg-bit-def.v"
+
+initial
+begin
+    SPMODE  <= 32'h0000_100F;
+    SPIE    <= 32'h0020_0000;
+    SPIM    <= 32'h0000_0000;
+    SPCOM   <= 32'h0000_0000;
+    SPITF   <= 32'h0000_0000;
+    SPIRF   <= 32'h0000_0000;
+    SPIREV1 <= 32'h0000_0000;
+    SPIREV2 <= 32'h0000_0000;
+    SPMODE0 <= 32'h0010_0000;
+    SPMODE1 <= 32'h0010_0000;
+    SPMODE2 <= 32'h0010_0000;
+    SPMODE3 <= 32'h0010_0000;
+
+    S_ARADDR <= 0;
+    S_AWADDR <= 0;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    S_ARVALID <= 0;
+    S_RREADY <= 0;
+    S_WSTRB <= 4'hf;
+    S_WDATA <= 0;
+    S_BREADY <= 0;
+    #50;
+    SPIE <= 32'hFFFF_FFFF;  
+    SPMODE <= 32'h8000_100F;
+    SPMODE0 <= 32'h2417_1108;
+    SPITF <= 32'h0300_4000;
+    SPCOM <= 32'h0003_0026;
+    #50;
+
+    S_AWADDR <= ADDR_SPIE;
+    S_WDATA <= SPIE;
+    #10;
+
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+
+    S_BREADY <= 1;
+
+    S_RREADY <= 1;
+    S_ARVALID <= 1;
+
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+
+    S_AWADDR <= ADDR_SPMODE;
+    S_WDATA <= SPMODE;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPMODE0;
+    S_WDATA <= 32'h2417_1108;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPITF;
+    S_WDATA <= SPITF;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPCOM;
+    S_WDATA <= SPCOM;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+end
+/*
+spi_intface # (.NCS(4)) 
+spi_master
+(
+    .S_SYSCLK(sysclk),  // platform clock
+    .S_RESETN(rst_n),  // reset
+    .S_AWADDR(S_AWADDR),
+    .S_WDATA(S_WDATA),
+    .S_WSTRB(S_WSTRB),
+    .S_WVALID(S_WVALID),
+    .S_AWVALID(S_AWVALID),
+    .S_WREADY(S_WREADY),
+    .S_AWREADY(S_AWREADY),
+    .S_ARVALID(S_ARVALID),
+    .S_ARREADY(S_ARREADY),
+    .S_ARADDR(S_ARADDR),
+    .S_RDATA(S_RDATA),
+    .S_RVALID(S_RVALID),
+    .S_RREADY(S_RREADY),
+    .S_BREADY(S_BREADY),
+    .S_BVALID(S_BVALID),
+    .S_RRESP(S_RRESP),
+    .S_SPI_SCK(SPI_SCK),
+    .S_SPI_MISO(SPI_MISO),
+    .S_SPI_MOSI(SPI_MOSI),
+    .S_SPI_CS_B(SPI_CS_B)
+);
+*/
+// /*
+spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+inst_spi_trx_ch
+(
+    .S_SYSCLK(sysclk),  // platform clock
+    .S_RESETN(rst_n),  // reset
+    .S_ENABLE(enable),  // enable
+    .S_CPOL(CPOL),    // clock polary
+    .S_CPHA(CPHA),    // clock phase, the first edge or second
+    .S_TX_ONLY(1'b0), // transmit only
+    .S_LOOP(LOOP),    // internal loopback mode
+    .S_REV(MSB_FIRST),     // msb first or lsb first
+    .S_CHAR_LEN(char_len),// characters in bits length
+    .S_NDIVIDER(divider_i),// clock divider
+    .S_SPI_SCK(SPI_SCK),
+    .S_SPI_MISO(SPI_MISO),
+    .S_SPI_MOSI(SPI_MOSI),
+    .S_CHAR_GO(go),
+    .S_CHAR_DONE(s_done),
+    .S_WCHAR(data_tx),   // output character
+    .S_RCHAR(data_rx)    // input character
+);
+
+always @(posedge s_done)
+begin
+    go <= 0;
+    data_tx <= data_tx + 1;
+    data_in <= data_rx[7:0];
+end
+
+// */
+
 spi_slave_model #(.CHAR_NBITS(16))
 inst_slave
 (
@@ -128,264 +269,12 @@ inst_slave
     .S_TX_ONLY(1'b0), // transmit only
     .S_REV(MSB_FIRST),     // msb first or lsb first
     .S_CHAR_LEN(char_len),// characters in bits length
-    .S_SPI_SCK(clk_out),
-    .S_SPI_MISO(miso),
-    .S_SPI_MOSI(mosi),
+    .S_SPI_SCK(SPI_SCK),
+    .S_SPI_MISO(SPI_MISO),
+    .S_SPI_MOSI(SPI_MOSI),
     .S_CHAR_GO(go),
     .S_CHAR_DONE(s_done)
 );
 
-// always @(negedge neg_edge or negedge rst_n)
-// begin
-//     if (!rst_n || !enable)
-//         ;
-//     else 
-//     begin
-//         case (spi_mode)
-//             2'b00:
-//             begin
-//                 if (last_clk & go) 
-//                 begin
-//                     go <= 0;
-//                     last_clk <= 0;
-//                 end
-//             end
-//             2'b01:
-//             begin
-//                 bit_cnt <= bit_cnt - 5'h1;
-//                 if (bit_cnt == 5'h0) 
-//                 begin
-//                     last_clk <= 1;
-//                     bit_cnt <= (CHAR_NBITS - 1);
-//                 end
-//             end
-//             2'b10:
-//             begin
-//                 if (last_clk & go) 
-//                 begin
-//                     go <= 0;
-//                     last_clk <= 0;
-//                 end
-//             end
-//             2'b11:
-//             begin
-//                 bit_cnt <= bit_cnt - 5'h1;
-//                 if (bit_cnt == 5'h0) 
-//                 begin
-//                     last_clk <= 1;
-//                     bit_cnt <= (CHAR_NBITS - 1);
-//                 end
-//             end
-//         endcase
-//     end
-// end
-// 
-// always @(negedge pos_edge or negedge rst_n)
-// begin
-//     if (!rst_n || !enable)
-//         bit_cnt <= (CHAR_NBITS - 1);
-//     else 
-//     begin
-//         case (spi_mode)
-//             2'b00:
-//             begin
-//                 bit_cnt <= bit_cnt - 5'h1;
-//                 if (bit_cnt == 5'h0) 
-//                 begin
-//                     last_clk <= 1;
-//                     bit_cnt <= (CHAR_NBITS - 1);
-//                 end
-//             end
-//             2'b01:
-//             begin
-//                 if (last_clk & go) 
-//                 begin
-//                     go <= 0;
-//                     last_clk <= 0;
-//                 end
-//             end
-//             2'b10:
-//             begin
-//                 bit_cnt <= bit_cnt - 5'h1;
-//                 if (bit_cnt == 5'h0) 
-//                 begin
-//                     last_clk <= 1;
-//                     bit_cnt <= (CHAR_NBITS - 1);
-//                 end
-//             end
-//             2'b11:
-//             begin
-//                 if (last_clk & go) 
-//                 begin
-//                     go <= 0;
-//                     last_clk <= 0;
-//                 end
-//             end
-//         endcase
-//     end
-// end
-
-// always @(posedge pos_edge_rx or negedge rst_n)
-// begin
-//     if (!rst_n || !enable)
-//     begin
-//         data_in  <= {CHAR_NBITS{1'b1}};
-//     end
-//     else
-//     begin
-//         if (enable)
-//         begin
-//         case (spi_mode)
-//             2'b00:
-//             begin
-//                 if (LOOP)
-//                 begin
-//                     shift_rx[shift_cnt] <= dout;
-//                 end
-//                 if (0 == shift_cnt)
-//                 begin
-//                     data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-//                 end
-//             end
-//             2'b01:
-//             begin
-//                 shift_cnt <= shift_cnt - 1;
-//                 if (0 == shift_cnt)
-//                 begin
-//                     shift_cnt <= CHAR_NBITS - 1;
-//                 end
-//             end
-//             2'b10:
-//             begin
-//                 shift_cnt <= shift_cnt - 1;
-//                 if (0 == shift_cnt)
-//                 begin
-//                     shift_cnt <= CHAR_NBITS;
-//                 end
-//             end
-//             2'b11:
-//             begin
-//                 if (LOOP)
-//                 begin
-//                     shift_rx[shift_cnt] <= dout;
-//                 end
-//                 if (0 == shift_cnt)
-//                 begin
-//                     data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-//                 end
-//             end
-//         endcase
-//         end
-//     end
-// end
-// 
-// always @(negedge neg_edge_rx or negedge rst_n)
-// begin
-//     if (!rst_n || !enable)
-//     begin
-//     end
-//     else
-//     begin
-//         if (enable)
-//         begin
-//         case (spi_mode)
-//             2'b00:
-//             begin
-//                 shift_cnt <= shift_cnt - 1;
-//                 if (0 == shift_cnt)
-//                 begin
-//                     shift_cnt <= CHAR_NBITS - 1;
-//                 end
-//             end
-//             2'b01:
-//             begin
-//                 if (LOOP)
-//                 begin
-//                     shift_rx[shift_cnt] <= dout;
-//                 end
-//                 if (0 == shift_cnt)
-//                 begin
-//                     data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-//                 end
-//             end
-//             2'b10:
-//             begin
-//                 if (LOOP)
-//                 begin
-//                     shift_rx[shift_cnt] <= dout;
-//                 end
-//                 if (0 == shift_cnt)
-//                 begin
-//                     data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-//                 end
-//             end
-//             2'b11:
-//             begin
-//                 shift_cnt <= shift_cnt - 1;
-//                 if (0 == shift_cnt)
-//                 begin
-//                     shift_cnt <= CHAR_NBITS;
-//                 end
-//                 if (LOOP)
-//                 begin
-//                     shift_rx[shift_cnt] <= dout;
-//                 end
-//             end
-//         endcase
-//         end
-//     end
-// end
-// 
-// always @(posedge sysclk or negedge rst_n)
-// begin
-//     if (!rst_n || !enable)
-//     begin
-//         dout <= 1'b0;
-//         shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
-//         shift_tx <= {1'b0, data_out};
-//         case (spi_mode)
-//             2'b00:
-//             begin
-//                 shift_cnt <= CHAR_NBITS - 1;
-//             end
-//             2'b01:
-//             begin
-//                 shift_cnt <= CHAR_NBITS - 1;
-//             end
-//             2'b10:
-//             begin
-//                 shift_cnt <= CHAR_NBITS;
-//             end
-//             2'b11:
-//             begin
-//                 shift_cnt <= CHAR_NBITS;
-//             end
-//         endcase
-//     end
-//     else
-//     begin
-//         if (enable)
-//         begin
-//             // last_clk <= last_clk;
-//             // go <= go;
-//             dout <= shift_tx[shift_cnt];
-//             shift_rx <= shift_rx;
-//             shift_cnt <= shift_cnt;
-//         end
-//     end
-// end
-//
-// spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen (
-//    .sysclk(sysclk),       // system clock input
-//    .rst_n(rst_n),         // module reset
-//    .enable(enable),       // module enable
-//    .go(go),               // start transmit
-//    .CPOL(CPOL),           // clock polarity
-//    .last_clk(last_clk),   // last clock 
-//    .divider_i(divider_i), // divider;
-//    .clk_out(clk_out),     // clock output
-//    .pos_edge(pos_edge),   // positive edge flag
-//    .neg_edge(neg_edge)    // negtive edge flag
-//);
 endmodule
 

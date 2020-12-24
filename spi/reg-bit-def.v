@@ -1,3 +1,7 @@
+localparam REG_WIDTH = 32;
+parameter integer C_ADDR_WIDTH = 8;
+parameter integer C_DATA_WIDTH = 32;
+
 // ESPI regist addr
 localparam ADDR_SPMODE       = 8'h00;
 localparam ADDR_SPIE         = 8'h04;
@@ -62,20 +66,20 @@ localparam SPCOM_TRANLEN_LO  = 0;
 // 6. SPIRF
 
 // 7. ESPI_SPMODE0;
-localparam SPMODEx_CI        = 31;
-localparam SPMODEx_CP        = 30;
-localparam SPMODEx_REV       = 29;
-localparam SPMODEx_DIV16     = 28;
-localparam SPMODEx_PM_HI     = 27;
-localparam SPMODEx_PM_LO     = 24;
-localparam SPMODEx_ODD       = 23;
-localparam SPMODEx_POL       = 20;
-localparam SPMODEx_LEN_HI    = 19;
-localparam SPMODEx_LEN_LO    = 16;
-localparam SPMODEx_CSBEF_HI  = 15;
-localparam SPMODEx_CSBEF_LO  = 12;
-localparam SPMODEx_CSAFT_HI  = 11;
-localparam SPMODEx_CSAFT_LO  = 8;
-localparam SPMODEx_CSCG_HI   = 7;
-localparam SPMODEx_CSCG_LO   = 3;
+localparam CSMODE_CPOL      = 31;
+localparam CSMODE_CPHA      = 30;
+localparam CSMODE_REV       = 29;
+localparam CSMODE_DIV16     = 28;
+localparam CSMODE_PM_HI     = 27;
+localparam CSMODE_PM_LO     = 24;
+localparam CSMODE_ODD       = 23;
+localparam CSMODE_POL       = 20;
+localparam CSMODE_LEN_HI    = 19;
+localparam CSMODE_LEN_LO    = 16;
+localparam CSMODE_CSBEF_HI  = 15;
+localparam CSMODE_CSBEF_LO  = 12;
+localparam CSMODE_CSAFT_HI  = 11;
+localparam CSMODE_CSAFT_LO  = 8;
+localparam CSMODE_CSCG_HI   = 7;
+localparam CSMODE_CSCG_LO   = 3;
 
