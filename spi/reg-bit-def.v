@@ -1,4 +1,5 @@
 localparam REG_WIDTH = 32;
+localparam CHAR_LEN_MAX = 16;
 parameter integer C_ADDR_WIDTH = 8;
 parameter integer C_DATA_WIDTH = 32;
 

@@ -1,20 +1,21 @@
 `include "timescale.v"
 
 module spi_tb;
-    localparam C_DIVIDER_WIDTH = 8;
-    localparam CHAR_NBITS = 8;
-    localparam CHAR_LEN_MAX = 16;
-    reg sysclk;            // system clock input
-    reg rst_n;             // module reset
-    reg enable;            // module enable
-    reg go;                // start transmit
-    reg CPOL;              // clock polarity
-    reg CPHA;              // clock phase
-    reg LOOP;              // loop mode test
-    reg MSB_FIRST;
-    reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
-    reg [CHAR_NBITS - 1: 0] data_in;
-    reg [3:0] char_len;
+`include "reg-bit-def.v"
+
+localparam C_DIVIDER_WIDTH = 8;
+localparam CHAR_NBITS = 8;
+reg sysclk;            // system clock input
+reg rst_n;             // module reset
+reg enable;            // module enable
+reg go;                // start transmit
+reg CPOL;              // clock polarity
+reg CPHA;              // clock phase
+reg LOOP;              // loop mode test
+reg MSB_FIRST;
+reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
+reg [CHAR_NBITS - 1: 0] data_in;
+reg [3:0] char_len;
 
 
 wire SPI_SCK;
@@ -110,7 +111,6 @@ wire [3:0 ] S_SPI_CS_B;
 reg S_BREADY;
 wire S_BVALID;
 
-`include "reg-bit-def.v"
 
 initial
 begin
@@ -198,7 +198,7 @@ begin
     S_AWVALID <= 0;
     #10;
 end
-/*
+// /*
 spi_intface # (.NCS(4)) 
 spi_master
 (
@@ -225,8 +225,8 @@ spi_master
     .S_SPI_MOSI(SPI_MOSI),
     .S_SPI_CS_B(SPI_CS_B)
 );
-*/
-// /*
+// */
+/*
 spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
 inst_spi_trx_ch
 (
@@ -256,7 +256,7 @@ begin
     data_in <= data_rx[7:0];
 end
 
-// */
+*/
 
 spi_slave_model #(.CHAR_NBITS(16))
 inst_slave

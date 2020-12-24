@@ -56,6 +56,13 @@ reg [31:0] reg_data_out;
 reg [C_ADDR_WIDTH-1 : 0] awaddr;
 reg [NCS-1:0] spi_cs_b;
 
+reg chr_go;
+reg frame_go;
+reg [SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] chars_count;  
+wire chr_done;
+reg [CHAR_LEN_MAX-1:0] data_tx;
+wire [CHAR_LEN_MAX-1:0] data_rx;
+
 integer byte_index;
 
 wire slv_reg_rden;
@@ -75,6 +82,7 @@ assign S_SPI_CS_B = spi_cs_b;
 assign slv_reg_wren = wready && S_WVALID && awready && S_AWVALID;
 assign slv_reg_rden = arready & S_ARVALID & ~rvalid;
 
+
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
@@ -86,6 +94,7 @@ begin
         spi_cs_b <= {{NCS{1'b0}}};
     end
     else begin
+        chars_count <= SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO]; 
         CSMODE <= cur_cs_mode(SPCOM, SPMODE0, SPMODE1, SPMODE2, SPMODE3);
     end
 end
@@ -368,28 +377,29 @@ begin
     endcase
 end
 endfunction
-/*
+
+// /*
 spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
 inst_spi_trx_ch
 (
-    .S_SYSCLK(sysclk),  // platform clock
-    .S_RESETN(rst_n),  // reset
-    .S_ENABLE(enable),  // enable
-    .S_CPOL(CPOL),    // clock polary
-    .S_CPHA(CPHA),    // clock phase, the first edge or second
-    .S_TX_ONLY(1'b0), // transmit only
-    .S_LOOP(LOOP),    // internal loopback mode
-    .S_REV(MSB_FIRST),     // msb first or lsb first
-    .S_CHAR_LEN(char_len),// characters in bits length
-    .S_NDIVIDER(divider_i),// clock divider
+    .S_SYSCLK(S_SYSCLK),  // platform clock
+    .S_RESETN(S_RESETN),  // reset
+    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
+    .S_CPOL(CSMODE[CSMODE_CPOL]),    // clock polary
+    .S_CPHA(CSMODE[CSMODE_CPOL]),    // clock phase, the first edge or second
+    .S_TX_ONLY(SPCOM[SPCOM_TO]), // transmit only
+    .S_LOOP(SPMODE[SPMODE_LOOP]),    // internal loopback mode
+    .S_REV(CSMODE[CSMODE_REV]),     // msb first or lsb first
+    .S_CHAR_LEN(CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO]),// characters in bits length
+    .S_NDIVIDER({{4{1'b0}},CSMODE[CSMODE_PM_HI:CSMODE_PM_LO]}),// clock divider
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_GO(go),
-    .S_CHAR_DONE(s_done),
+    .S_CHAR_GO(chr_go),
+    .S_CHAR_DONE(chr_done),
     .S_WCHAR(data_tx),   // output character
-    .S_RCHAR(rdata)    // input character
+    .S_RCHAR(data_rx)    // input character
 );
-*/
+// */
 
 endmodule
