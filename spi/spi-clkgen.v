@@ -24,6 +24,13 @@ reg in_process;
 assign cnt_zero = (cnt == {C_DIVIDER_WIDTH{1'b0}});
 assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 
+always @(posedge go or negedge rst_n)
+begin
+    if (enable) begin
+        cnt   <= divider_i;
+    end
+end
+
 always @(posedge sysclk or negedge rst_n)
 begin
     if (!rst_n)
@@ -32,8 +39,9 @@ begin
     end
     else
     begin
-        if (!enable || cnt_zero || !go)
+        if (!enable || cnt_zero || !go) begin
             cnt   <= divider_i;
+        end
         else
             cnt <= cnt - {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1};
     end

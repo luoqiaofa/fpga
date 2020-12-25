@@ -69,6 +69,7 @@ begin
     #(1000 * CHAR_NBITS / 8)
     // #50
     enable       <= 0;   // module enable
+    rst_n       <= 0;
 
     #1000
     $stop;
@@ -83,9 +84,6 @@ reg [REG_WIDTH-1: 0] SPIRF;
 reg [REG_WIDTH-1: 0] SPIREV1;
 reg [REG_WIDTH-1: 0] SPIREV2;
 reg [REG_WIDTH-1: 0] SPMODE0;
-reg [REG_WIDTH-1: 0] SPMODE1;
-reg [REG_WIDTH-1: 0] SPMODE2;
-reg [REG_WIDTH-1: 0] SPMODE3;
 
 reg S_WVALID;
 reg S_AWVALID;
@@ -123,9 +121,9 @@ begin
     SPIREV1 <= 32'h0000_0000;
     SPIREV2 <= 32'h0000_0000;
     SPMODE0 <= 32'h0010_0000;
-    SPMODE1 <= 32'h0010_0000;
-    SPMODE2 <= 32'h0010_0000;
-    SPMODE3 <= 32'h0010_0000;
+    // SPMODE1 <= 32'h0010_0000;
+    // SPMODE2 <= 32'h0010_0000;
+    // SPMODE3 <= 32'h0010_0000;
 
     S_ARADDR <= 0;
     S_AWADDR <= 0;
@@ -156,11 +154,22 @@ begin
     S_RREADY <= 1;
     S_ARVALID <= 1;
 
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPMODE0;
+    S_WDATA <= SPMODE0;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
     #10;
-
     S_AWADDR <= ADDR_SPMODE;
     S_WDATA <= SPMODE;
     #10;
@@ -169,13 +178,6 @@ begin
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
-    #10;
-    S_AWADDR <= ADDR_SPMODE0;
-    S_WDATA <= 32'h2417_1108;
-    #10;
-    S_WVALID <= 1;
-    S_AWVALID <= 1;
-    #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
     #10;
@@ -196,7 +198,20 @@ begin
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
+    #2500;
+    SPMODE[SPMODE_EN] <= 0;
     #10;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPMODE;
+    S_WDATA <= SPMODE;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    #10;
+
 end
 // /*
 spi_intface # (.NCS(4)) 
@@ -263,7 +278,7 @@ inst_slave
 (
     .S_SYSCLK(sysclk),  // platform clock
     .S_RESETN(rst_n),  // reset
-    .S_ENABLE(enable),  // enable
+    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
     .S_CPOL(CPOL),    // clock polary
     .S_CPHA(CPHA),    // clock phase, the first edge or second
     .S_TX_ONLY(1'b0), // transmit only

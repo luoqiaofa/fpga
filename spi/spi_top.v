@@ -42,6 +42,8 @@ reg [REG_WIDTH-1: 0] SPMODE3;
 
 reg [REG_WIDTH-1: 0] CSMODE;
 
+reg wvalid_pos_edge;
+reg awvalid_pos_edge;
 reg wready;
 reg awready;
 reg rrvalid;
@@ -62,6 +64,10 @@ reg [SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] chars_count;
 wire chr_done;
 reg [CHAR_LEN_MAX-1:0] data_tx;
 wire [CHAR_LEN_MAX-1:0] data_rx;
+reg brg_last_clk;
+wire brg_clk;
+wire brg_pos_edge;
+wire brg_neg_edge;
 
 integer byte_index;
 
@@ -79,9 +85,39 @@ assign S_RVALID  = rvalid;
 
 assign S_SPI_CS_B = spi_cs_b;
 
-assign slv_reg_wren = wready && S_WVALID && awready && S_AWVALID;
+assign slv_reg_wren = wready && S_WVALID && awready && S_AWVALID & wvalid_pos_edge & awvalid_pos_edge;
 assign slv_reg_rden = arready & S_ARVALID & ~rvalid;
 
+always @(posedge S_WVALID or negedge S_RESETN)
+begin
+    if (!S_RESETN)
+    begin
+        wvalid_pos_edge <= 0;
+    end
+    else begin
+        wvalid_pos_edge <= 1;
+    end
+end
+always @(posedge S_AWVALID or negedge S_RESETN)
+begin
+    if (!S_RESETN)
+    begin
+        awvalid_pos_edge <= 0;
+    end
+    else begin
+        awvalid_pos_edge <= 1;
+    end
+end
+
+always @(negedge SPMODE[SPMODE_EN] or negedge S_RESETN)
+begin
+    if (!S_RESETN) begin
+        brg_last_clk <= 0;
+    end
+    else begin
+        brg_last_clk <= 1;
+    end
+end
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
@@ -92,6 +128,10 @@ begin
         rresp   <= 2'b00;
         reg_data_out <= 0;
         spi_cs_b <= {{NCS{1'b0}}};
+        data_tx <= 16'h0000;
+        chr_go <= 0;
+        frame_go <= 0;
+        brg_last_clk <= 0;
     end
     else begin
         chars_count <= SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO]; 
@@ -120,6 +160,8 @@ begin
     end
     else begin
         if (slv_reg_wren) begin
+            wvalid_pos_edge <= 0;
+            awvalid_pos_edge <= 0;
             case (awaddr[7:2])
                ADDR_SPMODE[7:2] :
                     for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
@@ -386,20 +428,33 @@ inst_spi_trx_ch
     .S_RESETN(S_RESETN),  // reset
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
     .S_CPOL(CSMODE[CSMODE_CPOL]),    // clock polary
-    .S_CPHA(CSMODE[CSMODE_CPOL]),    // clock phase, the first edge or second
+    .S_CPHA(CSMODE[CSMODE_CPHA]),    // clock phase, the first edge or second
     .S_TX_ONLY(SPCOM[SPCOM_TO]), // transmit only
     .S_LOOP(SPMODE[SPMODE_LOOP]),    // internal loopback mode
     .S_REV(CSMODE[CSMODE_REV]),     // msb first or lsb first
     .S_CHAR_LEN(CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO]),// characters in bits length
     .S_NDIVIDER({{4{1'b0}},CSMODE[CSMODE_PM_HI:CSMODE_PM_LO]}),// clock divider
-    .S_SPI_SCK(SPI_SCK),
-    .S_SPI_MISO(SPI_MISO),
-    .S_SPI_MOSI(SPI_MOSI),
+    .S_SPI_SCK(S_SPI_SCK),
+    .S_SPI_MISO(S_SPI_MISO),
+    .S_SPI_MOSI(S_SPI_MOSI),
     .S_CHAR_GO(chr_go),
     .S_CHAR_DONE(chr_done),
     .S_WCHAR(data_tx),   // output character
     .S_RCHAR(data_rx)    // input character
 );
 // */
+
+spi_clk_gen # (.C_DIVIDER_WIDTH(8)) spi_brg (
+    .sysclk(S_SYSCLK),       // system clock input
+    .rst_n(S_RESETN),         // module reset
+    .enable(SPMODE[SPMODE_EN]),       // module enable
+    .go(SPMODE[SPMODE_EN]),               // start transmit
+    .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
+    .last_clk(brg_last_clk),   // last clock 
+    .divider_i({{4{1'b0}},CSMODE[CSMODE_PM_HI:CSMODE_PM_LO]}), // divider;
+    .clk_out(brg_clk),     // clock output
+    .pos_edge(brg_pos_edge),   // positive edge flag
+    .neg_edge(brg_neg_edge)    // negtive edge flag
+);
 
 endmodule
