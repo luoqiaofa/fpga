@@ -34,13 +34,13 @@ always @(sysclk)
     #5 sysclk <= !sysclk;
 
 initial
-begin            
+begin
     $dumpfile("wave.vcd");        //生成的vcd文件名称
     $dumpvars(0, spi_tb);    //tb模块名称
 end
 
 initial
-begin            
+begin
     char_len   <= 4'h7;
     data_tx    <= 16'h55aa;
     data_in    <= 8'hff;
@@ -69,6 +69,7 @@ begin
     #(1000 * CHAR_NBITS / 8)
     // #50
     enable       <= 0;   // module enable
+    #10000;
     rst_n       <= 0;
 
     #1000
@@ -135,12 +136,13 @@ begin
     S_WDATA <= 0;
     S_BREADY <= 0;
     #50;
-    SPIE <= 32'hFFFF_FFFF;  
-    SPMODE <= 32'h8000_100F;
+    SPIE    <= 32'hFFFF_FFFF;
+    SPMODE  <= 32'h8000_100F;
     SPMODE0 <= 32'h2417_1108;
-    SPITF <= 32'h0300_4000;
-    SPCOM <= 32'h0003_0026;
-    #50;
+    SPITF   <= 32'h0302_0100;
+    SPCOM   <= 32'h0003_0006;
+    #10;
+    SPMODE0[CSMODE_CSCG_HI :CSMODE_CSCG_LO] <= 3;
 
     S_AWADDR <= ADDR_SPIE;
     S_WDATA <= SPIE;
@@ -151,21 +153,27 @@ begin
 
     S_BREADY <= 1;
 
-    S_RREADY <= 1;
-    S_ARVALID <= 1;
-
-    S_WVALID <= 0;
-    S_AWVALID <= 0;
-    #10;
-    S_AWADDR <= ADDR_SPMODE0;
-    S_WDATA <= SPMODE0;
-    #10;
-    S_WVALID <= 1;
-    S_AWVALID <= 1;
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
 
+    SPIM[SPIM_RNE] = 1;
+    // SPIM[SPIM_TNF] = 1;
+    #10;
+
+    S_AWADDR <= ADDR_SPIM;
+    S_WDATA <= SPIM;
+    #10;
+
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+
+    S_BREADY <= 1;
+
+    #50;
+
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
@@ -178,9 +186,17 @@ begin
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
+    #10;
+    S_AWADDR <= ADDR_SPMODE0;
+    S_WDATA <= SPMODE0;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
     #10;
+
     S_AWADDR <= ADDR_SPITF;
     S_WDATA <= SPITF;
     #10;
@@ -198,7 +214,8 @@ begin
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
-    #2500;
+
+    #6500;
     SPMODE[SPMODE_EN] <= 0;
     #10;
     S_WVALID <= 0;
@@ -214,7 +231,7 @@ begin
 
 end
 // /*
-spi_intface # (.NCS(4)) 
+spi_intface # (.NCS(4))
 spi_master
 (
     .S_SYSCLK(sysclk),  // platform clock
@@ -272,7 +289,7 @@ begin
 end
 
 */
-
+/*
 spi_slave_model #(.CHAR_NBITS(16))
 inst_slave
 (
@@ -290,6 +307,7 @@ inst_slave
     .S_CHAR_GO(go),
     .S_CHAR_DONE(s_done)
 );
+*/
 
 endmodule
 
