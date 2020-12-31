@@ -60,6 +60,7 @@ reg [NCS-1:0] spi_cs_b;
 
 reg chr_go;
 reg frame_go;
+reg frame_go_trig;
 reg frame_en_go; // enable frame_go
 reg [SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] chars_count;
 wire chr_done;
@@ -79,6 +80,9 @@ reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] nchars_per_word;
 reg [1:0] cs_idx;
 reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] chr_idx_one_word;
 reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] chr_idx_one_word_max;
+reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_idx;
+reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_idx_dec;
+reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_trx_idx; // in trans
 
 reg [CSMODE_CSBEF_HI - CSMODE_CSBEF_LO : 0] csbef_count;
 reg [CSMODE_CSAFT_HI - CSMODE_CSAFT_LO : 0] csaft_count;
@@ -146,7 +150,10 @@ begin
             csbef_count <= csbef_count - 1;
         end
         else begin
-            chr_go <= 1;
+            if (frame_go_trig) begin
+                chr_go <= 1;
+                frame_go_trig <= 0;
+            end
         end
     end
     else begin
@@ -181,6 +188,7 @@ begin
         data_tx <= 16'h0000;
         chr_go <= 0;
         frame_go <= 0;
+        frame_go_trig <= 0;
         frame_en_go <= 1;
         brg_go <= 0;
         brg_last_clk <= 0;
@@ -193,6 +201,13 @@ begin
         spi_spcom_updated <= 0;
         chr_idx_one_word <= 0;
         chars_count <= 0;
+        spitf_idx <= 0;
+        spitf_idx_dec <= 0;
+        spitf_trx_idx <= 0;
+        for (byte_index = 0; byte_index <= SPMODE_TXTHR_HI-SPMODE_TXTHR_LO; byte_index = byte_index + 1) 
+        begin
+            word_tx_fifo[byte_index] <= 0;
+        end
 
         csbef_count <= 0;
         csaft_count <= 0;
@@ -200,9 +215,48 @@ begin
 
     end
     else begin
+        if (spitf_idx > 0) begin
+            spitf_idx_dec = spitf_idx - 1;
+        end
+        SPITF = word_tx_fifo[spitf_trx_idx];
         if (SPMODE[SPMODE_EN] & spi_spcom_updated) begin
             brg_go <= 1;
         end
+        CSMODE <= cur_cs_mode(SPCOM, SPMODE0, SPMODE1, SPMODE2, SPMODE3);
+        if (CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO] >= 8) begin
+            nchars_per_word = 2;
+            chr_idx_one_word_max = 1;
+        end
+        else begin
+            nchars_per_word = 4;
+            chr_idx_one_word_max = 3;
+        end
+        if (spi_spitf_updated) begin
+            if (frame_go) begin
+                chr_go <= 1;
+                spi_spitf_updated <= 0;
+            end
+            if (spi_spcom_updated) begin
+                spi_spitf_updated <= 0;
+                spi_spcom_updated <= 0;
+                data_tx <= {SPITF[23:16], SPITF[31:24]};
+                chr_idx_one_word <= 0;
+                spi_cs_b[cs_idx] <= 1'b0;
+                frame_go <= 1;
+                frame_go_trig <= 1;
+                frame_en_go <= 0;
+                chr_go <= 0;
+                csbef_count <= CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
+                csaft_count <= CSMODE[CSMODE_CSAFT_HI:CSMODE_CSAFT_LO];
+                cscg_count  <= CSMODE[CSMODE_CSCG_HI :CSMODE_CSCG_LO];
+            end
+        end
+    end
+end
+
+always @(posedge S_SYSCLK or negedge S_RESETN)
+begin
+    if (S_RESETN) begin
         case (chr_idx_one_word)
             16'h00:
             begin
@@ -222,28 +276,6 @@ begin
             end
             default: ;
         endcase
-        CSMODE <= cur_cs_mode(SPCOM, SPMODE0, SPMODE1, SPMODE2, SPMODE3);
-        if (CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO] >= 8) begin
-            nchars_per_word = 2;
-            chr_idx_one_word_max = 1;
-        end
-        else begin
-            nchars_per_word = 4;
-            chr_idx_one_word_max = 3;
-        end
-        if (spi_spcom_updated & spi_spitf_updated) begin
-            chr_go <= 0;
-            spi_spirf_updated <= 0;
-            spi_spcom_updated <= 0;
-            data_tx <= {SPITF[23:16], SPITF[31:24]};
-            chr_idx_one_word <= 0;
-            spi_cs_b[cs_idx] <= 1'b0;
-            frame_go <= 1;
-            frame_en_go <= 0;
-            csbef_count <= CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
-            csaft_count <= CSMODE[CSMODE_CSAFT_HI:CSMODE_CSAFT_LO];
-            cscg_count  <= CSMODE[CSMODE_CSCG_HI :CSMODE_CSCG_LO];
-        end
     end
 end
 
@@ -255,13 +287,18 @@ begin
     else begin
         chr_go <= 0;
         frame_go <= 0;
-        // spi_cs_b[cs_idx] <= 1'b1;
     end
     if (chr_idx_one_word < chr_idx_one_word_max) begin
         chr_idx_one_word <= chr_idx_one_word + 1;
     end
     else begin
         chr_idx_one_word <= 0;
+        if (spitf_trx_idx < spitf_idx_dec) begin
+            spitf_trx_idx <= spitf_trx_idx + 1;
+        end
+        else begin
+            chr_go <= 0;
+        end
     end
 end
 
@@ -329,16 +366,13 @@ begin
                 end
                 ADDR_SPITF[7:2]:
                 begin
-                    for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-                    begin
-                        if (S_WSTRB[byte_index] == 1 ) begin
-                            // Respective byte enables are asserted as per write strobes
-                            // Slave register 3
-                            SPITF[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
-                        end
-                    end
+                    SPITF <= S_WDATA;
                     spi_spitf_updated <= 1;
                     nchars_tx_cnt = nchars_tx_cnt + nchars_per_word;
+                    word_tx_fifo[spitf_idx] <= S_WDATA;
+                    if (spitf_idx < (SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1)) begin
+                        spitf_idx <= spitf_idx + 1;
+                    end
                 end
                 ADDR_SPIRF[7:2]:
                     for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )

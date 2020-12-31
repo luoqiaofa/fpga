@@ -139,7 +139,7 @@ begin
     SPIE    <= 32'hFFFF_FFFF;
     SPMODE  <= 32'h8000_100F;
     SPMODE0 <= 32'h2417_1108;
-    SPITF   <= 32'h0302_0100;
+    SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
     #10;
     SPMODE0[CSMODE_CSCG_HI :CSMODE_CSCG_LO] <= 3;
@@ -214,6 +214,8 @@ begin
     #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
+    SPITF   <= 32'h1122_3344;
+    #10;
 
     #6500;
     SPMODE[SPMODE_EN] <= 0;
@@ -229,6 +231,18 @@ begin
     #50;
     #10;
 
+end
+initial begin
+    #4500;
+    S_AWADDR <= ADDR_SPITF;
+    S_WDATA <= SPITF;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
 end
 // /*
 spi_intface # (.NCS(4))
