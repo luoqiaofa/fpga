@@ -233,7 +233,10 @@ begin
         end
         if (spi_spitf_updated) begin
             if (frame_go) begin
-                chr_go <= 1;
+                if (!chr_go) begin
+                    chr_go <= 1;
+                    spitf_trx_idx <= spitf_trx_idx + 1;
+                end
                 spi_spitf_updated <= 0;
             end
             if (spi_spcom_updated) begin

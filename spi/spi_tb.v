@@ -217,7 +217,7 @@ begin
     SPITF   <= 32'h1122_3344;
     #10;
 
-    #6500;
+    #7500;
     SPMODE[SPMODE_EN] <= 0;
     #10;
     S_WVALID <= 0;
