@@ -40,22 +40,22 @@ if __name__ == '__main__' :
             useage_help()
             sys.exit(0)
         elif opt in ('-c', "--sys-clk") :
-            sys_clk_freq = int(arg) # 100MHz, work freq in HZ
+            sys_clk_freq = float(arg) # 100MHz, work freq in HZ
         elif opt in ('-f', "--work-freq") :
-            period_freq = int(arg)
+            period_freq = float(arg)
         elif opt in ('-d', "--duty") :
-            duty = int(arg)
+            duty = float(arg)
         elif opt in ('-D', "--debug") :
             debug        = True
         else:
             useage_help()
             sys.exit(-1)
 
-    period_regval = sys_clk_freq // period_freq;
-    duty_regval = (period_regval * duty) // 100
-    print("00(mode)  : %08x" % 1)
-    print("04(period): %08x" % period_regval)
-    print("08(duty)  : %08x" % duty_regval)
+    period_regval = int(sys_clk_freq / period_freq);
+    duty_regval = int ((period_regval * duty) / 100)
+    print("00(mode)  : 0x%08x" % 1)
+    print("04(period): 0x%08x" % period_regval)
+    print("08(duty)  : 0x%08x" % duty_regval)
     
     pass
 

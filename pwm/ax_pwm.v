@@ -43,19 +43,26 @@ module pwm_module
     input  [N - 1:0] I_PWM_MODE,
     input  [N - 1:0] I_PWM_FREQ_DIV,
     input  [N - 1:0] I_PWM_DUTY,
+    input  [N - 1:0] I_BRIGHTNESS,
     output           O_PWM_OUT
     );
+
 localparam PWM_EN = 0;
+localparam BRIGHTNESS_MAX = 256;
 
 reg[N - 1:0] period_r;
 reg[N - 1:0] duty_r;
 reg[N - 1:0] period_cnt;
 reg pwm_r;
-assign O_PWM_OUT = pwm_r;
+reg [N-1:0] brightness_cnt;
+reg brightness;
+
+// assign O_PWM_OUT = pwm_r;
+assign O_PWM_OUT = pwm_r & brightness;
 /* Data buffer for I_PWM_FREQ_DIV and I_PWM_DUTY  */
 always@(posedge I_SYS_CLK or posedge I_ASSERT)
 begin
-    if(I_ASSERT==1)
+    if(I_ASSERT)
     begin
         period_r <= { N {1'b0} };
         duty_r <= { N {1'b0} };
@@ -66,44 +73,80 @@ begin
         duty_r   <= I_PWM_DUTY;
     end
 end
-/* I_PWM_FREQ_DIV counter, add with I_PWM_FREQ_DIV value every clock edge  */
+
 always@(posedge I_SYS_CLK or posedge I_ASSERT)
 begin
-    if(I_ASSERT==1)
+    if(I_ASSERT) begin
         period_cnt <= { N {1'b0} };
+        brightness_cnt <= 0;
+    end
     else
         if (I_PWM_MODE[PWM_EN])
         begin
-            if (period_r == 0)
+            if (period_r == 0) begin
                 period_cnt <= 0;
-            else if (period_cnt >= (period_r - 1))
+            end
+            else if (period_cnt >= (period_r - 1)) begin
                 period_cnt <= 0;
-            else
+            end
+            else begin
                 period_cnt <= period_cnt + 1;
+            end
+            if (brightness_cnt < (BRIGHTNESS_MAX - 1)) begin
+                brightness_cnt <= brightness_cnt + 1;
+            end
+            else begin
+                brightness_cnt <= 0;
+            end
         end
-        else
+        else begin
             period_cnt <= 0;
+            brightness_cnt <= 0;
+        end
 end
 
 always@(posedge I_SYS_CLK or posedge I_ASSERT)
 begin
-    if(I_ASSERT==1)
+    if(I_ASSERT)
     begin
         pwm_r <= 1'b0;
+        brightness <= 0;
     end
     else
     begin
         if (I_PWM_MODE[PWM_EN])
         begin
-            if (duty_r == 0)
+            if (duty_r == 0) begin
                 pwm_r <= 1'b0;
-            else if(period_cnt <= duty_r)
+                brightness <= 0;
+            end
+            else if(period_cnt <= duty_r) begin
                 pwm_r <= 1'b1;
-            else
+                if (I_BRIGHTNESS < (BRIGHTNESS_MAX - 1)) begin
+                    if (0 == I_BRIGHTNESS) begin
+                        brightness <= 0;
+                    end
+                    else if (brightness_cnt < (I_BRIGHTNESS)) begin
+                        brightness <= 1;
+                    end
+                    else begin
+                        brightness <= 0;
+                    end
+                end
+                else begin
+                    brightness <= 1;
+                end
+            end
+            else begin
                 pwm_r <= 1'b0;
+                brightness <= 0;
+            end
+
         end
-        else
+        else begin
             pwm_r <= 1'b0;
+            brightness <= 0;
+        end
     end
 end
 
