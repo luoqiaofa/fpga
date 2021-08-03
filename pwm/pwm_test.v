@@ -29,14 +29,17 @@ module pwm_test;
 parameter SYS_FREQ = 100000000;
 parameter BRIGHTNESS_FREQ = (SYS_FREQ >> 8) - 1;
 // parameter BRIGHTNESS = 0;
-parameter BRIGHTNESS = 128;
+localparam DUTY = 50;
+localparam BRIGHTNESS = 128;
+localparam FREQ_CNT = 32768;
+localparam DUTY_CNT = (DUTY * FREQ_CNT) / 100;
 // parameter BRIGHTNESS = 255;
 // wire div_2hz_o;
 pwm_module pwm_obj (
     .I_SYS_CLK(clk_i),
-    .I_ASSERT(~rst_n_i),
+    .I_RESETN(rst_n_i),
     .I_PWM_MODE(mode),
-    .I_PWM_FREQ_DIV(freq_div),
+    .I_PWM_FREQ_CNT(freq_div),
     .I_PWM_DUTY(duty),
     .I_BRIGHTNESS(BRIGHTNESS),
     .O_PWM_OUT(pwm_out)
@@ -54,17 +57,14 @@ initial
 begin
     clk_i <= 0;
     rst_n_i <= 0;
-    freq_div <= 65536;
-    duty     <= 32768;
-    // duty     <= 524288;
-    // duty     <= 0;
+    freq_div <= FREQ_CNT;
+    duty     <= DUTY_CNT;
     mode   <= 0;
     #15
     rst_n_i = 1;
     #500
-    mode   <= 1;
-    #1000
-    #(4*BRIGHTNESS_FREQ)
+    mode   <= 3;
+    #(2*FREQ_CNT*10)
     $stop;
 end
 

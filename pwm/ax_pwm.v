@@ -20,11 +20,12 @@
 //================================================================================
 //   Description:  pwm model
 //   I_SYS_CLK      platform clock input
-//   I_ASSERT       normally is reset
-//   I_PWM_MODE     pwm mode, now enable only support
-//   I_PWM_FREQ_DIV frequency(I_SYS_CLK) frequency divider
+//   I_RESETN       normally is reset
+//   I_PWM_MODE     pwm mode, BIT0: enable or disable
+//                            BIT1: 1 for negtive, 0 for positive
+//   I_PWM_FREQ_CNT frequency(I_SYS_CLK) frequency divider
 //   I_PWM_DUTY     duty circle ratio, 1~50 integer
-//   O_PWM_OUT frequency = frequency(I_SYS_CLK) / I_PWM_FREQ_DIV;
+//   O_PWM_OUT frequency = frequency(I_SYS_CLK) / I_PWM_FREQ_CNT;
 //
 //================================================================================
 //  Revision History:
@@ -39,15 +40,16 @@ module pwm_module
 )
 (
     input            I_SYS_CLK,
-    input            I_ASSERT,
+    input            I_RESETN,
     input  [N - 1:0] I_PWM_MODE,
-    input  [N - 1:0] I_PWM_FREQ_DIV,
+    input  [N - 1:0] I_PWM_FREQ_CNT,
     input  [N - 1:0] I_PWM_DUTY,
     input  [N - 1:0] I_BRIGHTNESS,
     output           O_PWM_OUT
     );
 
-localparam PWM_EN = 0;
+localparam PWM_EN  = 0;
+localparam PWM_NEG = 1;
 localparam BRIGHTNESS_MAX = 256;
 
 reg[N - 1:0] period_r;
@@ -58,31 +60,28 @@ reg [N-1:0] brightness_cnt;
 reg brightness;
 
 // assign O_PWM_OUT = pwm_r;
-assign O_PWM_OUT = pwm_r & brightness;
-/* Data buffer for I_PWM_FREQ_DIV and I_PWM_DUTY  */
-always@(posedge I_SYS_CLK or posedge I_ASSERT)
+assign O_PWM_OUT = I_PWM_MODE[PWM_NEG] ? ~(pwm_r & brightness) : (pwm_r & brightness);
+/* Data buffer for I_PWM_FREQ_CNT and I_PWM_DUTY  */
+always@(posedge I_SYS_CLK or negedge I_RESETN)
 begin
-    if(I_ASSERT)
-    begin
+    if(!I_RESETN) begin
         period_r <= { N {1'b0} };
         duty_r <= { N {1'b0} };
     end
-    else
-    begin
-        period_r <= I_PWM_FREQ_DIV;
+    else begin
+        period_r <= I_PWM_FREQ_CNT;
         duty_r   <= I_PWM_DUTY;
     end
 end
 
-always@(posedge I_SYS_CLK or posedge I_ASSERT)
+always@(posedge I_SYS_CLK or negedge I_RESETN)
 begin
-    if(I_ASSERT) begin
+    if(!I_RESETN) begin
         period_cnt <= { N {1'b0} };
         brightness_cnt <= 0;
-    end
-    else
-        if (I_PWM_MODE[PWM_EN])
-        begin
+    end 
+    else begin
+        if (I_PWM_MODE[PWM_EN]) begin
             if (period_r == 0) begin
                 period_cnt <= 0;
             end
@@ -103,20 +102,18 @@ begin
             period_cnt <= 0;
             brightness_cnt <= 0;
         end
+    end
 end
 
-always@(posedge I_SYS_CLK or posedge I_ASSERT)
+always@(posedge I_SYS_CLK or negedge I_RESETN)
 begin
-    if(I_ASSERT)
-    begin
-        pwm_r <= 1'b0;
+    if(!I_RESETN) begin
+        pwm_r <= 0;
         brightness <= 0;
     end
-    else
-    begin
-        if (I_PWM_MODE[PWM_EN])
-        begin
-            if (duty_r == 0) begin
+    else begin
+        if (I_PWM_MODE[PWM_EN]) begin
+            if ((0 == I_PWM_DUTY) || (0 == I_PWM_FREQ_CNT)) begin
                 pwm_r <= 1'b0;
                 brightness <= 0;
             end
