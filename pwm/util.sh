@@ -15,7 +15,7 @@
 useage_help()
 {
     printf "Usage:\n"
-    printf "    python3 util <opt> [arg]\n"
+    printf "    ./util.sh <opt> [arg]\n"
     printf "    -h For help\n"
     printf "    -c <sys clk freq in Hz> Default is 100000000 ie. 100MHz.\n"
     printf "    -f <work freq in Hz>    Default is 0.25,0.5,1,2,4, ie. 1Hz.\n"
