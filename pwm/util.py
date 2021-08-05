@@ -61,17 +61,17 @@ if __name__ == '__main__' :
             useage_help()
             sys.exit(-1)
 
-    print("PWM frequency=%f Hz, duty=%d, brightness=%d, polar=%d:" % \
+    print("PWM frequency=%f Hz, duty=%d%%, brightness=%d, polar=%d" % \
             (period_freq, duty, brightness, polar))
     period_regval = int(sys_clk_freq / period_freq);
     duty_regval = int ((period_regval * duty) / 100)
     if (polar) :
         mode = mode | 0x02
 
-    print("0x00(mode)      : 0x%02x" % mode)
-    print("0x04(period)    : 0x%08x" % period_regval)
-    print("0x08(duty)      : 0x%08x" % duty_regval)
-    print("0x0c(brightness): 0x%02x" % brightness)
+    print("0x00(mode)      : 0x%02x(%d)" % (mode, mode))
+    print("0x04(period)    : 0x%08x(%d)" % (period_regval, period_regval))
+    print("0x08(duty)      : 0x%08x(%d)" % (duty_regval, duty_regval))
+    print("0x0c(brightness): 0x%02x(%d)" % (brightness, brightness))
     
     pass
 

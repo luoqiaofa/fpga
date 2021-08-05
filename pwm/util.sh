@@ -65,7 +65,7 @@ while getopts "hDc:f:d:b:p:" opt; do
     esac
 done
 
-printf "PWM frequency=${period_freq} Hz, duty=${duty}, brightness=${brightness} polar=${polar}\n"
+printf "PWM frequency=${period_freq} Hz, duty=${duty}%%, brightness=${brightness} polar=${polar}\n"
 period_regval=$(awk "BEGIN{print ${sys_clk_freq}/${period_freq} }")
 duty_regval=$(awk "BEGIN{print ${period_regval}*${duty}/100 }")
 if [ 1 -eq ${polar} ]
