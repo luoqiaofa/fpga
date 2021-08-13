@@ -2,9 +2,9 @@
 //                                                                              //
 //  Author: luoqiaofa                                                           //
 //          luoqiaofa@163.com                                                   //
-//      origin from : http://www.alinx.cn/ msq@qq.com                           //
+//      origin from : http://www.alinx.cn/ heijin                               //
 //          ALINX(shanghai) Technology Co.,Ltd                                  //
-//          heijin                                                              //
+//                                                                              //
 //////////////////////////////////////////////////////////////////////////////////
 //                                                                              //
 //                                                                              //
@@ -18,14 +18,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 //================================================================================
-//   Description:  pwm model
-//   I_SYS_CLK      platform clock input
-//   I_RESETN       normally is reset
-//   I_PWM_MODE     pwm mode, BIT0: enable or disable
+//   Description: pwm model
+//   i_sysclk     platform clock input
+//   i_resetn     normally is reset
+//   i_enable     pwm mode, BIT0: enable or disable
 //                            BIT1: 1 for negtive, 0 for positive
-//   I_PWM_FREQ_CNT frequency(I_SYS_CLK) frequency divider
-//   I_PWM_DUTY     duty circle ratio, 1~50 integer
-//   O_PWM_OUT frequency = frequency(I_SYS_CLK) / I_PWM_FREQ_CNT;
+//   i_freq_cnt frequency(i_sysclk) frequency divider
+//   i_duty_cnt     duty circle ratio, 1~50 integer
+//   o_pwm_out frequency = frequency(i_sysclk) / i_freq_cnt;
 //
 //================================================================================
 //  Revision History:
@@ -36,113 +36,112 @@
 `timescale 1ns / 1ps
 module pwm_module
 #(
-	parameter N = 32 //pwm bit width
+	parameter C_DATA_WIDTH = 32 //pwm bit width
 )
 (
-    input            I_SYS_CLK,
-    input            I_RESETN,
-    input  [N - 1:0] I_PWM_MODE,
-    input  [N - 1:0] I_PWM_FREQ_CNT,
-    input  [N - 1:0] I_PWM_DUTY,
-    input  [N - 1:0] I_BRIGHTNESS,
-    output           O_PWM_OUT
+    input                       i_sysclk,
+    input                       i_resetn,
+    input                       i_enable,
+    input                       i_polar,
+    input  [C_DATA_WIDTH - 1:0] i_freq_cnt,
+    input  [C_DATA_WIDTH - 1:0] i_duty_cnt,
+    input  [7:0]                i_brightness,
+    output                      o_pwm_out
     );
 
-localparam PWM_EN  = 0;
-localparam PWM_NEG = 1;
 localparam BRIGHTNESS_MAX = 256;
 
-reg[N - 1:0] period_r;
-reg[N - 1:0] duty_r;
-reg[N - 1:0] period_cnt;
-reg pwm_r;
-reg [N-1:0] brightness_cnt;
-reg brightness;
+reg s_pwm;
+reg s_brightness;
+reg [C_DATA_WIDTH - 1:0] s_period;
+reg [C_DATA_WIDTH - 1:0] s_duty;
+reg [C_DATA_WIDTH - 1:0] s_period_cnt;
+reg [C_DATA_WIDTH - 1:0] s_brightness_cnt;
 
-// assign O_PWM_OUT = pwm_r;
-assign O_PWM_OUT = I_PWM_MODE[PWM_NEG] ? ~(pwm_r & brightness) : (pwm_r & brightness);
-/* Data buffer for I_PWM_FREQ_CNT and I_PWM_DUTY  */
-always@(posedge I_SYS_CLK or negedge I_RESETN)
+// assign o_pwm_out = s_pwm;
+assign o_pwm_out = i_polar ? ~(s_pwm & s_brightness) : (s_pwm & s_brightness);
+/* Data buffer for i_freq_cnt and i_duty_cnt  */
+always@(posedge i_sysclk or negedge i_resetn)
 begin
-    if(!I_RESETN) begin
-        period_r <= { N {1'b0} };
-        duty_r <= { N {1'b0} };
+    if(!i_resetn) begin
+        s_period <= { C_DATA_WIDTH {1'b0} };
+        s_duty   <= { C_DATA_WIDTH {1'b0} };
     end
     else begin
-        period_r <= I_PWM_FREQ_CNT;
-        duty_r   <= I_PWM_DUTY;
+        s_period <= i_freq_cnt;
+        s_duty   <= i_duty_cnt;
     end
 end
 
-always@(posedge I_SYS_CLK or negedge I_RESETN)
+always@(posedge i_sysclk or negedge i_resetn)
 begin
-    if(!I_RESETN) begin
-        period_cnt <= { N {1'b0} };
-        brightness_cnt <= 0;
+    if(!i_resetn) begin
+        s_period_cnt <= { C_DATA_WIDTH {1'b0} };
+        s_brightness_cnt <= 0;
     end 
     else begin
-        if (I_PWM_MODE[PWM_EN]) begin
-            if (period_r == 0) begin
-                period_cnt <= 0;
+        if (i_enable) begin
+            if (s_period == 0) begin
+                s_period_cnt <= 0;
             end
-            else if (period_cnt >= (period_r - 1)) begin
-                period_cnt <= 0;
-            end
-            else begin
-                period_cnt <= period_cnt + 1;
-            end
-            if (brightness_cnt < (BRIGHTNESS_MAX - 1)) begin
-                brightness_cnt <= brightness_cnt + 1;
+            else if (s_period_cnt >= (s_period - 1)) begin
+                s_period_cnt <= 0;
             end
             else begin
-                brightness_cnt <= 0;
+                s_period_cnt <= s_period_cnt + 1;
+            end
+            if (s_brightness_cnt < (BRIGHTNESS_MAX - 1)) begin
+                s_brightness_cnt <= s_brightness_cnt + 1;
+            end
+            else begin
+                s_brightness_cnt <= 0;
             end
         end
         else begin
-            period_cnt <= 0;
-            brightness_cnt <= 0;
+            s_period_cnt <= 0;
+            s_brightness_cnt <= 0;
         end
     end
 end
 
-always@(posedge I_SYS_CLK or negedge I_RESETN)
+always@(posedge i_sysclk or negedge i_resetn)
 begin
-    if(!I_RESETN) begin
-        pwm_r <= 0;
-        brightness <= 0;
+    if(!i_resetn) begin
+        s_pwm <= 0;
+        s_brightness <= 0;
     end
     else begin
-        if (I_PWM_MODE[PWM_EN]) begin
-            if ((0 == I_PWM_DUTY) || (0 == I_PWM_FREQ_CNT)) begin
-                pwm_r <= 1'b0;
-                brightness <= 0;
+        if (i_enable) begin
+            if ((0 == i_duty_cnt) || (0 == i_freq_cnt)) begin
+                s_pwm <= 1'b0;
+                s_brightness <= 0;
             end
-            else if(period_cnt <= duty_r) begin
-                pwm_r <= 1'b1;
-                if (I_BRIGHTNESS < (BRIGHTNESS_MAX - 1)) begin
-                    if (0 == I_BRIGHTNESS) begin
-                        brightness <= 0;
+            else if(s_period_cnt <= s_duty) begin
+                s_pwm <= 1'b1;
+                if (i_brightness < (BRIGHTNESS_MAX - 1)) begin
+                    if (0 == i_brightness) begin
+                        s_brightness <= 0;
                     end
-                    else if (brightness_cnt < (I_BRIGHTNESS)) begin
-                        brightness <= 1;
+                    else if (s_brightness_cnt < (i_brightness)) begin
+                        s_brightness <= 1;
                     end
                     else begin
-                        brightness <= 0;
+                        s_brightness <= 0;
                     end
                 end
                 else begin
-                    brightness <= 1;
+                    s_brightness <= 1;
                 end
             end
             else begin
-                pwm_r <= 1'b0;
-                brightness <= 0;
+                s_pwm <= 1'b0;
+                s_brightness <= 0;
             end
 
         end
         else begin
-            pwm_r <= 1'b0;
-            brightness <= 0;
+            s_pwm <= 1'b0;
+            s_brightness <= 0;
         end
     end
 end

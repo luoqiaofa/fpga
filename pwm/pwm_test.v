@@ -18,64 +18,64 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-module pwm_test;
-    reg         clk_i;
-    reg         rst_n_i;
-    reg[31:0]   mode;
-    reg[31:0]   freq_cnt;
-    reg[31:0]   duty;
-    wire        pwm_out;
-    wire        pwm_top;
-parameter SYS_FREQ = 100000000;
-parameter BRIGHTNESS_FREQ = (SYS_FREQ >> 8) - 1;
-// parameter BRIGHTNESS = 0;
-localparam POLAR = 1;
-localparam DUTY = 50;
-localparam BRIGHTNESS = 200;
-// localparam BRIGHTNESS = 255;
-localparam FREQ_CNT = 16384;
-localparam DUTY_CNT = (DUTY * FREQ_CNT) / 100;
-// localparam DUTY_CNT = FREQ_CNT;
-// parameter BRIGHTNESS = 255;
-// wire div_2hz_o;
-pwm_module pwm_obj (
-    .I_SYS_CLK(clk_i),
-    .I_RESETN(rst_n_i),
-    .I_PWM_MODE(mode),
-    .I_PWM_FREQ_CNT(freq_cnt),
-    .I_PWM_DUTY(duty),
-    .I_BRIGHTNESS(BRIGHTNESS),
-    .O_PWM_OUT(pwm_out)
+module pwm_test();
+    reg       s_clk_i;
+    reg       s_rst_n_i;
+    reg[1:0]  s_mode;
+    reg[31:0] s_freq_cnt;
+    reg[31:0] s_duty_cnt;
+    wire      s_pwm_out;
+
+    parameter SYS_FREQ = 100000000;
+    parameter BRIGHTNESS_FREQ = (SYS_FREQ >> 8) - 1;
+    // parameter BRIGHTNESS = 0;
+    localparam POLAR = 1;
+    localparam DUTY = 50;
+    localparam BRIGHTNESS = 200;
+    // localparam BRIGHTNESS = 255;
+    localparam FREQ_CNT = 16384;
+    localparam DUTY_CNT = (DUTY * FREQ_CNT) / 100;
+    // localparam DUTY_CNT = FREQ_CNT;
+    // parameter BRIGHTNESS = 255;
+    // wire div_2hz_o;
+    pwm_module pwm_obj (
+        .i_sysclk(s_clk_i),
+        .i_resetn(s_rst_n_i),
+        .i_enable(s_mode[0]),
+        .i_polar(s_mode[1]),
+        .i_freq_cnt(s_freq_cnt),
+        .i_duty_cnt(s_duty_cnt),
+        .i_brightness(BRIGHTNESS),
+        .o_pwm_out(s_pwm_out)
     );
 
-assign  pwm_top = pwm_out;
 
-initial
-begin
-    $dumpfile("wave.vcd");    //生成的vcd文件名称
-    $dumpvars(0);   //tb模块名称
-end
+    initial
+    begin
+        $dumpfile("wave.vcd");    //生成的vcd文件名称
+        $dumpvars(0);   //tb模块名称
+    end
 
-initial
-begin
-    clk_i <= 0;
-    rst_n_i <= 0;
-    freq_cnt <= FREQ_CNT;
-    duty     <= DUTY_CNT;
-    mode   <= 0;
-    #15
-    rst_n_i = 1;
-    #500
-    mode   <= 1;
-    #(2*FREQ_CNT*10)
-    mode   <= 0;
-    #(2*FREQ_CNT)
-    mode   <= (1 + (2 * POLAR));
-    #(2*FREQ_CNT*10)
-    $stop;
-end
+    initial
+    begin
+        s_clk_i <= 0;
+        s_rst_n_i <= 0;
+        s_freq_cnt <= FREQ_CNT;
+        s_duty_cnt <= DUTY_CNT;
+        s_mode   <= 0;
+        #15
+        s_rst_n_i = 1;
+        #500
+        s_mode   <= 1;
+        #(2*FREQ_CNT*10)
+        s_mode   <= 0;
+        #(2*FREQ_CNT)
+        s_mode   <= (1 + (2 * POLAR));
+        #(2*FREQ_CNT*10)
+        $stop;
+    end
 
-always #5 clk_i = ~clk_i;
-
+    always #5 s_clk_i = ~s_clk_i;
 
 endmodule
+
