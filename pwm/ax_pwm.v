@@ -53,25 +53,11 @@ localparam BRIGHTNESS_MAX = 256;
 
 reg s_pwm;
 reg s_brightness;
-reg [C_DATA_WIDTH - 1:0] s_period;
-reg [C_DATA_WIDTH - 1:0] s_duty;
 reg [C_DATA_WIDTH - 1:0] s_period_cnt;
 reg [C_DATA_WIDTH - 1:0] s_brightness_cnt;
 
 // assign o_pwm_out = s_pwm;
 assign o_pwm_out = i_polar ? ~(s_pwm & s_brightness) : (s_pwm & s_brightness);
-/* Data buffer for i_freq_cnt and i_duty_cnt  */
-always@(posedge i_sysclk or negedge i_resetn)
-begin
-    if(!i_resetn) begin
-        s_period <= { C_DATA_WIDTH {1'b0} };
-        s_duty   <= { C_DATA_WIDTH {1'b0} };
-    end
-    else begin
-        s_period <= i_freq_cnt;
-        s_duty   <= i_duty_cnt;
-    end
-end
 
 always@(posedge i_sysclk or negedge i_resetn)
 begin
@@ -81,10 +67,10 @@ begin
     end 
     else begin
         if (i_enable) begin
-            if (s_period == 0) begin
+            if (i_freq_cnt == 0) begin
                 s_period_cnt <= 0;
             end
-            else if (s_period_cnt >= (s_period - 1)) begin
+            else if (s_period_cnt >= (i_freq_cnt - 1)) begin
                 s_period_cnt <= 0;
             end
             else begin
@@ -108,42 +94,42 @@ always@(posedge i_sysclk or negedge i_resetn)
 begin
     if(!i_resetn) begin
         s_pwm <= 0;
-        s_brightness <= 0;
+        s_brightness <= 1'b0;
     end
     else begin
         if (i_enable) begin
             if ((0 == i_duty_cnt) || (0 == i_freq_cnt)) begin
                 s_pwm <= 1'b0;
-                s_brightness <= 0;
+                s_brightness <= 1'b0;
             end
-            else if(s_period_cnt <= s_duty) begin
+            else if ((s_period_cnt < i_duty_cnt) || (i_duty_cnt >= i_freq_cnt)) begin
                 s_pwm <= 1'b1;
                 if (i_brightness < (BRIGHTNESS_MAX - 1)) begin
                     if (0 == i_brightness) begin
-                        s_brightness <= 0;
+                        s_brightness <= 1'b0;
                     end
                     else if (s_brightness_cnt < (i_brightness)) begin
-                        s_brightness <= 1;
+                        s_brightness <= 1'b1;
                     end
                     else begin
-                        s_brightness <= 0;
+                        s_brightness <= 1'b0;
                     end
                 end
                 else begin
-                    s_brightness <= 1;
+                    s_brightness <= 1'b1;
                 end
             end
             else begin
                 s_pwm <= 1'b0;
-                s_brightness <= 0;
+                s_brightness <= 1'b0;
             end
 
-        end
+        end // if (i_enable) end
         else begin
             s_pwm <= 1'b0;
-            s_brightness <= 0;
+            s_brightness <= 1'b0;
         end
-    end
+    end // if(i_resetn) end
 end
 
 endmodule
