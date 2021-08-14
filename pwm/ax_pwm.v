@@ -22,7 +22,8 @@
 //   i_sysclk     platform clock input
 //   i_resetn     normally is reset
 //   i_enable     pwm mode, BIT0: enable or disable
-//                            BIT1: 1 for negtive, 0 for positive
+//                          BIT1: 1 for negtive, 0 for positive
+//   i_polar      enectric level polar, 0: hi active, 1: low active
 //   i_freq_cnt frequency(i_sysclk) frequency divider
 //   i_duty_cnt     duty circle ratio, 1~50 integer
 //   o_pwm_out frequency = frequency(i_sysclk) / i_freq_cnt;
