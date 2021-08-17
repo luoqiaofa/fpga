@@ -13,54 +13,54 @@ module i2c_master_byte_ctl(
     input      [2:0]  cmd,
 
     output            cmd_ack,
-    output            i2c_ack_o,
-    output            i2c_al_o,   // arbitration lost output
-    output            i2c_busy_o, // i2c bus busy output
+    output            o_i2c_ack,
+    output            o_i2c_al,   // arbitration lost output
+    output            o_i2c_busy, // i2c bus busy output
 
-    input      [7:0]  data_i,
-    output     [7:0]  data_o,
+    input      [7:0]  i_data,
+    output     [7:0]  o_data,
 
-    input             scl_i,
-    output            scl_o,
+    input             i_scl,
+    output            o_scl,
     output            scl_oen,
-    input             sda_i,
-    output            sda_o,
+    input             i_sda,
+    output            o_sda,
     output            sda_oen
 );
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
 
-reg  bit_i;
+reg  i_bit;
 reg  [2:0] bit_cmd;
 reg  [2:0] c_state;
 wire bit_done;
 reg  cmd_done;
-wire bit_o;
+wire o_bit;
 reg  bit_ack;
 reg [7:0] shift_r;
 reg [2:0] bit_cnt;
 reg [7:0] data_read;
 
 assign cmd_ack = cmd_done;
-assign i2c_ack_o = bit_ack;
-assign data_o = data_read;
+assign o_i2c_ack = bit_ack;
+assign o_data = data_read;
 always @(posedge sysclk or negedge nReset)
 begin
     if (!nReset || !enable)
     begin
         bit_ack <= 0;
         bit_cmd <= CMD_IDLE;
-        bit_i  <= 1'b1;
+        i_bit  <= 1'b1;
         shift_r <= 8'hff;
         bit_cnt <= 3'h7;
         cmd_done <= 0;
         c_state <= CMD_IDLE;
         data_read <= 8'hff;
     end
-    else 
+    else
     begin
         cmd_done <= 1'b0;
-        bit_i <= shift_r[bit_cnt];
+        i_bit <= shift_r[bit_cnt];
         // cmd_done <= 1'b0;
         if (bit_done)
         begin
@@ -69,7 +69,7 @@ begin
                 CMD_START:
                 begin
                     cmd_done <= 1'b1;
-                    shift_r = data_i;
+                    shift_r = i_data;
                     bit_cnt <= 3'h7;
                 end
                 CMD_WRITE:
@@ -80,12 +80,12 @@ begin
                     begin
                         cmd_done <= 1'b1;
                         bit_cnt <= 3'h7;
-                        shift_r = data_i;
+                        shift_r = i_data;
                     end
                 end
                 CMD_READ:
                 begin
-                    shift_r[bit_cnt] <= bit_o;
+                    shift_r[bit_cnt] <= o_bit;
                     bit_cmd <= c_state;
                     bit_cnt <= bit_cnt - 1;
                     if (bit_cnt == 1'b0)
@@ -99,14 +99,14 @@ begin
                 begin
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
-                    shift_r = data_i;
+                    shift_r = i_data;
                 end
                 CMD_RD_ACK:
                 begin
-                    bit_ack = bit_o;
+                    bit_ack = o_bit;
                     cmd_done <= 1'b1;
                     bit_cnt <= 3'h7;
-                    shift_r = data_i;
+                    shift_r = i_data;
                 end
                 CMD_RESTART:
                 begin
@@ -114,7 +114,7 @@ begin
                     c_state <= CMD_IDLE;
                     cmd_done <= 1'b1;
                 end
-                CMD_STOP: 
+                CMD_STOP:
                     begin
                         c_state <= CMD_IDLE;
                         data_read <= 8'hff;
@@ -136,7 +136,7 @@ begin
                 end
                 CMD_WRITE:
                 begin
-                    shift_r = data_i;
+                    shift_r = i_data;
                     bit_cmd <= cmd;
                 end
                 CMD_READ:
@@ -146,19 +146,19 @@ begin
                 CMD_RD_ACK:
                 begin
                     bit_cnt <= 3'h7;
-                    shift_r = data_i;
+                    shift_r = i_data;
                     bit_cmd <= CMD_READ;
                 end
                 CMD_WR_ACK:
                 begin
-                    bit_i <= 0;
+                    i_bit <= 0;
                     bit_cmd <= CMD_WRITE;
                 end
                 CMD_RESTART:
                 begin
                     bit_cmd <= CMD_RESTART;
                 end
-                CMD_STOP: 
+                CMD_STOP:
                 begin
                     bit_cmd <= CMD_STOP;
                 end
@@ -170,27 +170,27 @@ end
 
 
 i2c_bit_ctl bit_controller(
-    .sysclk     (sysclk),   // system clock input
-    .nReset     (nReset),  // sync reset
-    .enable     (enable),   // iic enable
+    .i_sysclk     (sysclk),   // system clock input
+    .i_nReset     (nReset),  // sync reset
+    .i_enable     (enable),   // iic enable
 
-    .prescale   (prescale), // clock prescale cnt
-    .dfsr       (dfsr),     // sample clk cnt
+    .i_prescale   (prescale), // clock prescale cnt
+    .i_dfsr       (dfsr),     // sample clk cnt
 
-    .cmd        (bit_cmd),
-    .cmd_ack    (bit_done),    // cmd compelete ack
-    .busy       (i2c_busy_o),     // bus busy
-    .arblost    (i2c_al_o),  // arbitration lost
+    .i_cmd        (bit_cmd),
+    .o_cmd_ack    (bit_done),    // cmd compelete ack
+    .o_busy       (o_i2c_busy),     // bus busy
+    .o_arblost    (o_i2c_al),  // arbitration lost
 
-    .din        (bit_i),
-    .dout       (bit_o),
+    .i_din        (i_bit),
+    .o_dout       (o_bit),
 
-    .scl_i      (scl_i),
-    .scl_o      (scl_o),
-    .scl_oen    (scl_oen),
-    .sda_i      (sda_i),
-    .sda_o      (sda_o),
-    .sda_oen    (sda_oen)
+    .i_scl        (i_scl),
+    .o_scl        (o_scl),
+    .o_scl_oen    (scl_oen),
+    .i_sda        (i_sda),
+    .o_sda        (o_sda),
+    .o_sda_oen    (sda_oen)
 );
 
 endmodule
