@@ -9,26 +9,26 @@ wire o_clk_div3;
 wire o_clk_div4;
 wire o_clk_div5;
 
-clk_divn clk_divn_u0 (
+clk_divn clk_div2_u0 (
     .i_clk(i_clk),
     .i_resetn(i_resetn),
     .i_divn(8'h02),
     .o_clk(o_clk_div2)
 );
 
-clk_divn clk_divn_u1 (
+clk_divn clk_div3_u1 (
     .i_clk(i_clk),
     .i_resetn(i_resetn),
     .i_divn(8'h03),
     .o_clk(o_clk_div3)
 );
-clk_divn clk_divn_u2 (
+clk_divn clk_div4_u2 (
     .i_clk(i_clk),
     .i_resetn(i_resetn),
     .i_divn(8'h04),
     .o_clk(o_clk_div4)
 );
-clk_divn clk_divn_u3 (
+clk_divn clk_div5_u3 (
     .i_clk(i_clk),
     .i_resetn(i_resetn),
     .i_divn(8'h05),
