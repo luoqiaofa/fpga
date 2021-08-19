@@ -43,6 +43,7 @@ assign i_wr_addr = wr_addr;
 assign i_wr_data = wr_data;
 assign i_rd_addr = rd_addr;
 assign i_rd_data = rd_data;
+wire   s_i2c_irq;
 
 i2c_top_module i2c_master_u1(
     .i_sysclk(i_sysclk),   // system clock input
@@ -55,6 +56,7 @@ i2c_top_module i2c_master_u1(
     .o_rd_data(o_rd_data), // read date output
     .o_read_ready (read_valid),      // data ready to read
     .o_write_ready(write_valid),      // data ready to read
+    .o_interrupt(s_i2c_irq),
     .scl_pin(scl_pin),     // scl pad pin
     .sda_pin(sda_pin)      // sda pad pin
 );

@@ -8,7 +8,7 @@ module i2c_bit_ctl(
     input [15:0]   i_prescale, // clock i_prescale s_
     input [5:0]    i_dfsr,     // sample clk cnt
 
-    input [2:0]    i_cmd,
+    input [3:0]    i_cmd,
     output reg     o_cmd_ack,  // i_cmd compelete ack
     output reg     o_busy,     // bus o_busy
     output reg     o_arblost,  // arbitration lost
@@ -25,6 +25,7 @@ module i2c_bit_ctl(
 );
 `include "i2c-def.v"
 
+reg [3:0]  s_bit_cmd;
 reg [4:0]  s_c_state;
 reg [15:0] s_cnt;
 reg s_clk_en;
@@ -87,6 +88,7 @@ begin
     else begin
         o_cmd_ack <= 1'b0;
         if (B_IDLE == s_c_state) begin
+            s_bit_cmd <= i_cmd;
             case (i_cmd)
                 CMD_IDLE   :s_c_state <= B_IDLE;
                 CMD_START  :s_c_state <= B_START_B;

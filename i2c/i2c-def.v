@@ -1,22 +1,24 @@
 // iic byte command to bit ctl
-localparam CMD_IDLE    = 3'h0;
-localparam CMD_START   = 3'h1;
-localparam CMD_STOP    = 3'h2;
-localparam CMD_WRITE   = 3'h3;
-localparam CMD_READ    = 3'h4;
-localparam CMD_WR_ACK  = 3'h5;
-localparam CMD_RD_ACK  = 3'h6;
-localparam CMD_RESTART = 3'h7;
+localparam CMD_IDLE    = 4'h0;
+localparam CMD_START   = 4'h1;
+localparam CMD_STOP    = 4'h2;
+localparam CMD_WRITE   = 4'h3;
+localparam CMD_READ    = 4'h4;
+localparam CMD_WR_ACK  = 4'h5;
+localparam CMD_WR_NAK  = 4'h6;
+localparam CMD_RD_ACK  = 4'h7;
+localparam CMD_RESTART = 4'h8;
 
 // iic byte state machine
-localparam SM_IDLE     = 3'h0;
-localparam SM_START    = 3'h1;
-localparam SM_STOP     = 3'h2;
-localparam SM_WRITE    = 3'h3;
-localparam SM_READ     = 3'h4;
-localparam SM_WR_ACK   = 3'h5;
-localparam SM_RD_ACK   = 3'h6;
-localparam SM_RESTART  = 3'h7;
+localparam SM_IDLE     = 4'h0;
+localparam SM_START    = 4'h1;
+localparam SM_STOP     = 4'h2;
+localparam SM_WRITE    = 4'h3;
+localparam SM_READ     = 4'h4;
+localparam SM_WR_ACK   = 4'h5;
+localparam SM_WR_NAK   = 4'h6;
+localparam SM_RD_ACK   = 4'h7;
+localparam SM_RESTART  = 4'h8;
 
 // iic bit control state machine
 localparam B_IDLE      = 5'h00;

@@ -11,6 +11,7 @@ module i2c_top_module(
     output      [7:0]    o_rd_data, // read date output
     output               o_read_ready, // data ready to read
     output               o_write_ready, // data ready to read
+    output               o_interrupt, // data ready to read
     inout                scl_pin,   // scl pad pin
     inout                sda_pin    // sda pad pin
 );
@@ -32,38 +33,40 @@ reg rd_ready_r;
 reg wr_ready_r;
 
 reg [2:0] i2c_state;
+reg s_irq;
 
-wire i_sda;
+wire s_sda;
 wire o_sda;
-wire sda_oen;
-wire i_scl;
+wire s_sda_oen;
+wire s_scl;
 wire o_scl;
-wire scl_oen;
+wire s_scl_oen;
 
 
 assign o_rd_data = s_data_out;
 assign o_read_ready = rd_ready_r;
 assign o_write_ready = wr_ready_r;
+assign o_interrupt = s_irq;
 
 pullup scl_pu(scl_pin);
 pullup sda_pu(sda_pin);
 
 iobuf sda(
-    .T  (sda_oen),
+    .T  (s_sda_oen),
     .IO (sda_pin),
     .I  (o_sda),
-    .O  (i_sda)
+    .O  (s_sda)
 );
 
 iobuf scl(
-    .T  (scl_oen),
+    .T  (s_scl_oen),
     .IO (scl_pin),
     .I  (o_scl),
-    .O  (i_scl)
+    .O  (s_scl)
 );
 
 reg [15:0] s_prescale; // clock prescale cnt
-reg [2:0]  s_cmd;
+reg [3:0]  s_cmd;
 
 wire s_cmd_ack;
 wire s_i2c_ack;
@@ -77,9 +80,9 @@ wire s_cmd_trig;
 assign s_cmd_trig = go | go_go;
 
 i2c_master_byte_ctl u1_byte_ctl(
-    .sysclk    (i_sysclk),
-    .nReset    (i_reset_n),  // sync reset
-    .enable    (I2CCR[CCR_MEN]),   // iic enable
+    .i_sysclk    (i_sysclk),
+    .i_nReset    (i_reset_n),  // sync reset
+    .i_enable    (I2CCR[CCR_MEN]),   // iic enable
     .i_prescale(s_prescale), // clock prescale cnt
     .i_dfsr    (I2CDFSRR[5:0]),   // Digital Filter Sampling Rate cnt
     .i_cmd_trig(s_cmd_trig),
@@ -92,12 +95,12 @@ i2c_master_byte_ctl u1_byte_ctl(
     .i_data    (I2CDR),
     .o_data    (s_rddata),
 
-    .i_scl     (i_scl),
+    .i_scl     (s_scl),
     .o_scl     (o_scl),
-    .scl_oen   (scl_oen),
-    .i_sda     (i_sda),
+    .o_scl_oen (s_scl_oen),
+    .i_sda     (s_sda),
     .o_sda     (o_sda),
-    .sda_oen   (sda_oen)
+    .o_sda_oen (s_sda_oen)
 );
 
 wire div_ready;
@@ -116,11 +119,9 @@ end
 
 always @(posedge I2CCR[CCR_MSTA])
 begin
-    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & I2CCR[CCR_MTX])
-    begin
+    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & I2CCR[CCR_MTX]) begin
         case (i2c_state)
-            SM_IDLE:
-            begin
+            SM_IDLE: begin
                 s_cmd <= CMD_START;
                 i2c_state <= SM_START;
                 go <= 1;
@@ -140,8 +141,7 @@ end
 
 always @(negedge I2CCR[CCR_MSTA])
 begin
-    if (I2CCR[CCR_MEN])
-    begin
+    if (I2CCR[CCR_MEN]) begin
         s_cmd <= CMD_STOP;
         i2c_state <= SM_STOP;
         go <= 1;
@@ -150,12 +150,10 @@ end
 
 always @(posedge go_write)
 begin
-    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & I2CCR[CCR_MTX])
-    begin
+    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA] & I2CCR[CCR_MTX]) begin
         case (i2c_state)
             SM_IDLE   :;
-            SM_START  :
-            begin
+            SM_START  : begin
                 i2c_state <= SM_WRITE;
                 s_cmd <= CMD_WRITE;
                 go <= 1;
@@ -164,14 +162,12 @@ begin
             SM_WRITE  :;
             SM_READ   :;
             SM_WR_ACK :;
-            SM_RD_ACK :
-            begin
+            SM_RD_ACK : begin
                 i2c_state <= SM_WRITE;
                 s_cmd <= CMD_WRITE;
                 go <= 1;
             end
-            SM_RESTART:
-            begin
+            SM_RESTART: begin
                 i2c_state <= SM_WRITE;
                 s_cmd <= CMD_WRITE;
                 go <= 1;
@@ -183,8 +179,7 @@ end
 
 always @(posedge go_read)
 begin
-    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
-    begin
+    if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA]) begin
         i2c_state <= SM_READ;
         s_cmd <= CMD_READ;
         go <= 1;
@@ -193,55 +188,45 @@ end
 
 always @(posedge i_sysclk or negedge i_reset_n)
 begin
-    if (!i_reset_n)
-    begin
+    if (!i_reset_n) begin
         go <= 0;
         s_cmd <= CMD_IDLE;
         i2c_state <= SM_IDLE;
     end
-    else
-    begin
+    else begin
+        s_irq <= 0;
         go <= 0;
-        if (/* I2CCR[CCR_MIEN] & */ I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
-        begin
-            if (s_cmd_ack)
-            begin
+        if (/* I2CCR[CCR_MIEN] & */ I2CCR[CCR_MEN] & I2CCR[CCR_MSTA]) begin
+            if (s_cmd_ack) begin
                 case (i2c_state)
                     SM_IDLE   :;
-                    SM_START  :
-                    begin
+                    SM_START  : begin
                         I2CSR[CSR_MBB] <= 1'b1;
                         wr_ready_r <= 1'b1;
                     end
-                    SM_STOP   :
-                    begin
+                    SM_STOP   : begin
                         I2CSR[CSR_MBB] <= 1'b0;
                         I2CSR[CSR_MCF] <= 1'b1;
                         i2c_state <= SM_IDLE;
                         s_cmd <= CMD_IDLE;
                     end
-                    SM_WRITE  :
-                    begin
-                        if (I2CCR[CCR_MTX])
-                        begin
+                    SM_WRITE  : begin
+                        if (I2CCR[CCR_MTX]) begin
                             i2c_state = SM_RD_ACK;
                             s_cmd <= CMD_RD_ACK;
                             go <= 1;
                         end
                     end
-                    SM_READ   :
-                    begin
+                    SM_READ   : begin
                         rd_ready_r <= 1'b1;
                         I2CDR <= s_rddata;
                         s_data_out <= s_rddata;
-                        if (!I2CCR[CCR_TXAK])
-                        begin
+                        if (!I2CCR[CCR_TXAK]) begin
                             i2c_state <= SM_WR_ACK;
                             s_cmd <= CMD_WR_ACK;
                             go <= 1;
                         end
-                        else
-                        begin
+                        else begin
                             I2CSR[CSR_MCF]  <= 1'b1;
                             // I2CSR[CSR_MAAS] <= 1'b0;
                             // I2CSR[CSR_MBB] <= s_i2c_busy;
@@ -250,22 +235,22 @@ begin
                             // I2CSR[CSR_SRW] <= 1'b0;
                             I2CSR[CSR_MIF]  <= 1'b1;
                             I2CSR[CSR_RXAK] <= 1'b1;
+                            s_irq <= 1;
                         end
                     end
-                    SM_WR_ACK :
-                        begin
+                    SM_WR_ACK : begin
 
-                            I2CSR[CSR_MCF]  <= 1'b1;
-                            // I2CSR[CSR_MAAS] <= 1'b0;
-                            // I2CSR[CSR_MBB] <= s_i2c_busy;
-                            I2CSR[CSR_MAL]  <= s_i2c_al;
-                            // I2CSR[CSR_BCSTM] <= 1'b0;
-                            // I2CSR[CSR_SRW] <= 1'b0;
-                            I2CSR[CSR_MIF]  <= 1'b1;
-                            I2CSR[CSR_RXAK] <= s_i2c_ack;
-                        end
-                    SM_RD_ACK :
-                    begin
+                        I2CSR[CSR_MCF]  <= 1'b1;
+                        // I2CSR[CSR_MAAS] <= 1'b0;
+                        // I2CSR[CSR_MBB] <= s_i2c_busy;
+                        I2CSR[CSR_MAL]  <= s_i2c_al;
+                        // I2CSR[CSR_BCSTM] <= 1'b0;
+                        // I2CSR[CSR_SRW] <= 1'b0;
+                        I2CSR[CSR_MIF]  <= 1'b1;
+                        I2CSR[CSR_RXAK] <= s_i2c_ack;
+                        s_irq <= 1;
+                    end
+                    SM_RD_ACK : begin
                         wr_ready_r <= 1'b1;
                         I2CSR[CSR_MCF]  <= 1'b1;
                         // I2CSR[CSR_MAAS] <= 1'b0;
@@ -275,13 +260,12 @@ begin
                         // I2CSR[CSR_SRW] <= 1'b0;
                         I2CSR[CSR_MIF]  <= 1'b1;
                         I2CSR[CSR_RXAK] <= s_i2c_ack;
+                        s_irq <= 1;
                     end
-                    SM_RESTART :
-                    begin
+                    SM_RESTART : begin
                         wr_ready_r <= 1'b1;
                     end
-                    default:
-                    begin
+                    default: begin
                         i2c_state <= SM_IDLE;
                         s_cmd <= CMD_IDLE;
                     end
@@ -293,8 +277,7 @@ end
 
 always @(posedge i_sysclk or negedge i_reset_n)
 begin
-    if (!i_reset_n)
-    begin
+    if (!i_reset_n) begin
         I2CADR   <= 8'h00;
         I2CFDR   <= 8'h00;
         I2CCR    <= 8'h00;
@@ -308,67 +291,54 @@ begin
         rd_ready_r <= 1'b1;
         wr_ready_r <= 1'b1;
     end
-    else
-    begin
+    else begin
         go_go <= 0;
         go_read <= 1'b0;
         go_write <= 1'b0;
         s_data_out <= s_data_out;
-        if (i_wr_ena)
-        begin
+        if (i_wr_ena) begin
             case (i_wr_addr[4:2])
-                ADDR_ADR   :
-                begin
+                ADDR_ADR   : begin
                     I2CADR   <= i_wr_data;
                 end
-                ADDR_FDR   :
-                begin
+                ADDR_FDR   : begin
                     I2CFDR   <= i_wr_data;
                 end
-                ADDR_CR    :
-                begin
+                ADDR_CR    : begin
                     I2CCR    <= i_wr_data;
-                    if (i_wr_data[CCR_RSTA] & i_wr_data[CCR_MEN] & i_wr_data[CCR_MSTA] & i_wr_data[CCR_MTX])
-                    begin
+                    if (i_wr_data[CCR_RSTA] & i_wr_data[CCR_MEN] & i_wr_data[CCR_MSTA] & i_wr_data[CCR_MTX]) begin
                         case (i2c_state)
                             SM_IDLE   :;
                             SM_START  :;
                             SM_STOP   :;
                             SM_WRITE  :;
                             SM_READ   :;
-                            SM_WR_ACK :
-                            begin
+                            SM_WR_ACK : begin
                                 s_cmd <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
                                 go_go <= 1'b1;
                                 wr_ready_r <= 1'b0;
                             end
-                            SM_RD_ACK :
-                            begin
+                            SM_RD_ACK : begin
                                 s_cmd <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
                                 go_go <= 1'b1;
                                 wr_ready_r <= 1'b0;
                             end
-                            SM_RESTART:;
-                            default   :;
+                            SM_RESTART:; default   :;
                         endcase
                     end
                 end
-                ADDR_SR    :
-                begin
-                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
-                    begin
+                ADDR_SR    : begin
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
                         I2CSR[CSR_MAL] <= i_wr_data[CSR_MAL];
                         I2CSR[CSR_MIF] <= i_wr_data[CSR_MIF];
                     end
                 end
-                ADDR_DR    :
-                begin
-                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF] & (!I2CSR[CSR_MIF]))
-                    begin
+                ADDR_DR    : begin
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF] & (!I2CSR[CSR_MIF])) begin
                         I2CSR[CSR_MCF] <= 1'b0;
                         I2CDR    <= i_wr_data;
                         go_write <= 1'b1;
@@ -379,41 +349,32 @@ begin
                 default    : I2CSR    <= I2CSR;
             endcase
         end
-        if (i_rd_ena)
-        begin
+        if (i_rd_ena) begin
             case (i_rd_addr[4:2])
-                ADDR_ADR   :
-                begin
+                ADDR_ADR   : begin
                     s_data_out <= I2CADR  ;
                 end
-                ADDR_FDR   :
-                begin
+                ADDR_FDR   : begin
                     s_data_out <= I2CFDR  ;
                 end
-                ADDR_CR    :
-                begin
+                ADDR_CR    : begin
                     s_data_out <= I2CCR   ;
                 end
-                ADDR_SR    :
-                begin
+                ADDR_SR    : begin
                     s_data_out <= I2CSR   ;
                 end
-                ADDR_DR    :
-                begin
-                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF])
-                    begin
+                ADDR_DR    : begin
+                    if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
                         I2CSR[CSR_MCF] <= 1'b0;
                         // I2CDR <= i_data;
                         go_read <= 1'b1;
                         rd_ready_r <= 1'b0;
                     end
                 end
-                ADDR_DFSRR :
-                begin
+                ADDR_DFSRR : begin
                     s_data_out <= I2CDFSRR;
                 end
-                default    :
-                begin
+                default    : begin
                     s_data_out <= I2CSR   ;
                 end
             endcase
@@ -428,73 +389,73 @@ reg [15:0] freq_div;
 
 begin
 
-case (fdr & 8'h3f)
-    8'h00 : freq_div = 384;
-    8'h01 : freq_div = 416;
-    8'h02 : freq_div = 480;
-    8'h03 : freq_div = 576;
-    8'h04 : freq_div = 640;
-    8'h05 : freq_div = 704;
-    8'h06 : freq_div = 832;
-    8'h07 : freq_div = 1024;
-    8'h08 : freq_div = 1152;
-    8'h09 : freq_div = 1280;
-    8'h0A : freq_div = 1536;
-    8'h0B : freq_div = 1920;
-    8'h0C : freq_div = 2304;
-    8'h0D : freq_div = 2560;
-    8'h0E : freq_div = 3072;
-    8'h0F : freq_div = 3840;
-    8'h10 : freq_div = 4608;
-    8'h11 : freq_div = 5120;
-    8'h12 : freq_div = 6144;
-    8'h13 : freq_div = 7680;
-    8'h14 : freq_div = 9216;
-    8'h15 : freq_div = 10240;
-    8'h16 : freq_div = 12288;
-    8'h17 : freq_div = 15360;
-    8'h18 : freq_div = 18432;
-    8'h19 : freq_div = 20480;
-    8'h1A : freq_div = 24576;
-    8'h1B : freq_div = 30720;
-    8'h1C : freq_div = 36864;
-    8'h1D : freq_div = 40960;
-    8'h1E : freq_div = 49152;
-    8'h1F : freq_div = 61440;
-    8'h20 : freq_div = 256;
-    8'h21 : freq_div = 288;
-    8'h22 : freq_div = 320;
-    8'h23 : freq_div = 352;
-    8'h24 : freq_div = 384;
-    8'h25 : freq_div = 448;
-    8'h26 : freq_div = 512;
-    8'h27 : freq_div = 576;
-    8'h28 : freq_div = 640;
-    8'h29 : freq_div = 768;
-    8'h2A : freq_div = 896;
-    8'h2B : freq_div = 1024;
-    8'h2C : freq_div = 1280;
-    8'h2D : freq_div = 1536;
-    8'h2E : freq_div = 1792;
-    8'h2F : freq_div = 2048;
-    8'h30 : freq_div = 2560;
-    8'h31 : freq_div = 3072;
-    8'h32 : freq_div = 3584;
-    8'h33 : freq_div = 4096;
-    8'h34 : freq_div = 5120;
-    8'h35 : freq_div = 6144;
-    8'h36 : freq_div = 7168;
-    8'h37 : freq_div = 8192;
-    8'h38 : freq_div = 10240;
-    8'h39 : freq_div = 12288;
-    8'h3A : freq_div = 14336;
-    8'h3B : freq_div = 16384;
-    8'h3C : freq_div = 20480;
-    8'h3D : freq_div = 24576;
-    8'h3E : freq_div = 28672;
-    8'h3F : freq_div = 32768;
-endcase
-freq_divid_get = freq_div;
+    case (fdr & 8'h3f)
+        8'h00 : freq_div = 384;
+        8'h01 : freq_div = 416;
+        8'h02 : freq_div = 480;
+        8'h03 : freq_div = 576;
+        8'h04 : freq_div = 640;
+        8'h05 : freq_div = 704;
+        8'h06 : freq_div = 832;
+        8'h07 : freq_div = 1024;
+        8'h08 : freq_div = 1152;
+        8'h09 : freq_div = 1280;
+        8'h0A : freq_div = 1536;
+        8'h0B : freq_div = 1920;
+        8'h0C : freq_div = 2304;
+        8'h0D : freq_div = 2560;
+        8'h0E : freq_div = 3072;
+        8'h0F : freq_div = 3840;
+        8'h10 : freq_div = 4608;
+        8'h11 : freq_div = 5120;
+        8'h12 : freq_div = 6144;
+        8'h13 : freq_div = 7680;
+        8'h14 : freq_div = 9216;
+        8'h15 : freq_div = 10240;
+        8'h16 : freq_div = 12288;
+        8'h17 : freq_div = 15360;
+        8'h18 : freq_div = 18432;
+        8'h19 : freq_div = 20480;
+        8'h1A : freq_div = 24576;
+        8'h1B : freq_div = 30720;
+        8'h1C : freq_div = 36864;
+        8'h1D : freq_div = 40960;
+        8'h1E : freq_div = 49152;
+        8'h1F : freq_div = 61440;
+        8'h20 : freq_div = 256;
+        8'h21 : freq_div = 288;
+        8'h22 : freq_div = 320;
+        8'h23 : freq_div = 352;
+        8'h24 : freq_div = 384;
+        8'h25 : freq_div = 448;
+        8'h26 : freq_div = 512;
+        8'h27 : freq_div = 576;
+        8'h28 : freq_div = 640;
+        8'h29 : freq_div = 768;
+        8'h2A : freq_div = 896;
+        8'h2B : freq_div = 1024;
+        8'h2C : freq_div = 1280;
+        8'h2D : freq_div = 1536;
+        8'h2E : freq_div = 1792;
+        8'h2F : freq_div = 2048;
+        8'h30 : freq_div = 2560;
+        8'h31 : freq_div = 3072;
+        8'h32 : freq_div = 3584;
+        8'h33 : freq_div = 4096;
+        8'h34 : freq_div = 5120;
+        8'h35 : freq_div = 6144;
+        8'h36 : freq_div = 7168;
+        8'h37 : freq_div = 8192;
+        8'h38 : freq_div = 10240;
+        8'h39 : freq_div = 12288;
+        8'h3A : freq_div = 14336;
+        8'h3B : freq_div = 16384;
+        8'h3C : freq_div = 20480;
+        8'h3D : freq_div = 24576;
+        8'h3E : freq_div = 28672;
+        8'h3F : freq_div = 32768;
+    endcase
+    freq_divid_get = freq_div;
 end
 
 endfunction
