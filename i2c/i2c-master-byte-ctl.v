@@ -6,13 +6,13 @@ module i2c_master_byte_ctl(
 
     input             enable,   // iic enable
 
-    input      [15:0] prescale, // clock prescale cnt
-    input      [15:0] dfsr,     // Digital Filter Sampling Rate cnt
+    input      [15:0] i_prescale, // clock prescale cnt
+    input      [5:0]  i_dfsr,     // Digital Filter Sampling Rate cnt
 
-    input             go,
-    input      [2:0]  cmd,
+    input             i_cmd_trig,
+    input      [2:0]  i_cmd,
 
-    output            cmd_ack,
+    output            o_cmd_ack,
     output            o_i2c_ack,
     output            o_i2c_al,   // arbitration lost output
     output            o_i2c_busy, // i2c bus busy output
@@ -30,137 +30,115 @@ module i2c_master_byte_ctl(
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
 
-reg  i_bit;
-reg  [2:0] bit_cmd;
-reg  [2:0] c_state;
-wire bit_done;
-reg  cmd_done;
-wire o_bit;
-reg  bit_ack;
-reg [7:0] shift_r;
-reg [2:0] bit_cnt;
-reg [7:0] data_read;
+reg  s_i_bit;
+reg  [2:0] s_bit_cmd;
+reg  [2:0] s_c_state;
+wire s_bit_done;
+reg  s_cmd_done;
+wire s_o_bit;
+reg  s_bit_ack;
+reg [7:0] s_shift_r;
+reg [2:0] s_bit_cnt;
+reg [7:0] s_data_read;
 
-assign cmd_ack = cmd_done;
-assign o_i2c_ack = bit_ack;
-assign o_data = data_read;
+assign o_cmd_ack = s_cmd_done;
+assign o_i2c_ack = s_bit_ack;
+assign o_data = s_data_read;
 always @(posedge sysclk or negedge nReset)
 begin
-    if (!nReset || !enable)
-    begin
-        bit_ack <= 0;
-        bit_cmd <= CMD_IDLE;
-        i_bit  <= 1'b1;
-        shift_r <= 8'hff;
-        bit_cnt <= 3'h7;
-        cmd_done <= 0;
-        c_state <= CMD_IDLE;
-        data_read <= 8'hff;
+    if (!nReset || !enable) begin
+        s_bit_ack <= 0;
+        s_bit_cmd <= CMD_IDLE;
+        s_i_bit  <= 1'b1;
+        s_shift_r <= 8'hff;
+        s_bit_cnt <= 3'h7;
+        s_cmd_done <= 0;
+        s_c_state <= CMD_IDLE;
+        s_data_read <= 8'hff;
     end
-    else
-    begin
-        cmd_done <= 1'b0;
-        i_bit <= shift_r[bit_cnt];
-        // cmd_done <= 1'b0;
-        if (bit_done)
-        begin
-            bit_cmd <= CMD_IDLE;
-            case (c_state)
-                CMD_START:
-                begin
-                    cmd_done <= 1'b1;
-                    shift_r = i_data;
-                    bit_cnt <= 3'h7;
+    else begin
+        s_bit_cmd <= CMD_IDLE;
+        s_cmd_done <= 1'b0;
+        s_i_bit <= s_shift_r[s_bit_cnt];
+        if (s_bit_done) begin
+            case (s_c_state)
+                CMD_START: begin
+                    s_cmd_done <= 1'b1;
+                    s_shift_r = i_data;
+                    s_bit_cnt <= 3'h7;
                 end
-                CMD_WRITE:
-                begin
-                    bit_cmd <= c_state;
-                    bit_cnt <= bit_cnt - 1;
-                    if (bit_cnt == 1'b0)
-                    begin
-                        cmd_done <= 1'b1;
-                        bit_cnt <= 3'h7;
-                        shift_r = i_data;
+                CMD_WRITE: begin
+                    s_bit_cmd <= s_c_state;
+                    s_bit_cnt <= s_bit_cnt - 1;
+                    if (s_bit_cnt == 1'b0) begin
+                        s_cmd_done <= 1'b1;
+                        s_bit_cnt <= 3'h7;
+                        s_shift_r = i_data;
                     end
                 end
-                CMD_READ:
-                begin
-                    shift_r[bit_cnt] <= o_bit;
-                    bit_cmd <= c_state;
-                    bit_cnt <= bit_cnt - 1;
-                    if (bit_cnt == 1'b0)
-                    begin
-                        cmd_done <= 1'b1;
-                        bit_cnt <= 3'h7;
-                        data_read <= shift_r;
+                CMD_READ: begin
+                    s_shift_r[s_bit_cnt] <= s_o_bit;
+                    s_bit_cmd <= s_c_state;
+                    s_bit_cnt <= s_bit_cnt - 1;
+                    if (s_bit_cnt == 1'b0) begin
+                        s_cmd_done <= 1'b1;
+                        s_bit_cnt <= 3'h7;
+                        s_data_read <= s_shift_r;
                     end
                 end
-                CMD_WR_ACK:
-                begin
-                    cmd_done <= 1'b1;
-                    bit_cnt <= 3'h7;
-                    shift_r = i_data;
+                CMD_WR_ACK: begin
+                    s_cmd_done <= 1'b1;
+                    s_bit_cnt <= 3'h7;
+                    s_shift_r = i_data;
                 end
-                CMD_RD_ACK:
-                begin
-                    bit_ack = o_bit;
-                    cmd_done <= 1'b1;
-                    bit_cnt <= 3'h7;
-                    shift_r = i_data;
+                CMD_RD_ACK: begin
+                    s_bit_ack = s_o_bit;
+                    s_cmd_done <= 1'b1;
+                    s_bit_cnt <= 3'h7;
+                    s_shift_r = i_data;
                 end
-                CMD_RESTART:
-                begin
-                    bit_cmd <= CMD_IDLE;
-                    c_state <= CMD_IDLE;
-                    cmd_done <= 1'b1;
+                CMD_RESTART: begin
+                    s_bit_cmd <= CMD_IDLE;
+                    s_c_state <= CMD_IDLE;
+                    s_cmd_done <= 1'b1;
                 end
-                CMD_STOP:
-                    begin
-                        c_state <= CMD_IDLE;
-                        data_read <= 8'hff;
+                CMD_STOP: begin
+                        s_c_state <= CMD_IDLE;
+                        s_data_read <= 8'hff;
                     end
-                default : bit_cmd <= CMD_IDLE;
+                default : s_bit_cmd <= CMD_IDLE;
             endcase
         end
-        if (go)
-        begin
-            c_state <= cmd;
-            case (cmd)
-                CMD_IDLE:
-                begin
-                    bit_cmd <= CMD_IDLE;
+        if (i_cmd_trig) begin
+            s_c_state <= i_cmd;
+            case (i_cmd)
+                CMD_IDLE: begin
+                    s_bit_cmd <= CMD_IDLE;
                 end
-                CMD_START:
-                begin
-                    bit_cmd <= cmd;
+                CMD_START: begin
+                    s_bit_cmd <= i_cmd;
                 end
-                CMD_WRITE:
-                begin
-                    shift_r = i_data;
-                    bit_cmd <= cmd;
+                CMD_WRITE: begin
+                    s_shift_r = i_data;
+                    s_bit_cmd <= i_cmd;
                 end
-                CMD_READ:
-                begin
-                    bit_cmd <= cmd;
+                CMD_READ: begin
+                    s_bit_cmd <= i_cmd;
                 end
-                CMD_RD_ACK:
-                begin
-                    bit_cnt <= 3'h7;
-                    shift_r = i_data;
-                    bit_cmd <= CMD_READ;
+                CMD_RD_ACK: begin
+                    s_bit_cnt <= 3'h7;
+                    s_shift_r = i_data;
+                    s_bit_cmd <= CMD_READ;
                 end
-                CMD_WR_ACK:
-                begin
-                    i_bit <= 0;
-                    bit_cmd <= CMD_WRITE;
+                CMD_WR_ACK: begin
+                    s_i_bit <= 0;
+                    s_bit_cmd <= CMD_WRITE;
                 end
-                CMD_RESTART:
-                begin
-                    bit_cmd <= CMD_RESTART;
+                CMD_RESTART: begin
+                    s_bit_cmd <= CMD_RESTART;
                 end
-                CMD_STOP:
-                begin
-                    bit_cmd <= CMD_STOP;
+                CMD_STOP: begin
+                    s_bit_cmd <= CMD_STOP;
                 end
                 default :;
             endcase
@@ -168,22 +146,21 @@ begin
     end
 end
 
-
 i2c_bit_ctl bit_controller(
     .i_sysclk     (sysclk),   // system clock input
     .i_nReset     (nReset),  // sync reset
     .i_enable     (enable),   // iic enable
 
-    .i_prescale   (prescale), // clock prescale cnt
-    .i_dfsr       (dfsr),     // sample clk cnt
+    .i_prescale   (i_prescale), // clock prescale cnt
+    .i_dfsr       (i_dfsr),     // sample clk cnt
 
-    .i_cmd        (bit_cmd),
-    .o_cmd_ack    (bit_done),    // cmd compelete ack
+    .i_cmd        (s_bit_cmd),
+    .o_cmd_ack    (s_bit_done),    // i_cmd compelete ack
     .o_busy       (o_i2c_busy),     // bus busy
     .o_arblost    (o_i2c_al),  // arbitration lost
 
-    .i_din        (i_bit),
-    .o_dout       (o_bit),
+    .i_din        (s_i_bit),
+    .o_dout       (s_o_bit),
 
     .i_scl        (i_scl),
     .o_scl        (o_scl),

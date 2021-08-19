@@ -4,15 +4,15 @@ module i2c_top_module(
     input                i_sysclk,  // system clock input
     input                i_reset_n, // module reset input
     input                i_wr_ena,  // write enable
-    input  wire [4:0]    i_wr_addr, // write address
-    input  wire [7:0]    i_wr_data, // write date input
+    input       [4:0]    i_wr_addr, // write address
+    input       [7:0]    i_wr_data, // write date input
     input                i_rd_ena,  // read enable input
-    input  wire [4:0]    i_rd_addr, // read address input
-    output wire [7:0]    o_rd_data, // read date output
-    output wire          o_read_ready, // data ready to read
-    output wire          o_write_ready, // data ready to read
-    inout  wire          scl_pin,   // scl pad pin
-    inout  wire          sda_pin    // sda pad pin
+    input       [4:0]    i_rd_addr, // read address input
+    output      [7:0]    o_rd_data, // read date output
+    output               o_read_ready, // data ready to read
+    output               o_write_ready, // data ready to read
+    inout                scl_pin,   // scl pad pin
+    inout                sda_pin    // sda pad pin
 );
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
@@ -23,7 +23,7 @@ reg [7:0] I2CCR;
 reg [7:0] I2CSR;
 reg [7:0] I2CDR;
 reg [7:0] I2CDFSRR;
-reg [7:0] data_out;
+reg [7:0] s_data_out;
 reg go;
 reg go_go;
 reg go_read;
@@ -41,7 +41,7 @@ wire o_scl;
 wire scl_oen;
 
 
-assign o_rd_data = data_out;
+assign o_rd_data = s_data_out;
 assign o_read_ready = rd_ready_r;
 assign o_write_ready = wr_ready_r;
 
@@ -62,39 +62,35 @@ iobuf scl(
     .O  (i_scl)
 );
 
+reg [15:0] s_prescale; // clock prescale cnt
+reg [2:0]  s_cmd;
 
-wire i_enable;   // iic enable
-
-reg [15:0] i_prescale; // clock prescale cnt
-reg [15:0] dfsr_cnt;   // Digital Filter Sampling Rate cnt
-
-reg [2:0] i_i2c_cmd;
-
-wire o_cmd_ack;
-wire o_i2c_ack;
-wire o_i2c_al;   // arbitration lost output
-wire o_i2c_busy; // i2c bus busy output
+wire s_cmd_ack;
+wire s_i2c_ack;
+wire s_i2c_al;   // arbitration lost output
+wire s_i2c_busy; // i2c bus busy output
 
 // wire [7:0] i_data;
-wire [7:0] o_data;
+wire [7:0] s_rddata;
+wire s_cmd_trig;
 
-assign i_enable = I2CCR[CCR_MEN];
+assign s_cmd_trig = go | go_go;
 
 i2c_master_byte_ctl u1_byte_ctl(
     .sysclk    (i_sysclk),
     .nReset    (i_reset_n),  // sync reset
-    .enable    (i_enable),   // iic enable
-    .prescale  (i_prescale), // clock prescale cnt
-    .dfsr      (dfsr_cnt),   // Digital Filter Sampling Rate cnt
-    .go        (go | go_go),
-    .cmd       (i_i2c_cmd),
-    .cmd_ack   (o_cmd_ack),
-    .o_i2c_ack (o_i2c_ack),
-    .o_i2c_al  (o_i2c_al),   // arbitration lost output
-    .o_i2c_busy(o_i2c_busy), // i2c bus busy output
+    .enable    (I2CCR[CCR_MEN]),   // iic enable
+    .i_prescale(s_prescale), // clock prescale cnt
+    .i_dfsr    (I2CDFSRR[5:0]),   // Digital Filter Sampling Rate cnt
+    .i_cmd_trig(s_cmd_trig),
+    .i_cmd     (s_cmd),
+    .o_cmd_ack (s_cmd_ack),
+    .o_i2c_ack (s_i2c_ack),
+    .o_i2c_al  (s_i2c_al),   // arbitration lost output
+    .o_i2c_busy(s_i2c_busy), // i2c bus busy output
 
     .i_data    (I2CDR),
-    .o_data    (o_data),
+    .o_data    (s_rddata),
 
     .i_scl     (i_scl),
     .o_scl     (o_scl),
@@ -107,49 +103,16 @@ i2c_master_byte_ctl u1_byte_ctl(
 wire div_ready;
 reg  div_ena;
 reg  [15:0] divisor;
-wire [15:0] quotient;
-wire [15:0] remainder;
-wire div_done;
 
 always @(posedge i_sysclk or negedge i_reset_n)
 begin
-    if (!i_reset_n)
-    begin
-        i_prescale <= 16'd384;
-        div_ena <= 0;
-        dfsr_cnt <= 16'd24;
+    if (!i_reset_n) begin
+        s_prescale <= 16'd384;
     end
-    else
-    begin
-        i_prescale <= freq_divid_get(I2CFDR);
-        divisor    <= {{10{1'b0}}, I2CDFSRR[5:0]};
-        if (div_ready)
-        begin
-            div_ena  <= 1'b1;
-        end
-        else if (div_done)
-        begin
-            dfsr_cnt <= quotient;
-            div_ena  <= 1'b0;
-        end
+    else begin
+        s_prescale <= freq_divid_get(I2CFDR);
     end
 end
-
-div_fsm #(
-    .DATA_WIDTH(16)
-)
-dfsr_div_u1
-(
-    /* input                        */ .clk      (i_sysclk),
-    /* input                        */ .rstn     (i_reset_n),
-    /* input                        */ .en       (div_ena),
-    /* output wire                  */ .ready    (div_ready),
-    /* input       [DATA_WIDTH-1:0] */ .dividend (i_prescale),
-    /* input       [DATA_WIDTH-1:0] */ .divisor  (divisor),
-    /* output wire [DATA_WIDTH-1:0] */ .quotient (quotient),
-    /* output wire [DATA_WIDTH-1:0] */ .remainder(remainder),
-    /* output wire                  */ .vld_out  (div_done)
-);
 
 always @(posedge I2CCR[CCR_MSTA])
 begin
@@ -158,7 +121,7 @@ begin
         case (i2c_state)
             SM_IDLE:
             begin
-                i_i2c_cmd <= CMD_START;
+                s_cmd <= CMD_START;
                 i2c_state <= SM_START;
                 go <= 1;
                 wr_ready_r <= 1'b0;
@@ -179,7 +142,7 @@ always @(negedge I2CCR[CCR_MSTA])
 begin
     if (I2CCR[CCR_MEN])
     begin
-        i_i2c_cmd <= CMD_STOP;
+        s_cmd <= CMD_STOP;
         i2c_state <= SM_STOP;
         go <= 1;
     end
@@ -194,7 +157,7 @@ begin
             SM_START  :
             begin
                 i2c_state <= SM_WRITE;
-                i_i2c_cmd <= CMD_WRITE;
+                s_cmd <= CMD_WRITE;
                 go <= 1;
             end
             SM_STOP   :;
@@ -204,13 +167,13 @@ begin
             SM_RD_ACK :
             begin
                 i2c_state <= SM_WRITE;
-                i_i2c_cmd <= CMD_WRITE;
+                s_cmd <= CMD_WRITE;
                 go <= 1;
             end
             SM_RESTART:
             begin
                 i2c_state <= SM_WRITE;
-                i_i2c_cmd <= CMD_WRITE;
+                s_cmd <= CMD_WRITE;
                 go <= 1;
             end
             default   :;
@@ -223,7 +186,7 @@ begin
     if (I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
     begin
         i2c_state <= SM_READ;
-        i_i2c_cmd <= CMD_READ;
+        s_cmd <= CMD_READ;
         go <= 1;
     end
 end
@@ -233,7 +196,7 @@ begin
     if (!i_reset_n)
     begin
         go <= 0;
-        i_i2c_cmd <= CMD_IDLE;
+        s_cmd <= CMD_IDLE;
         i2c_state <= SM_IDLE;
     end
     else
@@ -241,7 +204,7 @@ begin
         go <= 0;
         if (/* I2CCR[CCR_MIEN] & */ I2CCR[CCR_MEN] & I2CCR[CCR_MSTA])
         begin
-            if (o_cmd_ack)
+            if (s_cmd_ack)
             begin
                 case (i2c_state)
                     SM_IDLE   :;
@@ -255,34 +218,34 @@ begin
                         I2CSR[CSR_MBB] <= 1'b0;
                         I2CSR[CSR_MCF] <= 1'b1;
                         i2c_state <= SM_IDLE;
-                        i_i2c_cmd <= CMD_IDLE;
+                        s_cmd <= CMD_IDLE;
                     end
                     SM_WRITE  :
                     begin
                         if (I2CCR[CCR_MTX])
                         begin
                             i2c_state = SM_RD_ACK;
-                            i_i2c_cmd <= CMD_RD_ACK;
+                            s_cmd <= CMD_RD_ACK;
                             go <= 1;
                         end
                     end
                     SM_READ   :
                     begin
                         rd_ready_r <= 1'b1;
-                        I2CDR <= o_data;
-                        data_out <= o_data;
+                        I2CDR <= s_rddata;
+                        s_data_out <= s_rddata;
                         if (!I2CCR[CCR_TXAK])
                         begin
                             i2c_state <= SM_WR_ACK;
-                            i_i2c_cmd <= CMD_WR_ACK;
+                            s_cmd <= CMD_WR_ACK;
                             go <= 1;
                         end
                         else
                         begin
                             I2CSR[CSR_MCF]  <= 1'b1;
                             // I2CSR[CSR_MAAS] <= 1'b0;
-                            // I2CSR[CSR_MBB] <= o_i2c_busy;
-                            I2CSR[CSR_MAL]  <= o_i2c_al;
+                            // I2CSR[CSR_MBB] <= s_i2c_busy;
+                            I2CSR[CSR_MAL]  <= s_i2c_al;
                             // I2CSR[CSR_BCSTM] <= 1'b0;
                             // I2CSR[CSR_SRW] <= 1'b0;
                             I2CSR[CSR_MIF]  <= 1'b1;
@@ -294,24 +257,24 @@ begin
 
                             I2CSR[CSR_MCF]  <= 1'b1;
                             // I2CSR[CSR_MAAS] <= 1'b0;
-                            // I2CSR[CSR_MBB] <= o_i2c_busy;
-                            I2CSR[CSR_MAL]  <= o_i2c_al;
+                            // I2CSR[CSR_MBB] <= s_i2c_busy;
+                            I2CSR[CSR_MAL]  <= s_i2c_al;
                             // I2CSR[CSR_BCSTM] <= 1'b0;
                             // I2CSR[CSR_SRW] <= 1'b0;
                             I2CSR[CSR_MIF]  <= 1'b1;
-                            I2CSR[CSR_RXAK] <= o_i2c_ack;
+                            I2CSR[CSR_RXAK] <= s_i2c_ack;
                         end
                     SM_RD_ACK :
                     begin
                         wr_ready_r <= 1'b1;
                         I2CSR[CSR_MCF]  <= 1'b1;
                         // I2CSR[CSR_MAAS] <= 1'b0;
-                        // I2CSR[CSR_MBB] <= o_i2c_busy;
-                        I2CSR[CSR_MAL]  <= o_i2c_al;
+                        // I2CSR[CSR_MBB] <= s_i2c_busy;
+                        I2CSR[CSR_MAL]  <= s_i2c_al;
                         // I2CSR[CSR_BCSTM] <= 1'b0;
                         // I2CSR[CSR_SRW] <= 1'b0;
                         I2CSR[CSR_MIF]  <= 1'b1;
-                        I2CSR[CSR_RXAK] <= o_i2c_ack;
+                        I2CSR[CSR_RXAK] <= s_i2c_ack;
                     end
                     SM_RESTART :
                     begin
@@ -320,7 +283,7 @@ begin
                     default:
                     begin
                         i2c_state <= SM_IDLE;
-                        i_i2c_cmd <= CMD_IDLE;
+                        s_cmd <= CMD_IDLE;
                     end
                 endcase
             end
@@ -338,7 +301,7 @@ begin
         I2CSR    <= 8'h81;
         I2CDR    <= 8'h00;
         I2CDFSRR <= 8'h10;
-        data_out <= {{8{1'b1}}};
+        s_data_out <= {{8{1'b1}}};
         go_go <= 0;
         go_read  <= 0;
         go_write <= 0;
@@ -350,7 +313,7 @@ begin
         go_go <= 0;
         go_read <= 1'b0;
         go_write <= 1'b0;
-        data_out <= data_out;
+        s_data_out <= s_data_out;
         if (i_wr_ena)
         begin
             case (i_wr_addr[4:2])
@@ -375,7 +338,7 @@ begin
                             SM_READ   :;
                             SM_WR_ACK :
                             begin
-                                i_i2c_cmd <= CMD_RESTART;
+                                s_cmd <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
                                 go_go <= 1'b1;
@@ -383,7 +346,7 @@ begin
                             end
                             SM_RD_ACK :
                             begin
-                                i_i2c_cmd <= CMD_RESTART;
+                                s_cmd <= CMD_RESTART;
                                 i2c_state <= SM_RESTART;
                                 go <= 1'b1;
                                 go_go <= 1'b1;
@@ -421,19 +384,19 @@ begin
             case (i_rd_addr[4:2])
                 ADDR_ADR   :
                 begin
-                    data_out <= I2CADR  ;
+                    s_data_out <= I2CADR  ;
                 end
                 ADDR_FDR   :
                 begin
-                    data_out <= I2CFDR  ;
+                    s_data_out <= I2CFDR  ;
                 end
                 ADDR_CR    :
                 begin
-                    data_out <= I2CCR   ;
+                    s_data_out <= I2CCR   ;
                 end
                 ADDR_SR    :
                 begin
-                    data_out <= I2CSR   ;
+                    s_data_out <= I2CSR   ;
                 end
                 ADDR_DR    :
                 begin
@@ -447,11 +410,11 @@ begin
                 end
                 ADDR_DFSRR :
                 begin
-                    data_out <= I2CDFSRR;
+                    s_data_out <= I2CDFSRR;
                 end
                 default    :
                 begin
-                    data_out <= I2CSR   ;
+                    s_data_out <= I2CSR   ;
                 end
             endcase
         end
@@ -537,125 +500,3 @@ end
 endfunction
 
 endmodule
-
-// the follow copy from https://www.cnblogs.com/lyc-seu/p/12864956.html
-
-module div_fsm #(
-    parameter DATA_WIDTH = 16
-)
-(
-    input                        clk,
-    input                        rstn,
-    input                        en,
-    output wire                  ready,
-    input       [DATA_WIDTH-1:0] dividend ,
-    input       [DATA_WIDTH-1:0] divisor  ,
-    output wire [DATA_WIDTH-1:0] quotient ,
-    output wire [DATA_WIDTH-1:0] remainder,
-    output wire                  vld_out
-);
-
-reg [DATA_WIDTH*2-1:0] dividend_e ;
-reg [DATA_WIDTH*2-1:0] divisor_e  ;
-reg [DATA_WIDTH-1:0]   quotient_e ;
-reg [DATA_WIDTH-1:0]   remainder_e;
-
-reg [1:0] current_state,next_state;
-
-reg [DATA_WIDTH-1:0] count;
-
-localparam IDLE  = 2'b00;
-localparam SUB   = 2'b01;
-localparam SHIFT = 2'b10;
-localparam DONE  = 2'b11;
-
-always@(posedge clk or negedge rstn)
-begin
-    if(!rstn)
-        current_state <= IDLE;
-    else
-        current_state <= next_state;
-end
-
-always @(*)
-begin
-    next_state <= 2'bx;
-    case(current_state)
-        IDLE:
-        begin
-            if(en)
-                next_state <= SUB;
-            else
-                next_state <= IDLE;
-        end
-        SUB:  next_state <= SHIFT;
-        SHIFT:
-        begin
-            if(count < DATA_WIDTH)
-                next_state <= SUB;
-            else
-                next_state <= DONE;
-        end
-        DONE: next_state <= IDLE;
-    endcase
-end
-
-always@(posedge clk or negedge rstn)
-begin
-    if(!rstn)
-    begin
-        dividend_e  <= 0;
-        divisor_e   <= 0;
-        quotient_e  <= 0;
-        remainder_e <= 0;
-        count       <= 0;
-    end
-    else
-    begin
-    case(current_state)
-        IDLE:
-        begin
-            dividend_e <= {{DATA_WIDTH{1'b0}},dividend};
-            divisor_e  <= {divisor,{DATA_WIDTH{1'b0}}};
-        end
-        SUB:
-        begin
-            if(dividend_e>=divisor_e)
-            begin
-                quotient_e <= {quotient_e[DATA_WIDTH-2:0],1'b1};
-                dividend_e <= dividend_e-divisor_e;
-            end
-            else
-            begin
-                quotient_e <= {quotient_e[DATA_WIDTH-2:0],1'b0};
-                dividend_e <= dividend_e;
-            end
-        end
-        SHIFT:
-        begin
-            if(count < DATA_WIDTH)
-            begin
-                dividend_e <= dividend_e<<1;
-                count      <= count+1;
-            end
-            else begin
-                remainder_e <= dividend_e[DATA_WIDTH*2-1:DATA_WIDTH];
-            end
-        end
-        DONE:
-        begin
-            count <= 0;
-        end
-    endcase
-end
-end
-
-assign quotient  = quotient_e;
-assign remainder = remainder_e;
-
-assign ready   = (current_state == IDLE)? 1'b1:1'b0;
-assign vld_out = (current_state == DONE)? 1'b1:1'b0;
-
-
-endmodule
-
