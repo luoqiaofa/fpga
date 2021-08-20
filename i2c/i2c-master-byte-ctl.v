@@ -93,6 +93,7 @@ begin
                 end
                 CMD_WR_NAK: begin
                     s_cmd_done <= 1'b1;
+                    s_c_state  <= CMD_STOP;
                 end
                 CMD_RD_ACK: begin
                     s_bit_ack  <= s_o_bit;
