@@ -8,6 +8,7 @@ wire o_clk_div2;
 wire o_clk_div3;
 wire o_clk_div4;
 wire o_clk_div5;
+wire o_clk_div8;
 
 clk_divn clk_div2_u0 (
     .i_clk(i_clk),
@@ -33,6 +34,13 @@ clk_divn clk_div5_u3 (
     .i_resetn(i_resetn),
     .i_divn(8'h05),
     .o_clk(o_clk_div5)
+);
+
+clk_divn clk_div8_u4 (
+    .i_clk(i_clk),
+    .i_resetn(i_resetn),
+    .i_divn(8'h08),
+    .o_clk(o_clk_div8)
 );
 
 
