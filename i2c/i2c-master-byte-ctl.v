@@ -87,13 +87,12 @@ end
 
 always @(posedge s_bit_done)
 begin
-    // s_bit_cmd   <= CMD_IDLE;
+    s_bit_cmd   <= CMD_IDLE;
     case (s_c_state)
         CMD_START: begin
             s_cmd_done <= 1'b1;
             s_shift_r  <= i_data;
             s_bit_cnt  <= 3'h7;
-            s_i_bit    <= s_shift_r[7];
         end
         CMD_WRITE: begin
             s_bit_cmd <= s_c_state;
@@ -130,18 +129,15 @@ begin
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
             s_shift_r  <= i_data;
-            s_i_bit    <= s_shift_r[7];
         end
         CMD_RESTART: begin
             s_c_state  <= CMD_IDLE;
             s_cmd_done <= 1'b1;
-            s_i_bit    <= s_shift_r[7];
         end
         CMD_STOP: begin
             s_cmd_done  <= 1'b1;
             s_c_state   <= CMD_IDLE;
             s_data_read <= 8'hff;
-            s_i_bit    <= s_shift_r[7];
         end
         default : ;
     endcase
@@ -171,6 +167,9 @@ begin
     else begin
         s_bit_cmd  <= CMD_IDLE;
         s_cmd_done <= 1'b0;
+        if ((CMD_WR_ACK != s_c_state) && (CMD_WR_NAK != s_c_state)) begin
+            s_i_bit    <= s_shift_r[s_bit_cnt];
+        end
     end
 end
 
