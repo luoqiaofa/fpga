@@ -80,27 +80,25 @@ wire s_cmd_trig;
 assign s_cmd_trig = go | go_go;
 
 i2c_master_byte_ctl u1_byte_ctl(
-    .i_sysclk    (i_sysclk),
-    .i_nReset    (i_reset_n),  // sync reset
-    .i_enable    (I2CCR[CCR_MEN]),   // iic enable
-    .i_prescale(s_prescale), // clock prescale cnt
-    .i_dfsr    (I2CDFSRR[5:0]),   // Digital Filter Sampling Rate cnt
-    .i_cmd_trig(s_cmd_trig),
-    .i_cmd     (s_cmd),
-    .o_cmd_ack (s_cmd_ack),
-    .o_i2c_ack (s_i2c_ack),
-    .o_i2c_al  (s_i2c_al),   // arbitration lost output
-    .o_i2c_busy(s_i2c_busy), // i2c bus busy output
-
-    .i_data    (I2CDR),
-    .o_data    (s_rddata),
-
-    .i_scl     (s_scl),
-    .o_scl     (o_scl),
-    .o_scl_oen (s_scl_oen),
-    .i_sda     (s_sda),
-    .o_sda     (o_sda),
-    .o_sda_oen (s_sda_oen)
+    .i_sysclk   (i_sysclk),
+    .i_nReset   (i_reset_n),  // sync reset
+    .i_enable   (I2CCR[CCR_MEN]),   // iic enable
+    .i_prescale (s_prescale), // clock prescale cnt
+    .i_dfsr     (I2CDFSRR[5:0]),   // Digital Filter Sampling Rate cnt
+    .i_cmd_trig (s_cmd_trig),
+    .i_cmd      (s_cmd),
+    .o_cmd_ack  (s_cmd_ack),
+    .o_i2c_ack  (s_i2c_ack),
+    .o_i2c_al   (s_i2c_al),   // arbitration lost output
+    .o_i2c_busy (s_i2c_busy), // i2c bus busy output
+    .i_data     (I2CDR),
+    .o_data     (s_rddata),
+    .i_scl      (s_scl),
+    .o_scl      (o_scl),
+    .o_scl_oen  (s_scl_oen),
+    .i_sda      (s_sda),
+    .o_sda      (o_sda),
+    .o_sda_oen  (s_sda_oen)
 );
 
 wire div_ready;
