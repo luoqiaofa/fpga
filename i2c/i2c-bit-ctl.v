@@ -44,6 +44,7 @@ clk_divn_inst2 (
 always @(posedge i_sysclk or negedge i_nReset)
 begin
     if (!i_nReset) begin
+        s_sSda   <= 1'b1;
         s_clk_en <= 1'b0;
     end
     else  begin
@@ -75,6 +76,7 @@ begin
         o_busy    <= 1'b0;
         o_arblost <= 1'b0;
         s_c_state <= B_IDLE;
+        s_bit_cmd <= CMD_IDLE;
     end
     else if (!i_enable) begin
         o_scl_oen <= 1'b1;
@@ -84,6 +86,7 @@ begin
         o_busy    <= 1'b0;
         o_arblost <= 1'b0;
         s_c_state <= B_IDLE;
+        s_bit_cmd <= CMD_IDLE;
     end
     else begin
         o_cmd_ack <= 1'b0;
