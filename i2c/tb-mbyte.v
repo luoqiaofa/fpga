@@ -138,7 +138,7 @@ begin
             s_xfer_state <= C_SM_STOP ;
         end
         C_SM_STOP     : begin
-            s_cmd        <= CMD_STOP;
+            s_cmd        <= CMD_IDLE;
             s_xfer_state <= C_SM_IDLE ;
         end
         default : s_cmd <= CMD_IDLE;
