@@ -25,7 +25,8 @@ module i2c_master_byte_ctl(
     output            o_scl_oen,
     input             i_sda,
     output            o_sda,
-    output            o_sda_oen
+    output            o_sda_oen,
+    output            o_interrupt
 );
 `include "i2c-def.v"
 `include "i2c-reg-def.v"
@@ -40,10 +41,19 @@ reg  s_bit_ack;
 reg [7:0] s_shift_r;
 reg [2:0] s_bit_cnt;
 reg [7:0] s_data_read;
+reg  s_irq;
 
 assign o_cmd_ack = s_cmd_done;
 assign o_i2c_ack = s_bit_ack;
 assign o_data    = s_data_read;
+assign o_interrupt = s_irq;
+
+always @(posedge o_i2c_al or negedge i_nReset)
+begin
+    if (i_nReset) begin
+        s_irq <= 1;
+    end
+end
 
 always @(posedge i_cmd_trig)
 begin
@@ -115,11 +125,13 @@ begin
             end
         end
         CMD_WR_ACK: begin
+            s_irq      <= 1;
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
             s_shift_r  <= i_data;
         end
         CMD_WR_NAK: begin
+            s_irq      <= 1;
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
             s_c_state  <= CMD_STOP;
@@ -129,6 +141,7 @@ begin
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
             s_shift_r  <= i_data;
+            s_irq      <= 1;
         end
         CMD_RESTART: begin
             s_c_state  <= CMD_IDLE;
@@ -154,6 +167,7 @@ begin
         s_cmd_done  <= 0;
         s_c_state   <= CMD_IDLE;
         s_data_read <= 8'hff;
+        s_irq       <= 0;
     end
     else if (!i_enable) begin
         s_bit_ack   <= 0;
@@ -165,6 +179,9 @@ begin
         s_i_bit     <= s_shift_r[7];
     end
     else begin
+        if (s_irq) begin
+            s_irq      <= 0;
+        end
         s_bit_cmd  <= CMD_IDLE;
         s_cmd_done <= 1'b0;
         if ((CMD_WR_ACK != s_c_state) && (CMD_WR_NAK != s_c_state)) begin

@@ -21,6 +21,8 @@ module tb_msbyte();
     reg        s_sda_i;
     wire       s_sda_o;
     wire       s_sda_oen;
+    wire       s_interrupt;
+    
 
 localparam C_SM_IDLE     = 4'h0;
 localparam C_SM_START    = 4'h1;
@@ -166,7 +168,8 @@ i2c_master_byte_ctl ms_byte_inst(
     .o_scl_oen(s_scl_oen),
     .i_sda(s_sda_i),
     .o_sda(s_sda_o),
-    .o_sda_oen(s_sda_oen)
+    .o_sda_oen(s_sda_oen),
+    .o_interrupt(s_interrupt )
 );
 endmodule
 
