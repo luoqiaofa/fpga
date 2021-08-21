@@ -86,11 +86,13 @@ begin
         SM_IDLE     : begin
         end
         SM_START    : begin
+            I2CSR[CSR_MBB] <= 1;
         end
         SM_STOP     : begin
             s_cmd     <= CMD_IDLE;
             s_cmd_go  <= 1;
             i2c_state <= SM_IDLE;
+            I2CSR[CSR_MBB] <= 0;
         end
         SM_WRITE    : begin
             s_cmd     <= CMD_RD_ACK;
@@ -103,13 +105,16 @@ begin
             i2c_state <= SM_WR_ACK;
         end
         SM_WR_ACK   : begin
+            I2CSR[CSR_MCF] <= 1;
         end
         SM_WR_NAK   : begin
             s_cmd     <= CMD_STOP;
             s_cmd_go  <= 1;
             i2c_state <= SM_STOP;
+            I2CSR[CSR_MCF] <= 1;
         end
         SM_RD_ACK   : begin
+            I2CSR[CSR_MCF] <= 1;
         end
         SM_RESTART  : begin
         end
@@ -129,7 +134,7 @@ begin
             end
             ADDR_CR    : begin
                 I2CCR    <= i_wr_data;
-                if ( i_wr_data[CCR_MSTA]) begin
+                if (i_wr_data[CCR_RSTA]) begin
                     s_cmd <= CMD_RESTART;
                     s_cmd_go <= 1;
                     i2c_state <= SM_RESTART;
@@ -147,6 +152,7 @@ begin
                     s_cmd    <= CMD_WRITE;
                     s_cmd_go <= 1;
                     i2c_state <= SM_WRITE;
+                    I2CSR[CSR_MCF] <= 0;
                 end
             end
             ADDR_DFSRR : I2CDFSRR <= i_wr_data;
@@ -255,6 +261,7 @@ begin
         s_cmd_go <= 0;
     end
     else begin
+        I2CSR <= I2CSR;
         if (s_cmd_go) begin
             s_cmd_go <= 0;
         end
