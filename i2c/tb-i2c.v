@@ -48,7 +48,7 @@ module tb_i2c;
    reg  [7:0]    rd_data;
    reg  [7:0]    regval; // read date output
    reg  [7:0]    slave_addr;
-   reg  [8:0]    tmp_data;
+   reg  [8:0]    i2csr;
    reg  [4:0]    next_state; // read date output
    reg  [7:0]    num_bytes;
 
@@ -59,7 +59,6 @@ module tb_i2c;
    assign i_wr_addr = wr_addr;
    assign i_wr_data = wr_data;
    assign i_rd_addr = rd_addr;
-   assign i_rd_data = rd_data;
    wire   s_i2c_irq;
 
    i2c_top_module i2c_master_u1(
@@ -89,7 +88,6 @@ module tb_i2c;
        num_bytes <= 0;
        next_state <= C_SM_IDLE;
        slave_addr <= 8'h50;
-       tmp_data <= 8'h50;
        regval <= 8'h00;
        i_sysclk <= 0;
        i_reset_n <= 0;
@@ -171,13 +169,17 @@ module tb_i2c;
 
        i_wr_ena  <= 0;
        if (i_rd_ena) begin
+           regval <= o_rd_data;
            i_rd_ena <= 0;
+           if (rd_addr == (ADDR_SR << 2)) begin
+               i2csr <= o_rd_data;
+           end
        end
        else begin
            i_rd_ena <= 1;
        end
        // tmp_data <= tmp_data;
-       if (o_rd_data[CSR_MBB] & o_rd_data[CSR_MCF])
+       if (regval[CSR_MBB] & regval[CSR_MCF])
        begin
            case (next_state)
                C_SM_IDLE : begin
@@ -194,35 +196,67 @@ module tb_i2c;
                end
                C_SM_WR_WADDR : begin
                    wr_addr    <= (ADDR_DR << 2);
-                   i_wr_ena   <= 8'ha0;
+                     wr_data  <= 8'ha0;
                    i_wr_ena   <= 1;
                    next_state <= C_SM_RD_ACK1;
                end
                C_SM_RD_ACK1 : begin
                    next_state <= C_SM_WR_DATA;
+                     wr_data  <= 8'h55;
+                   i_wr_ena   <= 1;
                end
                C_SM_WR_DATA : begin
                    wr_addr    <= (ADDR_DR << 2);
-                   i_wr_ena   <= 8'h55;
+                     wr_data  <= 8'h55;
                    i_wr_ena   <= 1;
-                   next_state <= C_SM_WR_DATA;
+                   next_state <= C_SM_RD_ACK2;
                end
                C_SM_RD_ACK2 : begin
                    next_state <= C_SM_RESTART;
                end
                C_SM_RESTART : begin
+                   next_state <= C_SM_WR_RADDR;
+                   wr_addr    <= (ADDR_CR << 2);
+                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA);
+                   i_wr_ena   <= 1;
                end
                C_SM_WR_RADDR : begin
+                   next_state <= C_SM_RD_ACK3;
+                   wr_addr    <= (ADDR_DR << 2);
+                   wr_data    <= 8'ha1;
+                   i_wr_ena   <= 1;
                end
                C_SM_RD_ACK3 : begin
+                   next_state <= C_SM_RD_DATA1;
+                   wr_addr    <= (ADDR_CR << 2);
+                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
                end
                C_SM_RD_DATA1 : begin
+                   next_state <= C_SM_WR_ACK;
+                   rd_addr    <= (ADDR_DR << 2);
+                   rd_data    <= 8'h00;
+                   #5
+                   i_rd_ena   <= 1;
+                   #10
+                   i_rd_ena   <= 0;
                end
                C_SM_WR_ACK : begin
+                   next_state <= C_SM_RD_DATA2;
                end
                C_SM_RD_DATA2 : begin
+                   next_state <= C_SM_STOP;
+                   rd_addr    <= (ADDR_DR << 2);
+                   rd_data    <= 8'h00;
+                   #10
+                   i_rd_ena   <= 1;
+                   #10
+                   i_rd_ena   <= 0;
                end
                C_SM_STOP : begin
+                   next_state <= C_SM_IDLE;
+                   wr_addr    <= (ADDR_CR << 2);
+                   wr_data    <= (1 << CCR_MEN);
+                   i_wr_ena   <= 1;
                end
                default   :;
            endcase

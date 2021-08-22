@@ -32,6 +32,7 @@ reg rd_ready_r;
 reg wr_ready_r;
 reg s_start_done;
 reg s_dr_updated;
+reg s_read_dly;
 
 reg [2:0] i2c_state;
 
@@ -181,11 +182,21 @@ begin
                 s_data_out <= I2CSR   ;
             end
             ADDR_DR    : begin
-                if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
+                if (!s_read_dly)  begin
+                    if (s_start_done) begin
+                        if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
+                            I2CSR[CSR_MCF] <= 1'b0;
+                            s_cmd        <= CMD_READ;
+                            s_cmd_go     <= 1;
+                            i2c_state    <= SM_READ;
+                        end
+                    end
+                    else begin
+                        I2CSR[CSR_MCF] <= 1'b0;
+                    end
+                end
+                else begin
                     I2CSR[CSR_MCF] <= 1'b0;
-                    // I2CDR <= i_data;
-                    go_read <= 1'b1;
-                    rd_ready_r <= 1'b0;
                 end
             end
             ADDR_DFSRR : begin
@@ -287,6 +298,7 @@ begin
         wr_ready_r <= 1'b1;
         s_start_done <= 0;
         s_dr_updated <= 0;
+        s_read_dly  <= 0;
     end
     else begin
         go_read <= 1'b0;
@@ -299,6 +311,15 @@ begin
             s_cmd_go <= 1;
             i2c_state <= SM_WRITE;
             I2CSR[CSR_MCF] <= 0;
+        end
+        if (s_read_dly & s_start_done) begin
+            if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
+                s_read_dly <= 0;
+                I2CSR[CSR_MCF] <= 1'b0;
+                s_cmd        <= CMD_READ;
+                s_cmd_go     <= 1;
+                i2c_state    <= SM_READ;
+            end
         end
     end
 end
