@@ -129,6 +129,7 @@ begin
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
             s_shift_r  <= i_data;
+            s_irq      <= 1;
         end
         CMD_WR_NAK: begin
             s_irq      <= 1;

@@ -30,6 +30,8 @@ reg go_read;
 reg go_write;
 reg rd_ready_r;
 reg wr_ready_r;
+reg s_start_done;
+reg s_dr_updated;
 
 reg [2:0] i2c_state;
 
@@ -84,9 +86,11 @@ always @(posedge s_cmd_ack)
 begin
     case (i2c_state)
         SM_IDLE     : begin
+            s_start_done  <= 0;
         end
         SM_START    : begin
             I2CSR[CSR_MBB] <= 1;
+            s_start_done   <= 1;
         end
         SM_STOP     : begin
             s_cmd     <= CMD_IDLE;
@@ -117,6 +121,7 @@ begin
             I2CSR[CSR_MCF] <= 1;
         end
         SM_RESTART  : begin
+            s_start_done   <= 1;
         end
         default     : ;
     endcase
@@ -133,11 +138,12 @@ begin
                 I2CFDR   <= i_wr_data;
             end
             ADDR_CR    : begin
-                I2CCR    <= i_wr_data;
+                I2CCR <= i_wr_data;
                 if (i_wr_data[CCR_RSTA]) begin
-                    s_cmd <= CMD_RESTART;
-                    s_cmd_go <= 1;
-                    i2c_state <= SM_RESTART;
+                    s_cmd        <= CMD_RESTART;
+                    s_cmd_go     <= 1;
+                    i2c_state    <= SM_RESTART;
+                    s_start_done <= 0;
                 end
             end
             ADDR_SR    : begin
@@ -147,12 +153,9 @@ begin
                 end
             end
             ADDR_DR    : begin
-                I2CDR    <= i_wr_data;
-                if (I2CCR[CCR_MTX]) begin
-                    s_cmd    <= CMD_WRITE;
-                    s_cmd_go <= 1;
-                    i2c_state <= SM_WRITE;
-                    I2CSR[CSR_MCF] <= 0;
+                if (!s_dr_updated) begin
+                    I2CDR        <= i_wr_data;
+                    s_dr_updated <= 1;
                 end
             end
             ADDR_DFSRR : I2CDFSRR <= i_wr_data;
@@ -282,11 +285,21 @@ begin
         go_write <= 0;
         rd_ready_r <= 1'b1;
         wr_ready_r <= 1'b1;
+        s_start_done <= 0;
+        s_dr_updated <= 0;
     end
     else begin
         go_read <= 1'b0;
         go_write <= 1'b0;
         s_data_out <= s_data_out;
+
+        if (s_start_done & s_dr_updated & I2CCR[CCR_MTX]) begin
+            s_dr_updated <= 0;
+            s_cmd    <= CMD_WRITE;
+            s_cmd_go <= 1;
+            i2c_state <= SM_WRITE;
+            I2CSR[CSR_MCF] <= 0;
+        end
     end
 end
 
