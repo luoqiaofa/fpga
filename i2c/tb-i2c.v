@@ -11,23 +11,34 @@ module tb_i2c;
     * disable.
     * 5. Set the I2CnCR[MEN] to enable the I 2 C interface.
     */
-   localparam C_SM_IDLE     = 5'h00;
-   localparam C_SM_FDR_INIT = 5'h01;
-   localparam C_SM_ADR_INIT = 5'h02;
-   localparam C_SM_MEN_SET  = 5'h03;
-   localparam C_SM_CR_INIT  = 5'h04;
-   localparam C_SM_START    = 5'h05;
-   localparam C_SM_WR_WADDR = 5'h06;
-   localparam C_SM_RD_ACK1  = 5'h07;
-   localparam C_SM_WR_DATA  = 5'h08;
-   localparam C_SM_RD_ACK2  = 5'h09;
-   localparam C_SM_RESTART  = 5'h0a;
-   localparam C_SM_WR_RADDR = 5'h0b;
-   localparam C_SM_RD_ACK3  = 5'h0c;
-   localparam C_SM_RD_DATA1 = 5'h0d;
-   localparam C_SM_WR_ACK   = 5'h0e;
-   localparam C_SM_RD_DATA2 = 5'h0f;
-   localparam C_SM_STOP     = 5'h10;
+   localparam C_SM_IDLE      = 5'h00;
+   localparam C_SM_FDR_INIT  = 5'h01;
+   localparam C_SM_ADR_INIT  = 5'h02;
+   localparam C_SM_MEN_SET   = 5'h03;
+   localparam C_SM_WAIT_SR1  = 5'h04;
+   localparam C_SM_CR_INIT   = 5'h05;
+   localparam C_SM_WAIT_SR2  = 5'h06;
+   localparam C_SM_START     = 5'h07;
+   localparam C_SM_WAIT_SR3  = 5'h08;
+   localparam C_SM_WR_WADDR  = 5'h09;
+   localparam C_SM_RD_ACK1   = 5'h0a;
+   localparam C_SM_WAIT_SR4  = 5'h0b;
+   localparam C_SM_WR_DATA   = 5'h0c;
+   localparam C_SM_WAIT_SR5  = 5'h0d;
+   localparam C_SM_RD_ACK2   = 5'h0e;
+   localparam C_SM_WAIT_SR6  = 5'h0f;
+   localparam C_SM_RESTART   = 5'h10;
+   localparam C_SM_WAIT_SR8  = 5'h11;
+   localparam C_SM_WR_RADDR  = 5'h12;
+   localparam C_SM_WAIT_SR9  = 5'h13;
+   localparam C_SM_RD_ACK3   = 5'h14;
+   localparam C_SM_WAIT_SR10 = 5'h15;
+   localparam C_SM_RD_DATA1  = 5'h16;
+   localparam C_SM_WAIT_SR11 = 5'h17;
+   localparam C_SM_WR_ACK    = 5'h18;
+   localparam C_SM_RD_DATA2  = 5'h19;
+   localparam C_SM_WAIT_SR12 = 5'h1a;
+   localparam C_SM_STOP      = 5'h1b;
 
    reg           i_sysclk;  // system clock input
    reg           i_reset_n; // module reset input
@@ -46,9 +57,8 @@ module tb_i2c;
    reg  [7:0]    wr_data;
    reg  [4:0]    rd_addr;
    reg  [7:0]    rd_data;
-   reg  [7:0]    regval; // read date output
    reg  [7:0]    slave_addr;
-   reg  [8:0]    i2csr;
+   reg  [7:0]    i2csr;
    reg  [4:0]    next_state; // read date output
    reg  [7:0]    num_bytes;
 
@@ -86,9 +96,9 @@ module tb_i2c;
    initial
    begin
        num_bytes <= 0;
+       i2csr <= 0;
        next_state <= C_SM_IDLE;
        slave_addr <= 8'h50;
-       regval <= 8'h00;
        i_sysclk <= 0;
        i_reset_n <= 0;
        i_wr_ena <= 0;
@@ -96,22 +106,24 @@ module tb_i2c;
 
        wr_addr <= 0;
        wr_data <= 0;
-       rd_addr <= 0;
+       rd_addr <= (ADDR_SR << 2);
        rd_data <= 0;
 
-       #500
+       #100
        i_reset_n <= 1;
-       #500
+       i_wr_ena <= 0;
+       #100
        // C_SM_FDR_INIT : begin
        next_state <= C_SM_FDR_INIT;
        wr_addr    <= (ADDR_FDR << 2);
        wr_data    <= 8'h07; /*  7: 1024 dividor */
        #105
        i_wr_ena   <= 1;
-       #100
+       #40
+       next_state <= C_SM_ADR_INIT;
+       i_wr_ena   <= 0;
        // end
        // C_SM_ADR_INIT : begin
-       next_state <= C_SM_ADR_INIT;
        wr_addr    <= (ADDR_ADR << 2);
        wr_data    <= 8'h00;
        #100
@@ -119,6 +131,7 @@ module tb_i2c;
        // end
        // C_SM_MEN_SET : begin
        #100
+       i_wr_ena   <= 0;
        next_state <= C_SM_MEN_SET;
        wr_addr    <= (ADDR_CR << 2);
        wr_data    <= (1 << CCR_MEN);
@@ -127,141 +140,273 @@ module tb_i2c;
        // end
        // C_SM_CR_INIT : begin
        #500
-       next_state <= C_SM_CR_INIT;
-       wr_addr    <= (ADDR_CR << 2);
-       wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
-       #100
-       i_wr_ena  <= 1;
+       i_wr_ena   <= 0;
+       #40
+       next_state <= C_SM_WAIT_SR1;
+       i_wr_ena   <= 0;
        // end
        // C_SM_START : begin
-       #20
-       next_state <= C_SM_START;
-       #20
-       i_wr_ena  <= 1;
-       #20
-       next_state <= C_SM_WR_WADDR;
-       wr_addr <= (ADDR_DR << 2);
-       wr_data <= 8'ha0;
-       #10
-       i_wr_ena  <= 1;
        // end
        #600000
-       wr_data <= 8'h00;
-       #10;
-       i_wr_ena  <= 0;
-       rd_addr <= (ADDR_SR << 2);
        $stop;
        $finish;
    end
 
    always #5 i_sysclk = ~i_sysclk;
 
-   always @(posedge i_sysclk)
+   always @(posedge i_sysclk or negedge i_reset_n)
    begin
-       i_rd_ena <= 0;
-       #10
-       rd_addr <= (ADDR_SR << 2);
-       i_rd_ena <= 1;
-       #10
-       i_rd_ena <= 0;
-       #10
-       regval <= o_rd_data;
+       if (i_reset_n) begin
+           if (read_valid) begin
+               if (i_rd_ena) begin
+                   if (rd_addr == (ADDR_SR << 2)) begin
+                       i2csr <= o_rd_data;
+                   end
+                   else begin
+                       i2csr <= 0;
+                   end
+                   i_rd_ena <= 0;
+                   case (next_state)
+                       C_SM_WAIT_SR1: begin
+                           i_wr_ena   <= 0;
+                           wr_addr    <= (ADDR_CR << 2);
+                           wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                           next_state <= C_SM_CR_INIT;
+                       end
+                       C_SM_RD_ACK1 : begin
+                           next_state <= C_SM_WAIT_SR4;
+                       end
+                       C_SM_WAIT_SR4 : begin
+                           if (rd_addr == (ADDR_SR << 2)) begin
+                               if (o_rd_data[CSR_MCF]) begin
+                                   i_wr_ena   <= 0;
+                                   wr_addr <= (ADDR_DR << 2);
+                                   wr_data <= 8'h55;
+                                   next_state <= C_SM_WR_DATA;
+                               end
+                           end
+                       end
+                       C_SM_WAIT_SR5 : begin
+                           next_state <= C_SM_RD_ACK2;
+                       end
+                       C_SM_RD_ACK2 : begin
+                           if (rd_addr == (ADDR_SR << 2)) begin
+                               if (o_rd_data[CSR_MCF]) begin
+                                   i_wr_ena   <= 0;
+                                   wr_addr    <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA);
+                                   next_state <= C_SM_RESTART;
+                               end
+                           end
+                       end
+                       C_SM_WAIT_SR9  : begin
+                           next_state <= C_SM_RD_ACK3;
+                       end
+                       C_SM_RD_ACK3   : begin
+                           if (rd_addr == (ADDR_SR << 2)) begin
+                               if (o_rd_data[CSR_MCF]) begin
+                                   rd_addr <= (ADDR_DR << 2);
+                                   next_state <= C_SM_RD_DATA1;
+                               end
+                           end
+                       end
+                       C_SM_RD_DATA1  : begin
+                           rd_addr <= (ADDR_SR << 2);
+                           next_state <= C_SM_WAIT_SR11;
+                       end
+                       C_SM_WAIT_SR11 : begin
+                           if (rd_addr == (ADDR_SR << 2)) begin
+                               if (o_rd_data[CSR_MCF]) begin
+                                   rd_addr <= (ADDR_DR << 2);
+                                   next_state <= C_SM_RD_DATA2;
+                               end
+                           end
+                       end
+                       C_SM_RD_DATA2  : begin
+                           rd_addr <= (ADDR_SR << 2);
+                           next_state <= C_SM_WAIT_SR12;
+                       end
+                       C_SM_WAIT_SR12 : begin
+                           if (rd_addr == (ADDR_SR << 2)) begin
+                               if (o_rd_data[CSR_MCF]) begin
+                                   i_wr_ena   <= 0;
+                                   rd_addr <= (ADDR_SR << 2);
+                                   wr_addr    <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MTX);
+                                   next_state <= C_SM_STOP;
+                               end
+                           end
+                       end
+                       default : begin
+                           rd_addr <= (ADDR_SR << 2);
+                       end
+                   endcase
 
-       i_wr_ena  <= 0;
-       if (i_rd_ena) begin
-           regval <= o_rd_data;
-           i_rd_ena <= 0;
-           if (rd_addr == (ADDR_SR << 2)) begin
-               i2csr <= o_rd_data;
+                   if (i_wr_ena) begin
+                       if (i2csr[CSR_MCF])
+                       begin
+                           case (next_state)
+                               C_SM_IDLE : begin
+                               end
+                               C_SM_FDR_INIT : begin
+                               end
+                               C_SM_ADR_INIT : begin
+                               end
+                               C_SM_MEN_SET : begin
+                               end
+                               C_SM_WAIT_SR1 : begin
+                               end
+                               C_SM_CR_INIT : begin
+                                   i_wr_ena   <= 0;
+                                   wr_addr    <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                               end
+                               C_SM_WAIT_SR2 : begin
+                               end
+                               C_SM_START : begin
+                               end
+                               C_SM_WAIT_SR3 : begin
+                               end
+                               C_SM_WR_WADDR : begin
+                                   i_wr_ena   <= 0;
+                                   wr_addr <= (ADDR_DR << 2);
+                                   wr_data <= 8'ha0;
+                               end
+                               C_SM_WAIT_SR4 : begin
+                               end
+                               C_SM_RD_ACK1 : begin
+                               end
+                               C_SM_WR_DATA : begin
+                               end
+                               C_SM_WAIT_SR5 : begin
+                               end
+                               C_SM_RD_ACK2 : begin
+                               end
+                               C_SM_WAIT_SR6 : begin
+                               end
+                               C_SM_RESTART : begin
+                                   i_wr_ena   <= 0;
+                                   wr_addr <= (ADDR_DR << 2);
+                                   wr_data <= 8'ha1;
+                                   next_state <= C_SM_WR_RADDR;
+                               end
+                               C_SM_WAIT_SR8 : begin
+                               end
+                               C_SM_WR_RADDR : begin
+                                   wr_addr <= (ADDR_DR << 2);
+                                   wr_data <= 8'ha1;
+                               end
+                               C_SM_WAIT_SR9 : begin
+                               end
+                               C_SM_RD_ACK3 : begin
+                               end
+                               C_SM_WAIT_SR10 : begin
+                               end
+                               C_SM_RD_DATA1 : begin
+                               end
+                               C_SM_WAIT_SR11 : begin
+                               end
+                               C_SM_WR_ACK : begin
+                                   i_wr_ena  <= 1;
+                               end
+                               C_SM_RD_DATA2 : begin
+                               end
+                               C_SM_WAIT_SR12 : begin
+                               end
+                               C_SM_STOP : begin
+                                   i_wr_ena  <= 0;
+                               end
+                               default : begin
+                                   i_wr_ena  <= 0;
+                               end
+                           endcase
+                       end
+                   end
+                   else begin
+                       case (next_state)
+                           C_SM_IDLE : begin
+                           end
+                           C_SM_FDR_INIT : begin
+                           end
+                           C_SM_ADR_INIT : begin
+                           end
+                           C_SM_MEN_SET : begin
+                           end
+                           C_SM_WAIT_SR1 : begin
+                           end
+                           C_SM_CR_INIT : begin
+                               next_state <= C_SM_WR_WADDR;
+                               i_wr_ena  <= 1;
+                           end
+                           C_SM_WAIT_SR2 : begin
+                           end
+                           C_SM_START : begin
+                               i_wr_ena  <= 1;
+                           end
+                           C_SM_WAIT_SR3 : begin
+                           end
+                           C_SM_WR_WADDR : begin
+                               i_rd_ena <= 0;
+                               i_wr_ena  <= 1;
+                               next_state <= C_SM_RD_ACK1;
+                           end
+                           C_SM_WAIT_SR4 : begin
+                           end
+                           C_SM_RD_ACK1 : begin
+                           end
+                           C_SM_WR_DATA : begin
+                               i_wr_ena  <= 1;
+                               next_state <= C_SM_WAIT_SR5;
+                           end
+                           C_SM_WAIT_SR5 : begin
+                           end
+                           C_SM_RD_ACK2 : begin
+                           end
+                           C_SM_WAIT_SR6 : begin
+                           end
+                           C_SM_RESTART : begin
+                               i_wr_ena  <= 1;
+                           end
+                           C_SM_WAIT_SR8 : begin
+                           end
+                           C_SM_WR_RADDR : begin
+                               i_wr_ena  <= 1;
+                               next_state <= C_SM_WAIT_SR9;
+                           end
+                           C_SM_WAIT_SR9 : begin
+                           end
+                           C_SM_RD_ACK3 : begin
+                           end
+                           C_SM_WAIT_SR10 : begin
+                           end
+                           C_SM_RD_DATA1 : begin
+                           end
+                           C_SM_WAIT_SR11 : begin
+                           end
+                           C_SM_WR_ACK : begin
+                               i_wr_ena  <= 1;
+                           end
+                           C_SM_RD_DATA2 : begin
+                           end
+                           C_SM_WAIT_SR12 : begin
+                           end
+                           C_SM_STOP : begin
+                               i_wr_ena  <= 1;
+                           end
+                           default : begin
+                               i_wr_ena  <= 0;
+                               next_state <= C_SM_IDLE;
+                           end
+                       endcase
+                   end
+               end
+               else begin
+                   i_rd_ena <= 1;
+               end
            end
-       end
-       else begin
-           i_rd_ena <= 1;
-       end
-       // tmp_data <= tmp_data;
-       if (regval[CSR_MBB] & regval[CSR_MCF])
-       begin
-           case (next_state)
-               C_SM_IDLE : begin
-               end
-               C_SM_FDR_INIT : begin
-               end
-               C_SM_ADR_INIT : begin
-               end
-               C_SM_CR_INIT : begin
-               end
-               C_SM_MEN_SET : begin
-               end
-               C_SM_START : begin
-               end
-               C_SM_WR_WADDR : begin
-                   wr_addr    <= (ADDR_DR << 2);
-                     wr_data  <= 8'ha0;
-                   i_wr_ena   <= 1;
-                   next_state <= C_SM_RD_ACK1;
-               end
-               C_SM_RD_ACK1 : begin
-                   next_state <= C_SM_WR_DATA;
-                     wr_data  <= 8'h55;
-                   i_wr_ena   <= 1;
-               end
-               C_SM_WR_DATA : begin
-                   wr_addr    <= (ADDR_DR << 2);
-                     wr_data  <= 8'h55;
-                   i_wr_ena   <= 1;
-                   next_state <= C_SM_RD_ACK2;
-               end
-               C_SM_RD_ACK2 : begin
-                   next_state <= C_SM_RESTART;
-               end
-               C_SM_RESTART : begin
-                   next_state <= C_SM_WR_RADDR;
-                   wr_addr    <= (ADDR_CR << 2);
-                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA);
-                   i_wr_ena   <= 1;
-               end
-               C_SM_WR_RADDR : begin
-                   next_state <= C_SM_RD_ACK3;
-                   wr_addr    <= (ADDR_DR << 2);
-                   wr_data    <= 8'ha1;
-                   i_wr_ena   <= 1;
-               end
-               C_SM_RD_ACK3 : begin
-                   next_state <= C_SM_RD_DATA1;
-                   wr_addr    <= (ADDR_CR << 2);
-                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
-               end
-               C_SM_RD_DATA1 : begin
-                   next_state <= C_SM_WR_ACK;
-                   rd_addr    <= (ADDR_DR << 2);
-                   rd_data    <= 8'h00;
-                   #5
-                   i_rd_ena   <= 1;
-                   #10
-                   i_rd_ena   <= 0;
-               end
-               C_SM_WR_ACK : begin
-                   next_state <= C_SM_RD_DATA2;
-               end
-               C_SM_RD_DATA2 : begin
-                   next_state <= C_SM_STOP;
-                   rd_addr    <= (ADDR_DR << 2);
-                   rd_data    <= 8'h00;
-                   #10
-                   i_rd_ena   <= 1;
-                   #10
-                   i_rd_ena   <= 0;
-               end
-               C_SM_STOP : begin
-                   next_state <= C_SM_IDLE;
-                   wr_addr    <= (ADDR_CR << 2);
-                   wr_data    <= (1 << CCR_MEN);
-                   i_wr_ena   <= 1;
-               end
-               default   :;
-           endcase
+
        end
    end
 
-endmodule
+   endmodule
 

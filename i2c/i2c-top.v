@@ -123,6 +123,7 @@ begin
         end
         SM_RESTART  : begin
             s_start_done   <= 1;
+            I2CSR[CSR_MCF] <= 1'b1;
         end
         default     : ;
     endcase
@@ -145,6 +146,7 @@ begin
                     s_cmd_go     <= 1;
                     i2c_state    <= SM_RESTART;
                     s_start_done <= 0;
+                    I2CSR[CSR_MCF] <= 1'b0;
                 end
             end
             ADDR_SR    : begin
@@ -168,6 +170,7 @@ end
 always @(posedge s_read_enable or negedge i_reset_n)
 begin
     if (i_reset_n) begin
+        rd_ready_r <= 1'b0;
         case (i_rd_addr[4:2])
             ADDR_ADR   : begin
                 s_data_out <= I2CADR  ;
@@ -252,12 +255,15 @@ begin
         s_cmd    <= CMD_START;
         s_cmd_go <= 1;
         i2c_state <= SM_START;
+        I2CSR[CSR_MCF] <= 0;
+        I2CSR[CSR_MBB] <= 1;
     end
 end
 
 always @(negedge I2CCR[CCR_MSTA])
 begin
     if (I2CCR[CCR_MEN]) begin
+        I2CSR[CSR_MCF] <= 0;
         s_cmd    <= CMD_STOP;
         s_cmd_go <= 1;
     end
@@ -311,6 +317,17 @@ begin
             s_cmd_go <= 1;
             i2c_state <= SM_WRITE;
             I2CSR[CSR_MCF] <= 0;
+        end
+        if ((i_rd_ena) && (ADDR_DR == i_rd_addr[4:2])) begin
+            if (s_read_dly) begin
+                rd_ready_r <= 0;
+            end
+            else begin
+                rd_ready_r <= 1;
+            end
+        end
+        else begin
+            rd_ready_r <= 1;
         end
         if (s_read_dly & s_start_done) begin
             if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
