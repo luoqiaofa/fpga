@@ -111,6 +111,7 @@ begin
         end
         SM_WR_ACK   : begin
             I2CSR[CSR_MCF] <= 1;
+            s_read_dly     <= 0;
         end
         SM_WR_NAK   : begin
             s_cmd     <= CMD_STOP;
@@ -192,6 +193,7 @@ begin
                             s_cmd        <= CMD_READ;
                             s_cmd_go     <= 1;
                             i2c_state    <= SM_READ;
+                            s_read_dly   <= 1;
                         end
                     end
                     else begin
