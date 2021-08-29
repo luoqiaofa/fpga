@@ -32,7 +32,8 @@ reg rd_ready_r;
 reg wr_ready_r;
 reg s_start_done;
 reg s_dr_updated;
-reg s_read_dly;
+reg s_in_read_seq;
+reg s_in_dr_valid;
 
 reg [2:0] i2c_state;
 
@@ -111,7 +112,8 @@ begin
         end
         SM_WR_ACK   : begin
             I2CSR[CSR_MCF] <= 1;
-            s_read_dly     <= 0;
+            s_in_read_seq     <= 0;
+            s_in_dr_valid     <= 1;
         end
         SM_WR_NAK   : begin
             s_cmd     <= CMD_STOP;
@@ -186,22 +188,26 @@ begin
                 s_data_out <= I2CSR   ;
             end
             ADDR_DR    : begin
-                if (!s_read_dly)  begin
+                if (s_in_dr_valid) begin
+                    s_data_out <= I2CDR   ;
+                    s_in_dr_valid <= 0;
+                end
+                else begin
+                    s_data_out <= 8'hff   ;
+                end
+                if (!s_in_read_seq) begin
                     if (s_start_done) begin
                         if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
                             I2CSR[CSR_MCF] <= 1'b0;
                             s_cmd        <= CMD_READ;
                             s_cmd_go     <= 1;
                             i2c_state    <= SM_READ;
-                            s_read_dly   <= 1;
+                            s_in_read_seq   <= 1;
                         end
                     end
                     else begin
                         I2CSR[CSR_MCF] <= 1'b0;
                     end
-                end
-                else begin
-                    I2CSR[CSR_MCF] <= 1'b0;
                 end
             end
             ADDR_DFSRR : begin
@@ -306,7 +312,8 @@ begin
         wr_ready_r <= 1'b1;
         s_start_done <= 0;
         s_dr_updated <= 0;
-        s_read_dly  <= 0;
+        s_in_read_seq  <= 0;
+        s_in_dr_valid  <= 0;
     end
     else begin
         go_read <= 1'b0;
@@ -321,19 +328,14 @@ begin
             I2CSR[CSR_MCF] <= 0;
         end
         if ((i_rd_ena) && (ADDR_DR == i_rd_addr[4:2])) begin
-            if (s_read_dly) begin
-                rd_ready_r <= 0;
-            end
-            else begin
-                rd_ready_r <= 1;
-            end
+            rd_ready_r <= 1;
         end
         else begin
             rd_ready_r <= 1;
         end
-        if (s_read_dly & s_start_done) begin
+        if (s_in_read_seq & s_start_done) begin
             if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
-                s_read_dly <= 0;
+                s_in_read_seq <= 0;
                 I2CSR[CSR_MCF] <= 1'b0;
                 s_cmd        <= CMD_READ;
                 s_cmd_go     <= 1;
