@@ -39,7 +39,8 @@ module tb_i2c;
    localparam C_SM_SET_TXNAK = 5'h19;
    localparam C_SM_RD_DATA2  = 5'h1a;
    localparam C_SM_WAIT_SR11 = 5'h1b;
-   localparam C_SM_STOP      = 5'h1c;
+   localparam C_SM_RESET_MTX = 5'h1c;
+   localparam C_SM_STOP      = 5'h1d;
 
    reg           i_sysclk;  // system clock input
    reg           i_reset_n; // module reset input
@@ -239,8 +240,8 @@ module tb_i2c;
                                    i_wr_ena   <= 0;
                                    rd_addr <= (ADDR_SR << 2);
                                    wr_addr    <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MTX);
-                                   next_state <= C_SM_STOP;
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                                   next_state <= C_SM_RESET_MTX;
                                end
                            end
                        end
@@ -327,8 +328,14 @@ module tb_i2c;
                                end
                                C_SM_WAIT_SR11 : begin
                                end
-                               C_SM_STOP : begin
+                               C_SM_RESET_MTX : begin
                                    i_wr_ena  <= 0;
+                                   wr_addr    <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN);
+                                   next_state <= C_SM_STOP;
+                               end
+                               C_SM_STOP : begin
+                                   i_wr_ena  <= 1;
                                end
                                default : begin
                                    i_wr_ena  <= 0;
@@ -409,6 +416,9 @@ module tb_i2c;
                            C_SM_RD_DATA2 : begin
                            end
                            C_SM_WAIT_SR11 : begin
+                           end
+                           C_SM_RESET_MTX : begin
+                               i_wr_ena  <= 1;
                            end
                            C_SM_STOP : begin
                                i_wr_ena  <= 1;
