@@ -32,12 +32,12 @@ module tb_i2c;
    localparam C_SM_WR_RADDR  = 5'h12;
    localparam C_SM_WAIT_SR9  = 5'h13;
    localparam C_SM_RD_ACK3   = 5'h14;
-   localparam C_SM_WAIT_SR10 = 5'h15;
+   localparam C_SM_XFER_READ = 5'h15;
    localparam C_SM_RD_DATA1  = 5'h16;
-   localparam C_SM_WAIT_SR11 = 5'h17;
+   localparam C_SM_WAIT_SR10 = 5'h17;
    localparam C_SM_WR_ACK    = 5'h18;
    localparam C_SM_RD_DATA2  = 5'h19;
-   localparam C_SM_WAIT_SR12 = 5'h1a;
+   localparam C_SM_WAIT_SR11 = 5'h1a;
    localparam C_SM_STOP      = 5'h1b;
 
    reg           i_sysclk;  // system clock input
@@ -206,15 +206,18 @@ module tb_i2c;
                            if (rd_addr == (ADDR_SR << 2)) begin
                                if (o_rd_data[CSR_MCF]) begin
                                    rd_addr <= (ADDR_DR << 2);
-                                   next_state <= C_SM_RD_DATA1;
+                                   i_wr_ena   <= 0;
+                                   wr_addr <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
+                                   next_state <= C_SM_XFER_READ;
                                end
                            end
                        end
                        C_SM_RD_DATA1  : begin
                            rd_addr <= (ADDR_SR << 2);
-                           next_state <= C_SM_WAIT_SR11;
+                           next_state <= C_SM_WAIT_SR10;
                        end
-                       C_SM_WAIT_SR11 : begin
+                       C_SM_WAIT_SR10 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
                                if (o_rd_data[CSR_MCF]) begin
                                    rd_addr <= (ADDR_DR << 2);
@@ -224,9 +227,9 @@ module tb_i2c;
                        end
                        C_SM_RD_DATA2  : begin
                            rd_addr <= (ADDR_SR << 2);
-                           next_state <= C_SM_WAIT_SR12;
+                           next_state <= C_SM_WAIT_SR11;
                        end
-                       C_SM_WAIT_SR12 : begin
+                       C_SM_WAIT_SR11 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
                                if (o_rd_data[CSR_MCF]) begin
                                    i_wr_ena   <= 0;
@@ -300,18 +303,20 @@ module tb_i2c;
                                end
                                C_SM_RD_ACK3 : begin
                                end
-                               C_SM_WAIT_SR10 : begin
+                               C_SM_XFER_READ : begin
+                                   wr_addr <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
                                end
                                C_SM_RD_DATA1 : begin
                                end
-                               C_SM_WAIT_SR11 : begin
+                               C_SM_WAIT_SR10 : begin
                                end
                                C_SM_WR_ACK : begin
                                    i_wr_ena  <= 1;
                                end
                                C_SM_RD_DATA2 : begin
                                end
-                               C_SM_WAIT_SR12 : begin
+                               C_SM_WAIT_SR11 : begin
                                end
                                C_SM_STOP : begin
                                    i_wr_ena  <= 0;
@@ -377,18 +382,20 @@ module tb_i2c;
                            end
                            C_SM_RD_ACK3 : begin
                            end
-                           C_SM_WAIT_SR10 : begin
+                           C_SM_XFER_READ : begin
+                               i_wr_ena  <= 1;
+                               next_state <= C_SM_RD_DATA1;
                            end
                            C_SM_RD_DATA1 : begin
                            end
-                           C_SM_WAIT_SR11 : begin
+                           C_SM_WAIT_SR10 : begin
                            end
                            C_SM_WR_ACK : begin
                                i_wr_ena  <= 1;
                            end
                            C_SM_RD_DATA2 : begin
                            end
-                           C_SM_WAIT_SR12 : begin
+                           C_SM_WAIT_SR11 : begin
                            end
                            C_SM_STOP : begin
                                i_wr_ena  <= 1;
