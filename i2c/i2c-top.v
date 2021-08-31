@@ -106,9 +106,15 @@ begin
             i2c_state <= SM_RD_ACK;
         end
         SM_READ     : begin
-            s_cmd     <= CMD_WR_ACK;
             s_cmd_go  <= 1;
-            i2c_state <= SM_WR_ACK;
+            if (I2CCR[CCR_TXAK]) begin
+                s_cmd     <= CMD_WR_NAK;
+                i2c_state <= SM_WR_NAK;
+            end
+            else begin
+                s_cmd     <= CMD_WR_ACK;
+                i2c_state <= SM_WR_ACK;
+            end
         end
         SM_WR_ACK   : begin
             I2CSR[CSR_MCF] <= 1;
@@ -116,10 +122,12 @@ begin
             s_in_dr_valid     <= 1;
         end
         SM_WR_NAK   : begin
-            s_cmd     <= CMD_STOP;
-            s_cmd_go  <= 1;
-            i2c_state <= SM_STOP;
+            s_in_read_seq     <= 0;
+            s_in_dr_valid     <= 1;
             I2CSR[CSR_MCF] <= 1;
+            // s_cmd     <= CMD_STOP;
+            // s_cmd_go  <= 1;
+            // i2c_state <= SM_STOP;
         end
         SM_RD_ACK   : begin
             I2CSR[CSR_MCF] <= 1;

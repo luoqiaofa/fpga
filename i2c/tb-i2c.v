@@ -36,9 +36,10 @@ module tb_i2c;
    localparam C_SM_RD_DATA1  = 5'h16;
    localparam C_SM_WAIT_SR10 = 5'h17;
    localparam C_SM_WR_ACK    = 5'h18;
-   localparam C_SM_RD_DATA2  = 5'h19;
-   localparam C_SM_WAIT_SR11 = 5'h1a;
-   localparam C_SM_STOP      = 5'h1b;
+   localparam C_SM_SET_TXNAK = 5'h19;
+   localparam C_SM_RD_DATA2  = 5'h1a;
+   localparam C_SM_WAIT_SR11 = 5'h1b;
+   localparam C_SM_STOP      = 5'h1c;
 
    reg           i_sysclk;  // system clock input
    reg           i_reset_n; // module reset input
@@ -220,8 +221,11 @@ module tb_i2c;
                        C_SM_WAIT_SR10 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
                                if (o_rd_data[CSR_MCF]) begin
-                                   rd_addr <= (ADDR_DR << 2);
-                                   next_state <= C_SM_RD_DATA2;
+                                   rd_addr <= (ADDR_SR << 2);
+                                   i_wr_ena   <= 0;
+                                   wr_addr <= (ADDR_CR << 2);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_TXAK);
+                                   next_state <= C_SM_SET_TXNAK;
                                end
                            end
                        end
@@ -314,6 +318,11 @@ module tb_i2c;
                                C_SM_WR_ACK : begin
                                    i_wr_ena  <= 1;
                                end
+                               C_SM_SET_TXNAK: begin
+                                   // i_wr_ena   <= 0;
+                                   rd_addr <= (ADDR_DR << 2);
+                                   next_state <= C_SM_RD_DATA2;
+                               end
                                C_SM_RD_DATA2 : begin
                                end
                                C_SM_WAIT_SR11 : begin
@@ -392,6 +401,10 @@ module tb_i2c;
                            end
                            C_SM_WR_ACK : begin
                                i_wr_ena  <= 1;
+                           end
+                           C_SM_SET_TXNAK: begin
+                               i_wr_ena   <= 1;
+                               rd_addr <= (ADDR_SR << 2);
                            end
                            C_SM_RD_DATA2 : begin
                            end

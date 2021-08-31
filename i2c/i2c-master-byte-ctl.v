@@ -135,7 +135,7 @@ begin
             s_irq      <= 1;
             s_cmd_done <= 1'b1;
             s_bit_cnt  <= 3'h7;
-            s_c_state  <= CMD_STOP;
+            // s_c_state  <= CMD_STOP;
         end
         CMD_RD_ACK: begin
             s_bit_ack  <= s_o_bit;
