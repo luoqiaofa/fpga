@@ -140,7 +140,7 @@ module tb_i2c;
        i_wr_ena   <= 1;
        // end
        // C_SM_CR_INIT : begin
-       #500
+       #50000
        i_wr_ena   <= 0;
        #40
        next_state <= C_SM_WAIT_SR1;
