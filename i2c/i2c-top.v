@@ -35,7 +35,7 @@ reg s_dr_updated;
 reg s_in_read_seq;
 reg s_in_dr_valid;
 
-reg [2:0] i2c_state;
+reg [3:0] i2c_state;
 
 wire s_sda;
 wire o_sda;
