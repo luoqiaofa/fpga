@@ -102,11 +102,13 @@ begin
             s_start_done   <= 0;
         end
         SM_WRITE    : begin
+            I2CSR[CSR_MCF] <= 1'b1;
             s_cmd     <= CMD_RD_ACK;
             s_cmd_go  <= 1;
             i2c_state <= SM_RD_ACK;
         end
         SM_READ     : begin
+            I2CSR[CSR_MCF] <= 1'b1;
             I2CDR <= s_rddata;
             s_cmd_go  <= 1;
             if (I2CCR[CCR_TXAK]) begin
@@ -119,20 +121,20 @@ begin
             end
         end
         SM_WR_ACK   : begin
-            I2CSR[CSR_MCF] <= 1;
+            I2CSR[CSR_MIF] <= 1;
             s_in_read_seq     <= 0;
             s_in_dr_valid     <= 1;
         end
         SM_WR_NAK   : begin
             s_in_read_seq     <= 0;
             s_in_dr_valid     <= 1;
-            I2CSR[CSR_MCF] <= 1;
+            I2CSR[CSR_MIF] <= 1;
             // s_cmd     <= CMD_STOP;
             // s_cmd_go  <= 1;
             // i2c_state <= SM_STOP;
         end
         SM_RD_ACK   : begin
-            I2CSR[CSR_MCF] <= 1;
+            I2CSR[CSR_MIF] <= 1;
         end
         SM_RESTART  : begin
             s_start_done   <= 1;
@@ -159,17 +161,20 @@ begin
                     s_cmd_go     <= 1;
                     i2c_state    <= SM_RESTART;
                     s_start_done <= 0;
-                    I2CSR[CSR_MCF] <= 1'b0;
                 end
             end
             ADDR_SR    : begin
-                if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
+                if (I2CSR[CSR_MAL]) begin
                     I2CSR[CSR_MAL] <= i_wr_data[CSR_MAL];
+                end
+                if (I2CSR[CSR_MIF]) begin
                     I2CSR[CSR_MIF] <= i_wr_data[CSR_MIF];
                 end
             end
             ADDR_DR    : begin
-                if (!s_dr_updated) begin
+                if (!s_dr_updated & I2CSR[CSR_MCF]) begin
+                    I2CSR[CSR_MCF] <= 0;
+                    I2CSR[CSR_MIF] <= 0;
                     I2CDR        <= i_wr_data;
                     s_dr_updated <= 1;
                 end
@@ -201,7 +206,8 @@ begin
                 s_data_out <= I2CDR   ;
                 if (!s_in_read_seq) begin
                     if (s_start_done) begin
-                        if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF] & (!I2CCR[CCR_MTX])) begin
+                        if (I2CSR[CSR_MBB] & I2CSR[CSR_MIF] & (!I2CCR[CCR_MTX])) begin
+                            I2CSR[CSR_MIF] <= 1'b0;
                             I2CSR[CSR_MCF] <= 1'b0;
                             s_cmd        <= CMD_READ;
                             s_cmd_go     <= 1;
@@ -210,7 +216,7 @@ begin
                         end
                     end
                     else begin
-                        I2CSR[CSR_MCF] <= 1'b0;
+                        I2CSR[CSR_MIF] <= 1'b0;
                     end
                 end
             end
@@ -267,7 +273,7 @@ begin
         s_cmd    <= CMD_START;
         s_cmd_go <= 1;
         i2c_state <= SM_START;
-        I2CSR[CSR_MCF] <= 0;
+        I2CSR[CSR_MIF] <= 0;
         I2CSR[CSR_MBB] <= 1;
     end
 end
@@ -275,7 +281,7 @@ end
 always @(negedge I2CCR[CCR_MSTA])
 begin
     if (I2CCR[CCR_MEN]) begin
-        I2CSR[CSR_MCF] <= 0;
+        I2CSR[CSR_MIF] <= 0;
         s_cmd    <= CMD_STOP;
         s_cmd_go <= 1;
     end
@@ -329,7 +335,7 @@ begin
             s_cmd    <= CMD_WRITE;
             s_cmd_go <= 1;
             i2c_state <= SM_WRITE;
-            I2CSR[CSR_MCF] <= 0;
+            I2CSR[CSR_MIF] <= 0;
         end
         if ((i_rd_ena) && (ADDR_DR == i_rd_addr[4:2])) begin
             rd_ready_r <= 1;
@@ -338,9 +344,9 @@ begin
             rd_ready_r <= 1;
         end
         if (s_in_read_seq & s_start_done) begin
-            if (I2CSR[CSR_MBB] & I2CSR[CSR_MCF]) begin
+            if (I2CSR[CSR_MBB] & I2CSR[CSR_MIF]) begin
                 s_in_read_seq <= 0;
-                I2CSR[CSR_MCF] <= 1'b0;
+                I2CSR[CSR_MIF] <= 1'b0;
                 s_cmd        <= CMD_READ;
                 s_cmd_go     <= 1;
                 i2c_state    <= SM_READ;

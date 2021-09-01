@@ -180,7 +180,7 @@ module tb_i2c;
                        end
                        C_SM_WAIT_SR4 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
-                               if (o_rd_data[CSR_MCF]) begin
+                               if (o_rd_data[CSR_MIF]) begin
                                    i_wr_ena   <= 0;
                                    wr_addr <= (ADDR_DR << 2);
                                    wr_data <= 8'h55;
@@ -193,7 +193,7 @@ module tb_i2c;
                        end
                        C_SM_RD_ACK2 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
-                               if (o_rd_data[CSR_MCF]) begin
+                               if (o_rd_data[CSR_MIF]) begin
                                    i_wr_ena   <= 0;
                                    wr_addr    <= (ADDR_CR << 2);
                                    wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA);
@@ -206,7 +206,7 @@ module tb_i2c;
                        end
                        C_SM_RD_ACK3   : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
-                               if (o_rd_data[CSR_MCF]) begin
+                               if (o_rd_data[CSR_MIF]) begin
                                    rd_addr <= (ADDR_DR << 2);
                                    i_wr_ena   <= 0;
                                    wr_addr <= (ADDR_CR << 2);
@@ -221,7 +221,7 @@ module tb_i2c;
                        end
                        C_SM_WAIT_SR10 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
-                               if (o_rd_data[CSR_MCF]) begin
+                               if (o_rd_data[CSR_MIF]) begin
                                    rd_addr <= (ADDR_SR << 2);
                                    i_wr_ena   <= 0;
                                    wr_addr <= (ADDR_CR << 2);
@@ -236,7 +236,7 @@ module tb_i2c;
                        end
                        C_SM_WAIT_SR11 : begin
                            if (rd_addr == (ADDR_SR << 2)) begin
-                               if (o_rd_data[CSR_MCF]) begin
+                               if (o_rd_data[CSR_MIF]) begin
                                    i_wr_ena   <= 0;
                                    rd_addr <= (ADDR_SR << 2);
                                    wr_addr    <= (ADDR_CR << 2);
@@ -251,97 +251,101 @@ module tb_i2c;
                    endcase
 
                    if (i_wr_ena) begin
-                       if (i2csr[CSR_MCF])
-                       begin
-                           case (next_state)
-                               C_SM_IDLE : begin
-                               end
-                               C_SM_FDR_INIT : begin
-                               end
-                               C_SM_ADR_INIT : begin
-                               end
-                               C_SM_MEN_SET : begin
-                               end
-                               C_SM_WAIT_SR1 : begin
-                               end
-                               C_SM_CR_INIT : begin
-                                   i_wr_ena   <= 0;
-                                   wr_addr    <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
-                               end
-                               C_SM_WAIT_SR2 : begin
-                               end
-                               C_SM_START : begin
-                               end
-                               C_SM_WAIT_SR3 : begin
-                               end
-                               C_SM_WR_WADDR : begin
-                                   i_wr_ena   <= 0;
-                                   wr_addr <= (ADDR_DR << 2);
-                                   wr_data <= 8'ha0;
-                               end
-                               C_SM_WAIT_SR4 : begin
-                               end
-                               C_SM_RD_ACK1 : begin
-                               end
-                               C_SM_WR_DATA : begin
-                               end
-                               C_SM_WAIT_SR5 : begin
-                               end
-                               C_SM_RD_ACK2 : begin
-                               end
-                               C_SM_WAIT_SR6 : begin
-                               end
-                               C_SM_RESTART : begin
-                                   i_wr_ena   <= 0;
-                                   wr_addr <= (ADDR_DR << 2);
-                                   wr_data <= 8'ha1;
-                                   next_state <= C_SM_WR_RADDR;
-                               end
-                               C_SM_WAIT_SR8 : begin
-                               end
-                               C_SM_WR_RADDR : begin
-                                   wr_addr <= (ADDR_DR << 2);
-                                   wr_data <= 8'ha1;
-                               end
-                               C_SM_WAIT_SR9 : begin
-                               end
-                               C_SM_RD_ACK3 : begin
-                               end
-                               C_SM_XFER_READ : begin
-                                   wr_addr <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
-                               end
-                               C_SM_RD_DATA1 : begin
-                               end
-                               C_SM_WAIT_SR10 : begin
-                               end
-                               C_SM_WR_ACK : begin
-                                   i_wr_ena  <= 1;
-                               end
-                               C_SM_SET_TXNAK: begin
-                                   // i_wr_ena   <= 0;
-                                   rd_addr <= (ADDR_DR << 2);
-                                   next_state <= C_SM_RD_DATA2;
-                               end
-                               C_SM_RD_DATA2 : begin
-                               end
-                               C_SM_WAIT_SR11 : begin
-                               end
-                               C_SM_RESET_MTX : begin
-                                   i_wr_ena  <= 0;
-                                   wr_addr    <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN);
-                                   next_state <= C_SM_STOP;
-                               end
-                               C_SM_STOP : begin
-                                   i_wr_ena  <= 1;
-                               end
-                               default : begin
-                                   i_wr_ena  <= 0;
-                               end
-                           endcase
-                       end
+                       case (next_state)
+                           C_SM_IDLE : begin
+                           end
+                           C_SM_FDR_INIT : begin
+                           end
+                           C_SM_ADR_INIT : begin
+                           end
+                           C_SM_MEN_SET : begin
+                           end
+                           C_SM_WAIT_SR1 : begin
+                           end
+                           C_SM_CR_INIT : begin
+                               i_wr_ena   <= 0;
+                               wr_addr <= (ADDR_DR << 2);
+                               wr_data <= 8'ha0;
+                               next_state <= C_SM_WR_WADDR;
+                           end
+                           C_SM_WAIT_SR2 : begin
+                           end
+                           C_SM_START : begin
+                               i_wr_ena   <= 0;
+                               i_wr_ena   <= 0;
+                               wr_addr <= (ADDR_DR << 2);
+                               wr_data <= 8'ha0;
+                           end
+                           C_SM_WAIT_SR3 : begin
+                           end
+                           C_SM_WR_WADDR : begin
+                               i_wr_ena   <= 0;
+                               i_rd_ena   <= 0;
+                               rd_addr <= (ADDR_SR << 2);
+                               next_state <= C_SM_RD_ACK1;
+                           end
+                           C_SM_WAIT_SR4 : begin
+                           end
+                           C_SM_RD_ACK1 : begin
+                           end
+                           C_SM_WR_DATA : begin
+                           end
+                           C_SM_WAIT_SR5 : begin
+                           end
+                           C_SM_RD_ACK2 : begin
+                           end
+                           C_SM_WAIT_SR6 : begin
+                           end
+                           C_SM_RESTART : begin
+                               i_wr_ena   <= 0;
+                               wr_addr <= (ADDR_DR << 2);
+                               wr_data <= 8'ha1;
+                               next_state <= C_SM_WR_RADDR;
+                           end
+                           C_SM_WAIT_SR8 : begin
+                           end
+                           C_SM_WR_RADDR : begin
+                               wr_addr <= (ADDR_DR << 2);
+                               wr_data <= 8'ha1;
+                               next_state <= C_SM_WAIT_SR9;
+                           end
+                           C_SM_WAIT_SR9 : begin
+                           end
+                           C_SM_RD_ACK3 : begin
+                           end
+                           C_SM_XFER_READ : begin
+                               wr_addr <= (ADDR_CR << 2);
+                               wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
+                           end
+                           C_SM_RD_DATA1 : begin
+                           end
+                           C_SM_WAIT_SR10 : begin
+                           end
+                           C_SM_WR_ACK : begin
+                               i_wr_ena  <= 1;
+                           end
+                           C_SM_SET_TXNAK: begin
+                               // i_wr_ena   <= 0;
+                               rd_addr <= (ADDR_DR << 2);
+                               next_state <= C_SM_RD_DATA2;
+                           end
+                           C_SM_RD_DATA2 : begin
+                           end
+                           C_SM_WAIT_SR11 : begin
+                           end
+                           C_SM_RESET_MTX : begin
+                               i_wr_ena  <= 0;
+                               wr_addr    <= (ADDR_CR << 2);
+                               wr_data    <= (1 << CCR_MEN);
+                               next_state <= C_SM_STOP;
+                           end
+                           C_SM_STOP : begin
+                               i_wr_ena  <= 1;
+                           end
+                           default : begin
+                               i_wr_ena  <= 0;
+                           end
+                       endcase
                    end
                    else begin
                        case (next_state)
@@ -356,7 +360,6 @@ module tb_i2c;
                            C_SM_WAIT_SR1 : begin
                            end
                            C_SM_CR_INIT : begin
-                               next_state <= C_SM_WR_WADDR;
                                i_wr_ena  <= 1;
                            end
                            C_SM_WAIT_SR2 : begin
@@ -392,7 +395,6 @@ module tb_i2c;
                            end
                            C_SM_WR_RADDR : begin
                                i_wr_ena  <= 1;
-                               next_state <= C_SM_WAIT_SR9;
                            end
                            C_SM_WAIT_SR9 : begin
                            end
