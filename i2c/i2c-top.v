@@ -33,6 +33,7 @@ reg wr_ready_r;
 reg s_start_done;
 reg s_dr_updated;
 reg s_need_rd_seq;
+wire s_interrupt;
 
 reg [3:0] i2c_state;
 
@@ -43,7 +44,8 @@ wire s_scl;
 wire o_scl;
 wire s_scl_oen;
 
-
+assign s_interrupt = I2CSR[CSR_MIF] | I2CSR[CSR_MAL];
+assign o_interrupt = I2CCR[CCR_MIEN] ? s_interrupt : 0;
 assign o_rd_data = s_data_out;
 assign o_read_ready = rd_ready_r;
 assign o_write_ready = wr_ready_r;
@@ -82,6 +84,13 @@ wire s_read_enable;
 assign s_cmd_trig = s_cmd_go;
 assign s_write_enable = i_wr_ena;
 assign s_read_enable  = i_rd_ena;
+
+always @(posedge i_sysclk or posedge s_i2c_al or negedge i_reset_n)
+begin
+    if (i_reset_n) begin
+        I2CSR[CSR_MAL] <= s_i2c_al;
+    end
+end
 
 always @(posedge s_cmd_ack)
 begin
@@ -247,8 +256,7 @@ i2c_master_byte_ctl u1_byte_ctl(
     .o_scl_oen  (s_scl_oen),
     .i_sda      (s_sda),
     .o_sda      (o_sda),
-    .o_sda_oen  (s_sda_oen),
-    .o_interrupt(o_interrupt)
+    .o_sda_oen  (s_sda_oen)
 );
 
 wire div_ready;

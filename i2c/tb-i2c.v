@@ -172,7 +172,7 @@ module tb_i2c;
                        C_SM_WAIT_SR1: begin
                            i_wr_ena   <= 0;
                            wr_addr    <= (ADDR_CR << 2);
-                           wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                           wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1<< CCR_MIEN);
                            next_state <= C_SM_CR_INIT;
                        end
                        C_SM_RD_ACK1 : begin
@@ -196,7 +196,7 @@ module tb_i2c;
                                if (o_rd_data[CSR_MIF]) begin
                                    i_wr_ena   <= 0;
                                    wr_addr    <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1 << CCR_RSTA) | (1<< CCR_MIEN);
                                    next_state <= C_SM_RESTART;
                                end
                            end
@@ -210,7 +210,7 @@ module tb_i2c;
                                    rd_addr <= (ADDR_DR << 2);
                                    i_wr_ena   <= 0;
                                    wr_addr <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1<< CCR_MIEN);
                                    next_state <= C_SM_XFER_READ;
                                end
                            end
@@ -225,7 +225,7 @@ module tb_i2c;
                                    rd_addr <= (ADDR_SR << 2);
                                    i_wr_ena   <= 0;
                                    wr_addr <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_TXAK);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_TXAK) | (1<< CCR_MIEN);
                                    next_state <= C_SM_SET_TXNAK;
                                end
                            end
@@ -240,7 +240,7 @@ module tb_i2c;
                                    i_wr_ena   <= 0;
                                    rd_addr <= (ADDR_SR << 2);
                                    wr_addr    <= (ADDR_CR << 2);
-                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+                                   wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX) | (1<< CCR_MIEN);
                                    next_state <= C_SM_RESET_MTX;
                                end
                            end
@@ -315,7 +315,7 @@ module tb_i2c;
                            end
                            C_SM_XFER_READ : begin
                                wr_addr <= (ADDR_CR << 2);
-                               wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA);
+                               wr_data    <= (1 << CCR_MEN) | (1 << CCR_MSTA) | (1<< CCR_MIEN);
                            end
                            C_SM_RD_DATA1 : begin
                            end
