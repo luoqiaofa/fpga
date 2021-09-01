@@ -400,6 +400,8 @@ module tb_i2c;
                            end
                            C_SM_XFER_READ : begin
                                i_wr_ena  <= 1;
+                               i_rd_ena <= 0;
+                               rd_addr <= (ADDR_DR << 2);
                                next_state <= C_SM_RD_DATA1;
                            end
                            C_SM_RD_DATA1 : begin
