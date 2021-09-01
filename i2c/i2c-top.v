@@ -139,10 +139,10 @@ begin
         end
         SM_RD_ACK   : begin
             I2CSR[CSR_MIF] <= 1;
+            I2CSR[CSR_RXAK] <= s_i2c_ack;
         end
         SM_RESTART  : begin
             s_start_done   <= 1;
-            I2CSR[CSR_MCF] <= 1'b1;
         end
         default     : ;
     endcase
