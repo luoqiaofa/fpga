@@ -32,6 +32,9 @@ reg s_clk_en;
 reg s_sda_chk;
 reg s_dSCL;
 reg s_dSDA;
+reg s_sda_chk_al;
+reg s_sta_sto_sda_al;
+reg s_sta_sto_scl_al;
 
 reg [1:0] s_cSCL, s_cSDA;
 reg [2:0] s_fSCL, s_fSDA;      // SCL and SDA filter inputs
@@ -66,6 +69,10 @@ begin
         s_dSCL   <= 1'b1;
         s_dSDA   <= 1'b1;
         s_clk_en <= 1'b0;
+
+        s_sda_chk_al     <= 0;
+        s_sta_sto_sda_al <= 0;
+        s_sta_sto_scl_al <= 0;
     end
     else  begin
         s_clk_en <= 1'b0;
@@ -74,6 +81,20 @@ begin
             s_dSDA = (&s_cSDA) & i_sda;
         end
         o_busy <= ~((&s_fSCL) & (&s_fSDA) & (i_sda & i_scl));
+        o_arblost <= s_sda_chk_al | s_sta_sto_sda_al | s_sta_sto_scl_al;
+        if (s_sda_chk & o_sda_oen) begin
+            s_sda_chk_al <= (~s_dSDA);
+        end
+        else begin
+            if ((CMD_START == s_bit_cmd) || (CMD_STOP == s_bit_cmd)) begin
+                if (o_sda_oen) begin
+                    s_sta_sto_sda_al <= (~i_sda);
+                end
+                if (o_scl_oen) begin
+                    s_sta_sto_scl_al <= (~i_scl);
+                end
+            end
+        end
     end
 end
 

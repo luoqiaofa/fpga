@@ -34,7 +34,6 @@ reg s_start_done;
 reg s_dr_updated;
 reg s_need_rd_seq;
 wire s_interrupt;
-wire s_MIF;
 
 reg [3:0] i2c_state;
 
@@ -45,7 +44,6 @@ wire s_scl;
 wire o_scl;
 wire s_scl_oen;
 
-assign  s_MIF = I2CSR[CSR_MIF];
 assign s_interrupt = I2CSR[CSR_MIF] | I2CSR[CSR_MAL];
 assign o_interrupt = I2CCR[CCR_MIEN] ? s_interrupt : 0;
 assign o_rd_data = s_data_out;
@@ -209,7 +207,7 @@ begin
                 s_data_out <= I2CDR   ;
                 if (!s_need_rd_seq) begin
                     if (s_start_done) begin
-                        if (I2CSR[CSR_MBB] & I2CSR[CSR_MIF] & (!I2CCR[CCR_MTX])) begin
+                        if (I2CSR[CSR_MIF] & (!I2CCR[CCR_MTX])) begin
                             I2CSR[CSR_MIF] <= 1'b0;
                             I2CSR[CSR_MCF] <= 1'b0;
                             s_cmd        <= CMD_READ;
