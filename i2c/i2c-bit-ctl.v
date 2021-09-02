@@ -86,7 +86,9 @@ begin
             s_sda_chk_al <= (~s_dSDA);
         end
         else begin
-            if ((CMD_START == s_bit_cmd) || (CMD_STOP == s_bit_cmd)) begin
+            if ((CMD_START == s_bit_cmd) ||
+                (CMD_RESTART == s_bit_cmd) ||
+                (CMD_STOP == s_bit_cmd)) begin
                 if (o_sda_oen) begin
                     s_sta_sto_sda_al <= (~i_sda);
                 end

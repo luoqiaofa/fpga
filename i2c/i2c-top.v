@@ -99,7 +99,9 @@ begin
             s_start_done  <= 0;
         end
         SM_START    : begin
-            s_start_done   <= 1;
+            if (s_i2c_busy & ~s_i2c_al) begin
+                s_start_done   <= 1;
+            end
         end
         SM_STOP     : begin
             s_cmd     <= CMD_IDLE;
@@ -139,7 +141,9 @@ begin
             I2CSR[CSR_RXAK] <= s_i2c_ack;
         end
         SM_RESTART  : begin
-            s_start_done   <= 1;
+            if (s_i2c_busy & ~s_i2c_al) begin
+                s_start_done   <= 1;
+            end
         end
         default     : ;
     endcase
