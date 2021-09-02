@@ -34,6 +34,7 @@ reg s_start_done;
 reg s_dr_updated;
 reg s_need_rd_seq;
 wire s_interrupt;
+wire s_MIF;
 
 reg [3:0] i2c_state;
 
@@ -44,6 +45,7 @@ wire s_scl;
 wire o_scl;
 wire s_scl_oen;
 
+assign  s_MIF = I2CSR[CSR_MIF];
 assign s_interrupt = I2CSR[CSR_MIF] | I2CSR[CSR_MAL];
 assign o_interrupt = I2CCR[CCR_MIEN] ? s_interrupt : 0;
 assign o_rd_data = s_data_out;
@@ -105,7 +107,7 @@ begin
             s_cmd     <= CMD_IDLE;
             s_cmd_go  <= 1;
             i2c_state <= SM_IDLE;
-            I2CSR[CSR_RXAK] <= 0;
+            I2CSR[CSR_RXAK] <= 1;
             I2CSR[CSR_MIF] <= 0;
             s_start_done   <= 0;
         end
@@ -267,9 +269,6 @@ begin
     end
     else begin
         I2CSR[CSR_MBB] <= s_i2c_busy;
-        if (!I2CSR[CSR_MBB]) begin
-            I2CSR[CSR_MIF] <= 0;
-        end
         s_prescale <= freq_divid_get(I2CFDR);
     end
 end
@@ -290,6 +289,7 @@ begin
         I2CSR[CSR_MIF] <= 0;
         s_cmd    <= CMD_STOP;
         s_cmd_go <= 1;
+        i2c_state <= SM_STOP;
     end
 end
 
