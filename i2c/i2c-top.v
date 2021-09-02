@@ -99,14 +99,12 @@ begin
             s_start_done  <= 0;
         end
         SM_START    : begin
-            I2CSR[CSR_MBB] <= 1;
             s_start_done   <= 1;
         end
         SM_STOP     : begin
             s_cmd     <= CMD_IDLE;
             s_cmd_go  <= 1;
             i2c_state <= SM_IDLE;
-            I2CSR[CSR_MBB] <= 0;
             s_start_done   <= 0;
         end
         SM_WRITE    : begin
@@ -269,6 +267,7 @@ begin
         s_prescale <= 16'd384;
     end
     else begin
+        I2CSR[CSR_MBB] <= s_i2c_busy;
         s_prescale <= freq_divid_get(I2CFDR);
     end
 end
@@ -280,7 +279,6 @@ begin
         s_cmd_go <= 1;
         i2c_state <= SM_START;
         I2CSR[CSR_MIF] <= 0;
-        I2CSR[CSR_MBB] <= 1;
     end
 end
 

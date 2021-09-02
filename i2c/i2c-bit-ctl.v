@@ -30,7 +30,11 @@ reg [4:0]  s_c_state;
 reg [15:0] s_cnt;
 reg s_clk_en;
 reg s_sda_chk;
-reg s_sSda;
+reg s_dSCL;
+reg s_dSDA;
+
+reg [1:0] s_cSCL, s_cSDA;
+reg [2:0] s_fSCL, s_fSDA;      // SCL and SDA filter inputs
 
 wire s_state_clk_div4;
 clk_divn #(.CLK_DIVN_WIDTH(16))
@@ -40,18 +44,36 @@ clk_divn_inst2 (
     .i_divn({2'b0, i_prescale[15:2]}),
     .o_clk(s_state_clk_div4)
 );
+always @(posedge s_state_clk_div4 or negedge i_nReset)
+begin
+    if (!i_nReset) begin
+        s_fSCL   <= 3'b111;
+        s_fSDA   <= 3'b111;
+        s_cSCL   <= 2'b00;
+        s_cSDA   <= 2'b00;
+    end
+    else begin
+        s_cSCL   <= {s_cSCL[0], i_scl};
+        s_cSDA   <= {s_cSDA[0], i_sda};
+        s_fSCL <= {s_fSCL[1:0],  i_scl};
+        s_fSDA <= {s_fSDA[1:0],  i_sda};
+    end
+end
 
 always @(posedge i_sysclk or negedge i_nReset)
 begin
     if (!i_nReset) begin
-        s_sSda   <= 1'b1;
+        s_dSCL   <= 1'b1;
+        s_dSDA   <= 1'b1;
         s_clk_en <= 1'b0;
     end
     else  begin
         s_clk_en <= 1'b0;
-        if (o_sda_oen) begin
-            s_sSda <= i_sda;
+        s_dSCL = (&s_cSCL) & i_scl;
+        if (~s_cSCL[1] & s_cSCL[0]) begin
+            s_dSDA = (&s_cSDA) & i_sda;
         end
+        o_busy <= ~((&s_fSCL) & (&s_fSDA) & (i_sda & i_scl));
     end
 end
 
@@ -252,7 +274,7 @@ end
 assign o_scl = o_scl_oen;
 assign o_sda = o_sda_oen;
 
-assign o_dout = s_sSda;
+assign o_dout = s_dSDA;
 
 endmodule
 
