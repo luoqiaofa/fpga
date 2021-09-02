@@ -105,6 +105,8 @@ begin
             s_cmd     <= CMD_IDLE;
             s_cmd_go  <= 1;
             i2c_state <= SM_IDLE;
+            I2CSR[CSR_RXAK] <= 0;
+            I2CSR[CSR_MIF] <= 0;
             s_start_done   <= 0;
         end
         SM_WRITE    : begin
@@ -131,9 +133,6 @@ begin
         end
         SM_WR_NAK   : begin
             I2CSR[CSR_MIF] <= 1;
-            // s_cmd     <= CMD_STOP;
-            // s_cmd_go  <= 1;
-            // i2c_state <= SM_STOP;
         end
         SM_RD_ACK   : begin
             I2CSR[CSR_MIF] <= 1;
@@ -268,6 +267,9 @@ begin
     end
     else begin
         I2CSR[CSR_MBB] <= s_i2c_busy;
+        if (!I2CSR[CSR_MBB]) begin
+            I2CSR[CSR_MIF] <= 0;
+        end
         s_prescale <= freq_divid_get(I2CFDR);
     end
 end
@@ -347,7 +349,7 @@ begin
             rd_ready_r <= 1;
         end
         if (s_need_rd_seq & s_start_done) begin
-            if (((SM_RESTART == i2c_state) || (SM_START == i2c_state)) && I2CSR[CSR_MBB]) begin
+            if (((SM_RESTART == i2c_state) || (SM_START == i2c_state))) begin
                 s_need_rd_seq   <= 0;
                 I2CSR[CSR_MIF]  <= 1'b0;
                 s_cmd        <= CMD_READ;
