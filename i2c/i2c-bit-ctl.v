@@ -83,7 +83,7 @@ begin
         o_busy <= ~((&s_fSCL) & (&s_fSDA) & (i_sda & i_scl));
         o_arblost <= s_sda_chk_al | s_sta_sto_sda_al | s_sta_sto_scl_al;
         if (s_sda_chk & o_sda_oen) begin
-            s_sda_chk_al <= (~s_dSDA);
+            s_sda_chk_al <= (~i_sda);
         end
         else begin
             if ((CMD_START == s_bit_cmd) ||
