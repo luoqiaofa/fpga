@@ -23,7 +23,6 @@ module spi_master_trx_char
 
 reg go;        // start transmit, in transmit progress
 reg done;
-reg skip_first;
 reg last_clk;  // last clock 
 reg dout;
 reg [CHAR_NBITS - 1: 0] data_in;
@@ -98,7 +97,6 @@ begin
     begin
         go   <= 0;
         done <= 0;
-        skip_first <= 0;
         last_clk <= 0;
         dout <= 1'b1;
         data_in  <= {CHAR_NBITS{1'b1}};
@@ -112,7 +110,6 @@ begin
     begin
         done <= 0;
         data_in  <= data_in;
-        skip_first <= skip_first;
         if (S_ENABLE & go)
         begin
             bit_cnt <= bit_cnt;
@@ -129,17 +126,21 @@ begin
             if (S_REV) begin
                 bit_cnt <= bit_cnt - 6'h1;
                 if (cnt_min == bit_cnt) begin
+                    done <= 1;
                     go <= 0;
                     last_clk <= 1;
                     bit_cnt <= bits_per_char_dec;
+                    data_in <= shift_rx[31:0];
                 end
             end
             else begin
                 bit_cnt <= bit_cnt + 6'h1;
                 if (cnt_max == bit_cnt) begin
                     go <= 0;
+                    done <= 1;
                     last_clk <= 1;
                     bit_cnt <= 6'd0;
+                    data_in <= shift_rx[31:0];
                 end
             end
         end
@@ -147,18 +148,46 @@ begin
             if (S_REV) begin
                 if (0 == bit_cnt) begin
                     go <= 0;
+                    done <= 1;
+                    if (S_LOOP) begin
+                        data_in <= {shift_rx[31:1], S_SPI_MOSI};
+                    end
+                    else begin
+                        data_in <= {shift_rx[31:1], S_SPI_MISO};
+                    end
+                end
+                if (S_LOOP) begin
+                    shift_rx[bit_cnt] <= S_SPI_MOSI;
+                end
+                else begin
+                    shift_rx[bit_cnt] <= S_SPI_MISO;
                 end
             end
             else begin
                 if (cnt_max == bit_cnt) begin
                     go <= 0;
+                    done <= 1;
+                    if (S_LOOP) begin
+                        case (bits_per_char)
+                            6'd8 : data_in[7:0] <= {S_SPI_MOSI, shift_rx[7:1]};
+                            6'd16: data_in[15:0] <= {S_SPI_MOSI, shift_rx[15:1]};
+                            6'd32: data_in[31:0] <= {S_SPI_MOSI, shift_rx[31:1]};
+                        endcase
+                    end
+                    else begin
+                        case (bits_per_char)
+                            6'd8 : data_in[7:0] <= {S_SPI_MISO, shift_rx[7:1]};
+                            6'd16: data_in[15:0] <= {S_SPI_MISO, shift_rx[15:1]};
+                            6'd32: data_in[31:0] <= {S_SPI_MISO, shift_rx[31:1]};
+                        endcase
+                    end
                 end
-            end
-            if (S_LOOP) begin
-                shift_rx[bit_cnt] <= S_SPI_MOSI;
-            end
-            else begin
-                shift_rx[bit_cnt] <= S_SPI_MISO;
+                if (S_LOOP) begin
+                    shift_rx[bit_cnt] <= S_SPI_MOSI;
+                end
+                else begin
+                    shift_rx[bit_cnt] <= S_SPI_MISO;
+                end
             end
         end
         2'h2: begin // CI=1 CP=0
@@ -213,6 +242,7 @@ begin
                     bit_cnt <= bit_cnt + 6'h1;
                     if (cnt_max == bit_cnt) begin
                         go <= 0;
+                        done <= 1;
                         last_clk <= 1;
                         bit_cnt <= 6'd0;
                     end
@@ -223,16 +253,20 @@ begin
                     bit_cnt <= bit_cnt - 6'h1;
                     if (0 == bit_cnt) begin
                         go <= 0;
+                        done <= 1;
                         last_clk <= 1;
                         bit_cnt <= bits_per_char_dec;
+                        data_in <= shift_rx[31:0];
                     end
                 end
                 else begin
                     bit_cnt <= bit_cnt + 6'h1;
                     if (cnt_max == bit_cnt) begin
                         go <= 0;
+                        done <= 1;
                         last_clk <= 1;
                         bit_cnt <= 6'd0;
+                        data_in <= shift_rx[31:0];
                     end
                 end
             end
@@ -246,11 +280,33 @@ begin
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         go <= 0;
+                        done <= 1;
+                        if (S_LOOP) begin
+                            data_in <= {shift_rx[31:1], S_SPI_MOSI};
+                        end
+                        else begin
+                            data_in <= {shift_rx[31:1], S_SPI_MISO};
+                        end
                     end
                 end
                 else begin
                     if (cnt_max == bit_cnt) begin
                         go <= 0;
+                        done <= 1;
+                        if (S_LOOP) begin
+                            case (bits_per_char)
+                                6'd8 : data_in[7:0] <= {S_SPI_MOSI, shift_rx[7:1]};
+                                6'd16: data_in[15:0] <= {S_SPI_MOSI, shift_rx[15:1]};
+                                6'd32: data_in[31:0] <= {S_SPI_MOSI, shift_rx[31:1]};
+                            endcase
+                        end
+                        else begin
+                            case (bits_per_char)
+                                6'd8 : data_in[7:0] <= {S_SPI_MISO, shift_rx[7:1]};
+                                6'd16: data_in[15:0] <= {S_SPI_MISO, shift_rx[15:1]};
+                                6'd32: data_in[31:0] <= {S_SPI_MISO, shift_rx[31:1]};
+                            endcase
+                        end
                     end
                 end
             end
