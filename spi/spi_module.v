@@ -1,5 +1,5 @@
-module spi_trx_one_char
-#(parameter integer CHAR_NBITS = 16)
+module spi_master_trx_char
+#(parameter integer CHAR_NBITS = 32)
 (
     input  wire        S_SYSCLK,  // platform clock
     input  wire        S_RESETN,  // reset
@@ -21,15 +21,17 @@ module spi_trx_one_char
 );
 `include "reg-bit-def.v"
 
-reg go;        // start transmit
+reg go;        // start transmit, in transmit progress
 reg done;
 reg skip_first;
 reg last_clk;  // last clock 
 reg dout;
 reg [CHAR_NBITS - 1: 0] data_in;
-reg [4:0] bit_cnt;
-reg [4:0] shift_cnt;
-reg [4:0] cnt_max;
+wire [5:0] bits_per_char;
+wire [5:0] bits_per_char_dec;
+reg  [5:0] bit_cnt;
+reg  [5:0] cnt_min;
+reg  [5:0] cnt_max;
 reg [CHAR_NBITS:0] shift_tx;
 reg [CHAR_NBITS:0] shift_rx;
 wire [1:0] spi_mode;
@@ -41,9 +43,11 @@ wire neg_edge_rx;         // positive edge flag
 assign S_SPI_MOSI = dout;
 assign S_RCHAR    = data_in;
 assign S_CHAR_DONE = done;
-assign spi_mode = {S_CPHA, S_CPOL};
+assign spi_mode = {S_CPOL, S_CPHA};
 assign pos_edge_rx = S_SPI_SCK;
 assign neg_edge_rx = S_SPI_SCK;
+assign bits_per_char     = (0 == S_CHAR_LEN) ? 32 : S_CHAR_LEN + 1 ;
+assign bits_per_char_dec = (0 == S_CHAR_LEN) ? 31 : S_CHAR_LEN ;
 
 spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen_char (
     .sysclk(S_SYSCLK),       // system clock input
@@ -58,9 +62,38 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen_char (
     .neg_edge(neg_edge)    // negtive edge flag
 );
 
-always @(posedge go)
+always @(posedge S_CHAR_GO)
 begin
-    shift_tx <= {1'b0, {CHAR_NBITS{S_WCHAR}}};
+    if (!go & S_RESETN & S_ENABLE) begin
+        go <= 1;
+        if (!S_REV) begin
+            bit_cnt <= 0;
+            if (S_CPHA) begin
+                cnt_max <= bits_per_char;
+                dout <= 1'b1;
+                shift_tx <= {S_WCHAR, 1'b1};
+            end
+            else begin
+                cnt_max <= bits_per_char_dec;
+                shift_tx <= {1'b1, S_WCHAR};
+                dout <= S_WCHAR[0];
+            end
+        end
+        else begin
+            if (S_CPHA) begin
+                shift_tx <= {1'b1, S_WCHAR};
+                bit_cnt <= bits_per_char;
+                cnt_min <= 1;
+                dout <= 1'b1;
+            end
+            else begin
+                bit_cnt <= bits_per_char_dec;
+                shift_tx <= {1'b1, S_WCHAR};
+                cnt_min <= 0;
+                dout <= S_WCHAR[bits_per_char_dec];
+            end
+        end
+    end
 end
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
@@ -71,395 +104,128 @@ begin
         done <= 0;
         skip_first <= 0;
         last_clk <= 0;
-        dout <= 1'b0;
+        dout <= 1'b1;
         data_in  <= {CHAR_NBITS{1'b1}};
         cnt_max <= CHAR_NBITS - 1;
         bit_cnt <= CHAR_NBITS - 1;
-        shift_cnt <= CHAR_NBITS - 1;
+        cnt_min <= 0;
         shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
-        shift_tx <= {1'b0, {CHAR_NBITS{S_WCHAR}}};
+        shift_tx <= {1'b0, S_WCHAR};
     end
     else
     begin
         done <= 0;
         data_in  <= data_in;
         skip_first <= skip_first;
-        if (S_ENABLE)
+        if (S_ENABLE & go)
         begin
-            // last_clk <= last_clk;
-            go <= S_CHAR_GO;
-            dout <= shift_tx[shift_cnt];
+            bit_cnt <= bit_cnt;
+            dout <= shift_tx[bit_cnt];
             shift_rx <= shift_rx;
-            shift_cnt <= shift_cnt;
-            if (!go)
-            begin
-                bit_cnt   <= {1'b0, S_CHAR_LEN};
-
-                if (S_REV) begin
-                    case (spi_mode)
-                        2'b00:
-                        begin
-                            shift_cnt <= {1'b0, S_CHAR_LEN};
-                        end
-                        2'b01:
-                        begin
-                            shift_cnt <= {1'b0, S_CHAR_LEN};
-                        end
-                        2'b10:
-                        begin
-                            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                        end
-                        2'b11:
-                        begin
-                            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                        end
-                    endcase // case (spi_mode)
-                end
-                else begin
-                    case (spi_mode)
-                        2'b00:
-                        begin
-                            shift_cnt <= 0;
-                            cnt_max = {1'b0, S_CHAR_LEN};
-                        end
-                        2'b01:
-                        begin
-                            cnt_max = {1'b0, S_CHAR_LEN};
-                            shift_cnt <= 0;
-                            cnt_max = {1'b0, S_CHAR_LEN};
-                        end
-                        2'b10:
-                        begin
-                            cnt_max = {1'b0, S_CHAR_LEN} + 1;
-                            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                        end
-                        2'b11:
-                        begin
-                            cnt_max = {1'b0, S_CHAR_LEN} + 1;
-                            shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                        end
-                    endcase
-                end
-            end // end of (0 == S_ENABLE)
         end // end of if (S_ENABLE)
     end
 end
 
-always @(posedge S_CHAR_GO)
-begin
-    if (S_REV) begin
-        case (spi_mode)
-            2'b00:
-            begin
-                shift_cnt <= {1'b0, S_CHAR_LEN};
-            end
-            2'b01:
-            begin
-                shift_cnt <= {1'b0, S_CHAR_LEN};
-            end
-            2'b10:
-            begin
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-            end
-            2'b11:
-            begin
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-            end
-        endcase
-    end
-    else begin
-        case (spi_mode)
-            2'b00:
-            begin
-                shift_cnt <= 0;
-                cnt_max = {1'b0, S_CHAR_LEN};
-            end
-            2'b01:
-            begin
-                shift_cnt <= 0;
-                cnt_max = {1'b0, S_CHAR_LEN};
-            end
-            2'b10:
-            begin
-                skip_first <= 1;
-                cnt_max = {1'b0, S_CHAR_LEN} + 1;
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-            end
-            2'b11:
-            begin
-                skip_first <= 1;
-                cnt_max = {1'b0, S_CHAR_LEN} + 1;
-                shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-            end
-        endcase
-    end
-end
- 
 always @(negedge neg_edge)
 begin
     case (spi_mode)
-        2'b00:
-        begin
-            if (last_clk & go) 
-            begin
-                go <= 0;
-                last_clk <= 0;
+        2'h0 : begin // CI=0 CP=0
+            if (S_REV) begin
+                bit_cnt <= bit_cnt - 6'h1;
+                if (cnt_min == bit_cnt) begin
+                    go <= 0;
+                    last_clk <= 1;
+                    bit_cnt <= bits_per_char_dec;
+                end
+            end
+            else begin
+                bit_cnt <= bit_cnt + 6'h1;
+                if (cnt_max == bit_cnt) begin
+                    go <= 0;
+                    last_clk <= 1;
+                    bit_cnt <= 6'd0;
+                end
             end
         end
-        2'b01:
-        begin
-            bit_cnt <= bit_cnt - 5'h1;
-            if (bit_cnt == 5'h0) 
-            begin
-                last_clk <= 1;
-                bit_cnt <= {1'b0, S_CHAR_LEN};
-            end
+        2'h1: begin // CI=0 CP=1
+            shift_rx[bit_cnt] <= S_SPI_MISO;
         end
-        2'b10:
-        begin
-            if (last_clk & go) 
-            begin
-                go <= 0;
-                last_clk <= 0;
-            end
+        2'h2: begin // CI=1 CP=0
+            shift_rx[bit_cnt] <= S_SPI_MISO;
         end
-        2'b11:
-        begin
-            bit_cnt <= bit_cnt - 5'h1;
-            if (bit_cnt == 5'h0) 
-            begin
-                last_clk <= 1;
-                bit_cnt <= {1'b0, S_CHAR_LEN};
+        2'h3: begin // CI=1 CP=1
+            if (S_REV) begin
+                bit_cnt <= bit_cnt - 6'h1;
+                if (0 == bit_cnt) begin
+                    // go <= 0;
+                    last_clk <= 1;
+                end
             end
-        end
-    endcase
-end
-
-always @(negedge pos_edge)
-begin
-    case (spi_mode)
-        2'b00:
-        begin
-            bit_cnt <= bit_cnt - 5'h1;
-            if (bit_cnt == 5'h0) 
-            begin
-                last_clk <= 1;
-                bit_cnt <= {1'b0, S_CHAR_LEN};
-            end
-        end
-        2'b01:
-        begin
-            if (last_clk & go) 
-            begin
-                go <= 0;
-                last_clk <= 0;
-            end
-        end
-        2'b10:
-        begin
-            bit_cnt <= bit_cnt - 5'h1;
-            if (bit_cnt == 5'h0) 
-            begin
-                last_clk <= 1;
-                bit_cnt <= {1'b0, S_CHAR_LEN};
-            end
-        end
-        2'b11:
-        begin
-            if (last_clk & go) 
-            begin
-                go <= 0;
-                last_clk <= 0;
+            else begin
+                bit_cnt <= bit_cnt + 6'h1;
+                if (cnt_max == bit_cnt) begin
+                    // go <= 0;
+                    last_clk <= 1;
+                end
             end
         end
     endcase
 end
 
-always @(posedge pos_edge_rx)
+always @(posedge pos_edge)
 begin
-    if (S_ENABLE)
-    begin
+    if (S_ENABLE & go) begin
         case (spi_mode)
-            2'b00:
-            begin
-                if (S_LOOP) begin
-                    shift_rx[shift_cnt] <= dout;
-                end
-                else begin
-                    shift_rx[shift_cnt] <= S_SPI_MISO;
-                end
+            2'h0: begin // CI=0 CP=0
+                shift_rx[bit_cnt] <= S_SPI_MISO;
             end
-            2'b01:
-            begin
+            2'h1: begin // CI=0 CP=1
                 if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        done <= 1;
-                        // shift_cnt <= {1'b0, S_CHAR_LEN};
-                        data_in = shift_rx[CHAR_NBITS-1:0];
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt - 1;
+                    bit_cnt <= bit_cnt - 6'h1;
+                    if (0 == bit_cnt) begin
+                        go <= 0;
+                        last_clk <= 1;
+                        bit_cnt <= bits_per_char;
                     end
                 end
                 else begin
-                    if (cnt_max == shift_cnt) begin
-                        done <= 1;
-                        // shift_cnt <= 0;
-                        data_in = shift_rx[CHAR_NBITS-1:0];
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt + 1;
+                    bit_cnt <= bit_cnt + 6'h1;
+                    if (cnt_max == bit_cnt) begin
+                        go <= 0;
+                        last_clk <= 1;
+                        bit_cnt <= 6'd0;
                     end
                 end
             end
-            2'b10:
-            begin
+            2'h2: begin // CI=1 CP=0
                 if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt - 1;
+                    bit_cnt <= bit_cnt - 6'h1;
+                    if (0 == bit_cnt) begin
+                        go <= 0;
+                        last_clk <= 1;
+                        bit_cnt <= bits_per_char_dec;
                     end
                 end
                 else begin
-                    if (cnt_max == shift_cnt) begin
-                        shift_cnt <= 0;
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt + 1;
+                    bit_cnt <= bit_cnt + 6'h1;
+                    if (cnt_max == bit_cnt) begin
+                        go <= 0;
+                        last_clk <= 1;
+                        bit_cnt <= 6'd0;
                     end
                 end
             end
-            2'b11:
-            begin
-                if (S_LOOP) begin
-                    shift_rx[shift_cnt] <= dout;
-                end
-                else begin
-                    shift_rx[shift_cnt] <= S_SPI_MISO;
-                end
+            2'h3: begin // CI=1 CP=1
+                shift_rx[bit_cnt] <= S_SPI_MISO;
                 if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        done <= 1;
-                        if (S_LOOP) begin
-                            data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-                        end
-                        else begin
-                            data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
-                        end
+                    if (0 == bit_cnt) begin
+                        go <= 0;
                     end
                 end
                 else begin
-                    if ({1'b0, S_CHAR_LEN} == shift_cnt) begin
-                        done <= 1;
-                        // shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
+                    if (cnt_max == bit_cnt) begin
+                        go <= 0;
                     end
-                    if (S_LOOP) begin
-                        data_in[shift_cnt] <= dout;
-                    end
-                    else begin
-                        data_in[shift_cnt] <= S_SPI_MISO;
-                    end
-                end
-            end
-        endcase
-    end
-end
-
-always @(negedge neg_edge_rx)
-begin
-    if (S_ENABLE)
-    begin
-        case (spi_mode)
-            2'b00:
-            begin
-                if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        done <= 1;
-                        // shift_cnt <= {1'b0, S_CHAR_LEN};
-                        data_in <= shift_rx[CHAR_NBITS-1: 0];
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt - 1;
-                    end
-                end
-                else begin
-                    if (cnt_max == shift_cnt) begin
-                        // shift_cnt <= 0;
-                        done <= 1;
-                        data_in <= shift_rx[CHAR_NBITS-1: 0];
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt + 1;
-                    end
-                end
-            end
-            2'b01:
-            begin
-                if (S_LOOP) begin
-                    shift_rx[shift_cnt] <= dout;
-                end
-                else begin
-                    shift_rx[shift_cnt] <= S_SPI_MISO;
-                end
-            end
-            2'b10:
-            begin
-                if (S_LOOP) begin
-                    data_in[shift_cnt] <= dout;
-                    shift_rx[shift_cnt] <= dout;
-                end
-                else begin
-                    data_in[shift_cnt] <= S_SPI_MISO;
-                    shift_rx[shift_cnt] <= S_SPI_MISO;
-                end
-                if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        done <= 1;
-                        if (S_LOOP) begin
-                            data_in  <= {shift_rx[CHAR_NBITS-1:1], dout};
-                        end
-                        else begin
-                            data_in  <= {shift_rx[CHAR_NBITS-1:1], S_SPI_MISO};
-                        end
-                    end
-                end
-                else begin
-                    if ({1'b0, S_CHAR_LEN} == shift_cnt) begin
-                        done <= 1;
-                    end
-                end
-            end
-            2'b11:
-            begin
-                if (S_REV) begin
-                    if (0 == shift_cnt)
-                    begin
-                        shift_cnt <= {1'b0, S_CHAR_LEN} + 1;
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt - 1;
-                    end
-                end
-                else begin
-                    if (cnt_max == shift_cnt) begin
-                        shift_cnt <= 0;
-                    end
-                    else begin
-                        shift_cnt <= shift_cnt + 1;
-                    end
-                end
-                if (S_LOOP) begin
-                    shift_rx[shift_cnt] <= dout;
-                end
-                else begin
-                    shift_rx[shift_cnt] <= S_SPI_MISO;
                 end
             end
         endcase

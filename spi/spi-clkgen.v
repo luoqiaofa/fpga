@@ -27,23 +27,22 @@ assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 always @(posedge go or negedge rst_n)
 begin
     if (enable) begin
-        cnt   <= divider_i;
+        cnt <= divider_i;
     end
 end
 
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n)
-    begin
+    if (!rst_n) begin
         cnt   <= {C_DIVIDER_WIDTH{1'b1}};
     end
-    else
-    begin
+    else begin
         if (!enable || cnt_zero || !go) begin
             cnt   <= divider_i;
         end
-        else
+        else begin
             cnt <= cnt - {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1};
+        end
     end
 end
 
@@ -52,29 +51,35 @@ begin
     clk_out <= CPOL;
 end
 
-
 // clock out
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n || !enable)
-        clk_out <= CPOL;
-    else
-        if (go)
-            clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
-        else
+    if (!rst_n) begin
+        clk_out <= 0;
+    end
+    else begin
+        if (!enable) begin
             clk_out <= CPOL;
+        end
+        else begin
+            if (go) begin
+                clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
+            end
+            else begin
+                clk_out <= CPOL;
+            end
+        end
+    end
 end
 
 // pos neg signals
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n || !enable)
-    begin
+    if (!rst_n || !enable) begin
         pos_edge <= 1'b0;
         neg_edge <= 1'b0;
     end
-    else
-    begin
+    else begin
         pos_edge <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && go && !enable);
         neg_edge <= (enable && clk_out && cnt_one) || (!(|divider_i) && !clk_out && enable);
     end
