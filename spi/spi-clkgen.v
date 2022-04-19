@@ -75,7 +75,7 @@ end
 // pos neg signals
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n || !enable) begin
+    if (!rst_n || !enable || !go) begin
         pos_edge <= 1'b0;
         neg_edge <= 1'b0;
     end
