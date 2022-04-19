@@ -37,15 +37,11 @@ reg [CHAR_NBITS:0] shift_rx;
 wire [1:0] spi_mode;
 wire pos_edge; // positive edge flag
 wire neg_edge; // negtive edge flag
-wire pos_edge_rx;         // positive edge flag
-wire neg_edge_rx;         // positive edge flag
 
 assign S_SPI_MOSI = dout;
 assign S_RCHAR    = data_in;
 assign S_CHAR_DONE = done;
 assign spi_mode = {S_CPOL, S_CPHA};
-assign pos_edge_rx = S_SPI_SCK;
-assign neg_edge_rx = S_SPI_SCK;
 assign bits_per_char     = (0 == S_CHAR_LEN) ? 32 : S_CHAR_LEN + 1 ;
 assign bits_per_char_dec = (0 == S_CHAR_LEN) ? 31 : S_CHAR_LEN ;
 
@@ -148,10 +144,30 @@ begin
             end
         end
         2'h1: begin // CI=0 CP=1
-            shift_rx[bit_cnt] <= S_SPI_MISO;
+            if (S_REV) begin
+                if (0 == bit_cnt) begin
+                    go <= 0;
+                end
+            end
+            else begin
+                if (cnt_max == bit_cnt) begin
+                    go <= 0;
+                end
+            end
+            if (S_LOOP) begin
+                shift_rx[bit_cnt] <= S_SPI_MOSI;
+            end
+            else begin
+                shift_rx[bit_cnt] <= S_SPI_MISO;
+            end
         end
         2'h2: begin // CI=1 CP=0
-            shift_rx[bit_cnt] <= S_SPI_MISO;
+            if (S_LOOP) begin
+                shift_rx[bit_cnt] <= S_SPI_MOSI;
+            end
+            else begin
+                shift_rx[bit_cnt] <= S_SPI_MISO;
+            end
         end
         2'h3: begin // CI=1 CP=1
             if (S_REV) begin
@@ -172,18 +188,23 @@ begin
     endcase
 end
 
-always @(posedge pos_edge)
+always @(negedge pos_edge)
 begin
     if (S_ENABLE & go) begin
         case (spi_mode)
             2'h0: begin // CI=0 CP=0
-                shift_rx[bit_cnt] <= S_SPI_MISO;
+                if (S_LOOP) begin
+                    shift_rx[bit_cnt] <= S_SPI_MOSI;
+                end
+                else begin
+                    shift_rx[bit_cnt] <= S_SPI_MISO;
+                end
             end
             2'h1: begin // CI=0 CP=1
                 if (S_REV) begin
                     bit_cnt <= bit_cnt - 6'h1;
                     if (0 == bit_cnt) begin
-                        go <= 0;
+                        // go <= 0;
                         last_clk <= 1;
                         bit_cnt <= bits_per_char;
                     end
@@ -216,7 +237,12 @@ begin
                 end
             end
             2'h3: begin // CI=1 CP=1
-                shift_rx[bit_cnt] <= S_SPI_MISO;
+                if (S_LOOP) begin
+                    shift_rx[bit_cnt] <= S_SPI_MOSI;
+                end
+                else begin
+                    shift_rx[bit_cnt] <= S_SPI_MISO;
+                end
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         go <= 0;
