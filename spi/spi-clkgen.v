@@ -4,14 +4,14 @@
 module spi_clk_gen #
 (parameter integer C_DIVIDER_WIDTH = 8)
 (
-    input  sysclk,         // system clock input
+    input  sysclk,          // system clock input
     input  rst_n,           // module reset
-    input  enable,              // module enable
+    input  enable,          // module enable
     input  go,              // start transmit
     input  CPOL,            // clock polarity
     input  last_clk,        // last clock 
     input  [C_DIVIDER_WIDTH-1:0] divider_i, // divider;
-    output reg clk_out,         // clock output
+    output reg clk_out,     // clock output
     output reg pos_edge,    // positive edge flag
     output reg neg_edge     // negtive edge flag
 );
