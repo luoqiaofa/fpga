@@ -19,6 +19,7 @@ module spi_slave_trx_char
 `include "reg-bit-def.v"
 
 reg done;
+reg dout;
 reg [CHAR_NBITS - 1: 0] data_in;
 wire [5:0] bits_per_char;
 wire [5:0] bits_per_char_dec;
@@ -38,27 +39,36 @@ assign spi_mode = {S_CPOL, S_CPHA};
 assign bits_per_char     = (0 == S_CHAR_LEN) ? 32 : S_CHAR_LEN + 1;
 assign bits_per_char_dec = (0 == S_CHAR_LEN) ? 31 : S_CHAR_LEN;
 assign cnt_max           = S_CPHA ? bits_per_char : bits_per_char_dec;
+assign S_SPI_MISO        = dout;
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
     begin
+        dout     <= 1;
         done     <= 0;
         data_in  <= {CHAR_NBITS{1'b1}};
         bit_cnt  <= 0;
         shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
-        shift_tx <= {1'b1, S_WCHAR};
+        shift_tx <= {1'b1, {CHAR_NBITS{1'b1}}};
     end
     else begin
         done <= 0;
+        if (S_REV) begin
+            shift_tx <= {1'b1, S_WCHAR};
+        end
+        else begin
+            shift_tx <= (S_CPHA ? {S_WCHAR , 1'b1} : {1'b1, S_WCHAR});
+        end
         if (S_ENABLE) begin
+            dout <= shift_tx[bit_cnt];
             data_in  <= data_in;
             // bit_cnt <= bit_cnt;
             shift_rx <= shift_rx;
         end
         else begin
+            dout <= 1'b1;
             shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
-            shift_tx <= {1'b1, S_WCHAR};
         end
     end
 end
