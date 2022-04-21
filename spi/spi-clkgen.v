@@ -19,7 +19,9 @@ module spi_clk_gen #
 wire cnt_zero;
 wire cnt_one;
 reg [C_DIVIDER_WIDTH-1:0] cnt;
-reg in_process;
+reg  in_process;
+wire is_active;
+assign is_active = in_process;
 
 assign cnt_zero = (cnt == {C_DIVIDER_WIDTH{1'b0}});
 assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
@@ -27,6 +29,7 @@ assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 always @(posedge go or negedge rst_n)
 begin
     if (enable) begin
+        in_process <= 1;
         cnt <= divider_i;
     end
 end
@@ -34,10 +37,11 @@ end
 always @(posedge sysclk or negedge rst_n)
 begin
     if (!rst_n) begin
+        in_process <= 0;
         cnt   <= {C_DIVIDER_WIDTH{1'b1}};
     end
     else begin
-        if (!enable || cnt_zero || !go) begin
+        if (!enable || cnt_zero || !is_active) begin
             cnt   <= divider_i;
         end
         else begin
@@ -49,6 +53,11 @@ end
 always @(negedge last_clk or negedge rst_n)
 begin
     clk_out <= CPOL;
+end
+
+always @(posedge last_clk)
+begin
+    in_process <= 0;
 end
 
 // clock out
@@ -80,7 +89,7 @@ begin
         neg_edge <= 1'b0;
     end
     else begin
-        pos_edge <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && go && !enable);
+        pos_edge <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && is_active && !enable);
         neg_edge <= (enable && clk_out && cnt_one) || (!(|divider_i) && !clk_out && enable);
     end
 end
