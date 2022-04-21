@@ -15,6 +15,7 @@ module spi_master_trx_char
     output wire        S_CHAR_DONE,
     input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character
     output wire [CHAR_NBITS-1:0] S_RCHAR,   // input character
+    output wire        S_SPI_CS,
     output wire        S_SPI_SCK,
     input  wire        S_SPI_MISO,
     output wire        S_SPI_MOSI
@@ -109,6 +110,7 @@ begin
     else
     begin
         done <= 0;
+        last_clk <= 0;
         data_in  <= data_in;
         if (S_ENABLE & go)
         begin
@@ -149,6 +151,7 @@ begin
                 if (0 == bit_cnt) begin
                     go <= 0;
                     done <= 1;
+                    last_clk <= 1;
                     if (S_LOOP) begin
                         data_in <= {shift_rx[31:1], S_SPI_MOSI};
                     end
@@ -167,6 +170,7 @@ begin
                 if (cnt_max == bit_cnt) begin
                     go <= 0;
                     done <= 1;
+                    last_clk <= 1;
                     if (S_LOOP) begin
                         case (bits_per_char)
                             6'd8 : data_in[7:0] <= {S_SPI_MOSI, shift_rx[7:1]};
@@ -281,6 +285,7 @@ begin
                     if (0 == bit_cnt) begin
                         go <= 0;
                         done <= 1;
+                        last_clk <= 1;
                         if (S_LOOP) begin
                             data_in <= {shift_rx[31:1], S_SPI_MOSI};
                         end
@@ -293,6 +298,7 @@ begin
                     if (cnt_max == bit_cnt) begin
                         go <= 0;
                         done <= 1;
+                        last_clk <= 1;
                         if (S_LOOP) begin
                             case (bits_per_char)
                                 6'd8 : data_in[7:0] <= {S_SPI_MOSI, shift_rx[7:1]};
