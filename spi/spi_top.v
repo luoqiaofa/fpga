@@ -20,27 +20,29 @@ module spi_intface # (parameter NCS = 4)
     output wire S_BVALID,
     output wire [1 : 0] S_BRESP,
     output wire [1 : 0] S_RRESP,
-    output wire S_SPI_SCK,
-    input  wire S_SPI_MISO,
-    output wire S_SPI_MOSI,
-    output wire [NCS-1:0] S_SPI_CS_B
+    inout  wire S_SPI_SCK,
+    inout  wire S_SPI_MISO,
+    inout  wire S_SPI_MOSI,
+    input  wire [NCS - 1 : 0] S_SPI_SEL
 );
 `include "reg-bit-def.v"
 
-reg [REG_WIDTH-1: 0] SPMODE;
-reg [REG_WIDTH-1: 0] SPIE;
-reg [REG_WIDTH-1: 0] SPIM;
-reg [REG_WIDTH-1: 0] SPCOM;
-reg [REG_WIDTH-1: 0] SPITF;
-reg [REG_WIDTH-1: 0] SPIRF;
-reg [REG_WIDTH-1: 0] SPIREV1;
-reg [REG_WIDTH-1: 0] SPIREV2;
-reg [REG_WIDTH-1: 0] SPMODE0;
-reg [REG_WIDTH-1: 0] SPMODE1;
-reg [REG_WIDTH-1: 0] SPMODE2;
-reg [REG_WIDTH-1: 0] SPMODE3;
+reg [31: 0] SPMODE;
+reg [31: 0] SPIE;
+reg [31: 0] SPIM;
+reg [31: 0] SPCOM;
+reg [31: 0] SPITF;
+reg [31: 0] SPIRF;
+reg [31: 0] SPIREV1;
+reg [31: 0] SPIREV2;
+reg [31: 0] CSX_SPMODE[0:NCS-1];
 
-reg [REG_WIDTH-1: 0] CSMODE;
+integer idx;
+reg spmodex_updated;
+reg [31: 0]  spmode_x;
+wire [31: 0] CSMODE;
+wire [CSMODE_LEN_HI - CSMODE_LEN_LO: 0] CSMODE_LEN;
+wire [1: 0] CS_IDX;
 
 reg wvalid_pos_edge;
 reg awvalid_pos_edge;
@@ -71,6 +73,8 @@ reg brg_last_clk;
 wire brg_clk;
 wire brg_pos_edge;
 wire brg_neg_edge;
+wire [4:0] csmode_pm_divider;
+wire [7:0] brg_divider;
 reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] word_tx_cnt;
 reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] word_rx_cnt;
 reg [REG_WIDTH-1: 0] word_tx_fifo[SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0];
@@ -97,6 +101,28 @@ integer byte_index;
 wire slv_reg_rden;
 wire slv_reg_wren;
 
+wire i_spi_mosi;
+wire o_spi_mosi;
+wire s_spi_mosi_oen;
+
+wire i_spi_miso;
+wire o_spi_miso;
+wire s_spi_miso_oen;
+
+wire i_spi_sck;
+wire o_spi_sck;
+wire s_spi_sck_oen;
+
+wire i_spi_sel;
+wire o_spi_sel;
+wire s_spi_sel_oen;
+
+assign CS_IDX     = SPCOM[SPCOM_CS_HI: SPCOM_CS_LO];
+assign CSMODE     = CSX_SPMODE[CS_IDX];
+assign CSMODE_LEN = CSMODE[CSMODE_LEN_HI: CSMODE_LEN_LO];
+assign csmode_pm_divider = {1'b0, CSMODE[CSMODE_PM_HI: CSMODE_PM_LO]} + 1;
+assign brg_divider = CSMODE[CSMODE_DIV16] ? {csmode_pm_divider[3:0], 4'h0} - 1 : {2'b00, csmode_pm_divider[4:0], 1'b0} - 1 ;
+
 assign S_AWREADY = awready;
 assign S_WREADY  = wready;
 assign S_BRESP   = bresp;
@@ -105,8 +131,6 @@ assign S_ARREADY = arready;
 assign S_RDATA   = rdata;
 assign S_RRESP   = rresp;
 assign S_RVALID  = rvalid;
-
-assign S_SPI_CS_B = spi_cs_b;
 
 assign slv_reg_wren = wready && S_WVALID && awready && S_AWVALID & wvalid_pos_edge & awvalid_pos_edge;
 assign slv_reg_rden = arready & S_ARVALID & ~rvalid;
@@ -139,7 +163,7 @@ begin
     end
     else begin
         brg_last_clk <= 1;
-        spi_cs_b[cs_idx] <= 1'b1;
+        spi_cs_b[CS_IDX] <= 1'b1;
     end
 end
 
@@ -161,10 +185,10 @@ begin
             csaft_count <= csaft_count - 1;
         end
         else begin
-            spi_cs_b[cs_idx] <= 1'b1;
+            spi_cs_b[CS_IDX] <= 1'b1;
             cscg_count  <= CSMODE[CSMODE_CSCG_HI :CSMODE_CSCG_LO];
         end
-        if (spi_cs_b[cs_idx] & (!frame_en_go)) begin
+        if (spi_cs_b[CS_IDX] & (!frame_en_go)) begin
             if (cscg_count > 0) begin
                 cscg_count <= cscg_count - 1;
             end
@@ -212,9 +236,9 @@ begin
         csbef_count <= 0;
         csaft_count <= 0;
         cscg_count <= 0;
-
     end
     else begin
+        brg_last_clk <= 0;
         if (spitf_idx > 0) begin
             spitf_idx_dec = spitf_idx - 1;
         end
@@ -222,7 +246,6 @@ begin
         if (SPMODE[SPMODE_EN] & spi_spcom_updated) begin
             brg_go <= 1;
         end
-        CSMODE <= cur_cs_mode(SPCOM, SPMODE0, SPMODE1, SPMODE2, SPMODE3);
         if (CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO] >= 8) begin
             nchars_per_word = 2;
             chr_idx_one_word_max = 1;
@@ -244,7 +267,7 @@ begin
                 spi_spcom_updated <= 0;
                 data_tx <= {SPITF[23:16], SPITF[31:24]};
                 chr_idx_one_word <= 0;
-                spi_cs_b[cs_idx] <= 1'b0;
+                spi_cs_b[CS_IDX] <= 1'b0;
                 frame_go <= 1;
                 frame_go_trig <= 1;
                 frame_en_go <= 0;
@@ -305,26 +328,29 @@ begin
     end
 end
 
-always @( posedge S_SYSCLK )
+always @( posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (S_RESETN == 1'b0 )
     begin
         byte_index <= 0;
-        SPMODE  <= 32'h0000_100F;
-        SPIE    <= 32'h0020_0000;
-        SPIM    <= 32'h0000_0000;
-        SPCOM   <= 32'h0000_0000;
-        SPITF   <= 32'h0000_0000;
-        SPIRF   <= 32'h0000_0000;
-        SPIREV1 <= 32'h0000_0000;
-        SPIREV2 <= 32'h0000_0000;
-        SPMODE0 <= 32'h0010_0000;
-        SPMODE1 <= 32'h0010_0000;
-        SPMODE2 <= 32'h0010_0000;
-        SPMODE3 <= 32'h0010_0000;
-        CSMODE  <= 32'h0010_0000;
+        SPMODE  <= SPMODE_DEF;
+        SPIE    <= SPIE_DEF;
+        SPIM    <= SPIM_DEF;
+        SPCOM   <= SPCOM_DEF;
+        SPITF   <= SPITF_DEF;
+        SPIRF   <= SPIRF_DEF;
+        for (idx = 0; idx < NCS; idx += 1) begin
+            CSX_SPMODE[idx] <= CSMODE_DEF;
+        end
+        cs_idx <= 0;
+        spmode_x <= CSMODE_DEF;
+        spmodex_updated <= 0;
     end
     else begin
+        if (spmodex_updated) begin
+            spmodex_updated <= 0;
+            CSX_SPMODE[cs_idx] <= spmode_x;
+        end
         if (slv_reg_wren) begin
             wvalid_pos_edge <= 0;
             awvalid_pos_edge <= 0;
@@ -363,7 +389,6 @@ begin
                         end
                     end
                     spi_spcom_updated <= 1;
-                    cs_idx <= S_WDATA[SPCOM_CS_HI:SPCOM_CS_LO];
                     num_chars_trx <= S_WDATA[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO];
                     chars_count   <= S_WDATA[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO];
                 end
@@ -384,47 +409,16 @@ begin
                             // Slave register 3
                             SPIRF[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
                         end
-                ADDR_SPMODE0[7:2]:
+                ADDR_SPMODE0[7:2], ADDR_SPMODE0[7:2], ADDR_SPMODE2[7:2], ADDR_SPMODE3[7:2]:
                 begin
                     for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
                     begin
                         if (S_WSTRB[byte_index] == 1 ) begin
                             // Respective byte enables are asserted as per write strobes
                             // Slave register 3
-                            SPMODE0[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
-                        end
-                    end
-                end
-                ADDR_SPMODE1[7:2]:
-                begin
-                    for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-                    begin
-                        if (S_WSTRB[byte_index] == 1 ) begin
-                            // Respective byte enables are asserted as per write strobes
-                            // Slave register 3
-                            SPMODE1[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
-                        end
-                    end
-                end
-                ADDR_SPMODE2[7:2]:
-                begin
-                    for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-                    begin
-                        if (S_WSTRB[byte_index] == 1 ) begin
-                            // Respective byte enables are asserted as per write strobes
-                            // Slave register 3
-                            SPMODE2[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
-                        end
-                    end
-                end
-                ADDR_SPMODE3[7:2]:
-                begin
-                    for (byte_index = 0; byte_index <= (C_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-                    begin
-                        if (S_WSTRB[byte_index] == 1 ) begin
-                            // Respective byte enables are asserted as per write strobes
-                            // Slave register 3
-                            SPMODE3[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
+                            cs_idx <= awaddr[7:2] - ADDR_SPMODE0[7:2];
+                            spmodex_updated <= 1;
+                            spmode_x[(byte_index*8) +: 8] <= S_WDATA[(byte_index*8) +: 8];
                         end
                     end
                 end
@@ -568,59 +562,6 @@ begin
     end
 end
 
-function [REG_WIDTH-1: 0] cur_cs_mode(
-    input [REG_WIDTH-1: 0] spcom,
-    input [REG_WIDTH-1: 0] spmode0,
-    input [REG_WIDTH-1: 0] spmode1,
-    input [REG_WIDTH-1: 0] spmode2,
-    input [REG_WIDTH-1: 0] spmode3
-);
-begin
-    case (spcom[SPCOM_CS_HI:SPCOM_CS_LO])
-        2'b00:
-        begin
-           cur_cs_mode = spmode0;
-        end
-        2'b01:
-        begin
-            cur_cs_mode = spmode1;
-        end
-        2'b10:
-        begin
-            cur_cs_mode = spmode2;
-        end
-        2'b11:
-        begin
-            cur_cs_mode = spmode3;
-        end
-    endcase
-end
-endfunction
-
-// /*
-spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
-inst_spi_trx_ch
-(
-    .S_SYSCLK(S_SYSCLK),  // platform clock
-    .S_RESETN(S_RESETN),  // reset
-    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CSMODE[CSMODE_CPOL]),    // clock polary
-    .S_CPHA(CSMODE[CSMODE_CPHA]),    // clock phase, the first edge or second
-    .S_TX_ONLY(SPCOM[SPCOM_TO]), // transmit only
-    .S_LOOP(SPMODE[SPMODE_LOOP]),    // internal loopback mode
-    .S_REV(CSMODE[CSMODE_REV]),     // msb first or lsb first
-    .S_CHAR_LEN(CSMODE[CSMODE_LEN_HI:CSMODE_LEN_LO]),// characters in bits length
-    .S_NDIVIDER({{4{1'b0}},CSMODE[CSMODE_PM_HI:CSMODE_PM_LO]}),// clock divider
-    .S_SPI_SCK(S_SPI_SCK),
-    .S_SPI_MISO(S_SPI_MISO),
-    .S_SPI_MOSI(S_SPI_MOSI),
-    .S_CHAR_GO(chr_go),
-    .S_CHAR_DONE(chr_done),
-    .S_WCHAR(data_tx),   // output character
-    .S_RCHAR(data_rx)    // input character
-);
-// */
-
 spi_clk_gen # (.C_DIVIDER_WIDTH(8)) spi_brg (
     .sysclk(S_SYSCLK),       // system clock input
     .rst_n(S_RESETN),         // module reset
@@ -628,10 +569,55 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(8)) spi_brg (
     .go(brg_go),               // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(brg_last_clk),   // last clock
-    .divider_i({{4{1'b0}},CSMODE[CSMODE_PM_HI:CSMODE_PM_LO]}), // divider;
+    .divider_i(brg_divider), // divider;
     .clk_out(brg_clk),     // clock output
     .pos_edge(brg_pos_edge),   // positive edge flag
     .neg_edge(brg_neg_edge)    // negtive edge flag
 );
 
+spi_master_trx_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+inst_spi_trx_ch
+(
+    .S_SYSCLK(S_SYSCLK),  // platform clock
+    .S_RESETN(S_RESETN),  // reset
+    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
+    .S_CPOL(CSMODE[CSMODE_CPOL]),    // clock polary
+    .S_CPHA(CSMODE[CSMODE_CPHA]),    // clock phase, the first edge or second
+    .S_REV(CSMODE[CSMODE_REV]),     // msb first or lsb first
+    .S_CHAR_LEN(CSMODE_LEN),// characters in bits length
+    .S_TX_ONLY(SPCOM[SPCOM_TO]), // transmit only
+    .S_LOOP(1'b0/* SPMODE[SPMODE_LOOP] */),    // internal loopback mode
+    .S_NDIVIDER(brg_divider),// clock divider
+    .S_SPI_SCK(S_SPI_SCK),
+    .S_SPI_MISO(S_SPI_MISO),
+    .S_SPI_MOSI(S_SPI_MOSI),
+    .S_CHAR_GO(chr_go),
+    .S_CHAR_DONE(chr_done),
+    .S_WCHAR(32'h12345678),   // output character
+    .S_RCHAR(data_rx)    // input character
+);
+wire [CHAR_LEN_MAX-1:0] slv_data_rx;
+wire slv_done;
+
+spi_slave_trx_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+inst_spi_slv_trx
+(
+    .S_SYSCLK(S_SYSCLK),           // platform clock
+    .S_RESETN(S_RESETN),           // reset
+    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
+    .S_CPOL(CSMODE[CSMODE_CPOL]),  // clock polary
+    .S_CPHA( CSMODE[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_REV(CSMODE[CSMODE_REV]),    // msb first or lsb first
+    .S_CHAR_LEN(CSMODE_LEN),             // characters in bits length
+    .S_LOOP(1'b0 /* SPMODE[SPMODE_LOOP] */),  // internal loopback mode, invalid in slave mode
+    .S_SPI_CS(S_SPI_SEL[0]),
+    .S_SPI_SCK(S_SPI_SCK),
+    .S_SPI_MISO(S_SPI_MISO),
+    .S_SPI_MOSI(S_SPI_MOSI),
+    .S_CHAR_DONE(slv_done),
+    .S_WCHAR(32'h1faa5510),        // output character
+    .S_RCHAR(slv_data_rx)          // input character
+);
+
 endmodule
+

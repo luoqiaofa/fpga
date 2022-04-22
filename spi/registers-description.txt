@@ -95,13 +95,34 @@ Table 19-4. SPMODE Field Descriptions
 |      |      | PM = 0011 and DIV16 is set, the system/SPICLK clock ratio will be         |
 |      |      | 16 × (4 × (0011 + 1)) = 256.  In slave mode this field must be cleared.   |
 +------+------+---------------------------------------------------------------------------+
-| 16–18| —    | Reserved                                                                  |
+| 16   | POL  | CS polarity                                                               |
+|      |      | 1 Asserted Low, Negated High                                              |
+|      |      | 0 Asserted High, Negated Low.                                             |
++------+------+---------------------------------------------------------------------------+
+| 17-18| ---- | Reserved                                                                  |
 +------+------+---------------------------------------------------------------------------+
 | 19   | OD   | Open drain mode.                                                          |
 |      |      | 0 All output pins are configured to normal mode.                          |
 |      |      | 1 All output pins are configured to open drain mode.                      |
 +------+------+---------------------------------------------------------------------------+
-| 20–31| —    | Reserved                                                                  |
+| 20-23| CSBEF| CS assertion time in bits before frame starts                             |
+|      |      | (that is, before clock toggles)                                           |
+|      |      | Example:                                                                  |
+|      |      |   CS0BEF = 0010 inserts 2 bits time gap between CS                        |
+|      |      |   assertion to clock toggle                                               |
++------+------+---------------------------------------------------------------------------+
+| 24-27| CSAFT| CS assertion time in bits before frame starts                             |
+|      |      | (that is, before clock toggles)                                           |
+|      |      | Example:                                                                  |
+|      |      |   CS0BEF = 0010 inserts 2 bits time gap between CS                        |
+|      |      |   assertion to clock toggle                                               |
++------+------+---------------------------------------------------------------------------+
+| 28-31| CSCG | Clock gap insert gaps between transmitted frames according to this size   |
+|      |      |  (during this time, chip select is negated).                              |
+|      |      |  Chip select is negated minimum time of 1 bit time.                       |
+|      |      |  Example:                                                                 |
+|      |      |  CS0CG = 00101 inserts 5 + 1 = 6 bits time gap between every two          |
+|      |      |  consecutive frames                                                       |
 +------+------+---------------------------------------------------------------------------+
 
 SPIE Field ts Name Description

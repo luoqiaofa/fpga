@@ -18,12 +18,20 @@ reg [CHAR_NBITS - 1: 0] data_in;
 reg [3:0] char_len;
 
 
+wire [3:0] SPI_CS;
 wire SPI_SCK;
 wire SPI_MISO;
 wire SPI_MOSI;
-wire [3:0] SPI_CS_B;
+reg  [3:0] s_spi_sel;
 
-pullup pullup_miso (SPI_MISO);
+assign SPI_CS = s_spi_sel;
+
+// pullup pullup_spi_cs0 (SPI_CS[0]);
+// pullup pullup_spi_cs1 (SPI_CS[1]);
+// pullup pullup_spi_cs2 (SPI_CS[2]);
+// pullup pullup_spi_cs3 (SPI_CS[3]);
+
+/* pullup pullup_miso (SPI_MISO); */
 
 wire s_done;
 wire  [CHAR_LEN_MAX -1:0] data_rx;
@@ -41,6 +49,7 @@ end
 
 initial
 begin
+    s_spi_sel  <= 0;
     char_len   <= 4'h7;
     data_tx    <= 16'h55aa;
     data_in    <= 8'hff;
@@ -113,18 +122,13 @@ wire S_BVALID;
 
 initial
 begin
-    SPMODE  <= 32'h0000_100F;
-    SPIE    <= 32'h0020_0000;
-    SPIM    <= 32'h0000_0000;
-    SPCOM   <= 32'h0000_0000;
-    SPITF   <= 32'h0000_0000;
-    SPIRF   <= 32'h0000_0000;
-    SPIREV1 <= 32'h0000_0000;
-    SPIREV2 <= 32'h0000_0000;
-    SPMODE0 <= 32'h0010_0000;
-    // SPMODE1 <= 32'h0010_0000;
-    // SPMODE2 <= 32'h0010_0000;
-    // SPMODE3 <= 32'h0010_0000;
+    SPMODE  <= SPMODE_DEF;
+    SPIE    <= SPIE_DEF;
+    SPIM    <= SPIM_DEF;
+    SPCOM   <= SPCOM_DEF;
+    SPITF   <= SPITF_DEF;
+    SPIRF   <= SPIRF_DEF;
+    SPMODE0 <= CSMODE_DEF;
 
     S_ARADDR <= 0;
     S_AWADDR <= 0;
@@ -138,11 +142,15 @@ begin
     #50;
     SPIE    <= 32'hFFFF_FFFF;
     SPMODE  <= 32'h8000_100F;
-    SPMODE0 <= 32'h2417_1108;
+    SPMODE0[CSMODE_DIV16] <= 1'b1;
+    SPMODE0[CSMODE_CPOL]  <= 1'b0;
+    SPMODE0[CSMODE_CPHA]  <= 1'b0;
+    SPMODE0[CSMODE_REV]   <= 1'b1;
+    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'hf;
     SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
     #10;
-    SPMODE0[CSMODE_CSCG_HI :CSMODE_CSCG_LO] <= 3;
+    // SPMODE0[CSMODE_CSCG_HI : CSMODE_CSCG_LO] <= 3;
 
     S_AWADDR <= ADDR_SPIE;
     S_WDATA <= SPIE;
@@ -269,7 +277,7 @@ spi_master
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
-    .S_SPI_CS_B(SPI_CS_B)
+    .S_SPI_SEL(SPI_CS)
 );
 // */
 /*

@@ -12,7 +12,7 @@ module spi_slave_trx_char
     output wire        S_CHAR_DONE,
     input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character, output to SPI_MISO
     output wire [CHAR_NBITS-1:0] S_RCHAR,   // output character, read from SPI_MOSI
-    input  wire        S_SPI_SEL,  // chip select, low active
+    input  wire        S_SPI_CS,  // chip select, low active
     input  wire        S_SPI_SCK,
     output wire        S_SPI_MISO,
     input  wire        S_SPI_MOSI
@@ -42,7 +42,7 @@ assign bits_per_char     = (0 == S_CHAR_LEN) ? 32 : S_CHAR_LEN + 1;
 assign bits_per_char_dec = (0 == S_CHAR_LEN) ? 31 : S_CHAR_LEN;
 assign cnt_max           = S_CPHA ? bits_per_char : bits_per_char_dec;
 assign S_SPI_MISO        = dout;
-assign slave_active = (S_ENABLE && !S_SPI_SEL);
+assign slave_active = (S_ENABLE && !S_SPI_CS);
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin

@@ -15,7 +15,6 @@ module spi_master_trx_char
     output wire        S_CHAR_DONE,
     input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character
     output wire [CHAR_NBITS-1:0] S_RCHAR,   // input character
-    output wire        S_SPI_CS,
     output wire        S_SPI_SCK,
     input  wire        S_SPI_MISO,
     output wire        S_SPI_MOSI
