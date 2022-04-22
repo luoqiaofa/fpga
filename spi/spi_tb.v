@@ -69,7 +69,7 @@ begin
     #10000;
     rst_n       <= 0;
 
-    #1000
+    #2000
     $stop;
 end
 
@@ -221,8 +221,7 @@ begin
     #10;
     S_WVALID <= 1;
     S_AWVALID <= 1;
-    #50;
-    #10;
+    #500;
 
 end
 initial begin

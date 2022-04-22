@@ -12,7 +12,7 @@ module spi_intface # (parameter NCS = 4)
     output wire S_AWREADY,
     input  wire S_ARVALID,
     output wire S_ARREADY,
-    input  wire [7 : 0] S_ARADDR,
+    input  wire [7 : 0]  S_ARADDR,
     output wire [31 : 0] S_RDATA,
     output wire S_RVALID,
     input  wire S_RREADY,
@@ -33,8 +33,6 @@ reg [31: 0] SPIM;
 reg [31: 0] SPCOM;
 reg [31: 0] SPITF;
 reg [31: 0] SPIRF;
-reg [31: 0] SPIREV1;
-reg [31: 0] SPIREV2;
 reg [31: 0] CSX_SPMODE[0:NCS-1];
 
 integer idx;
@@ -316,6 +314,7 @@ begin
     else begin
         chr_go <= 0;
         frame_go <= 0;
+        spi_sel <= {NCS{1'b1}};
     end
     if (chr_idx_one_word < chr_idx_one_word_max) begin
         chr_idx_one_word <= chr_idx_one_word + 1;
