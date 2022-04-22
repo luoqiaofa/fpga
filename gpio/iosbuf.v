@@ -8,7 +8,7 @@ module iosbuf #(parameter integer NUM_IO = 2)
 genvar ii;
 generate 
 for (ii = 0; ii < NUM_IO; ii = ii + 1)
-begin : my_iosbus_gen
+begin : my_iosbuf_gen
     assign IOs[ii] = Ts[ii] ? 1'bz : Is[ii];
     assign Os[ii] = IOs[ii];
 end
