@@ -20,10 +20,10 @@ module spi_intface # (parameter NCS = 4)
     output wire S_BVALID,
     output wire [1 : 0] S_BRESP,
     output wire [1 : 0] S_RRESP,
-    inout  wire S_SPI_SCK,
-    inout  wire S_SPI_MISO,
-    inout  wire S_SPI_MOSI,
-    input  wire [NCS - 1 : 0] S_SPI_SEL
+    output wire S_SPI_SCK,
+    input  wire S_SPI_MISO,
+    output wire S_SPI_MOSI,
+    output wire [NCS-1:0] S_SPI_SEL
 );
 `include "reg-bit-def.v"
 
@@ -43,6 +43,8 @@ reg [31: 0]  spmode_x;
 wire [31: 0] CSMODE;
 wire [CSMODE_LEN_HI - CSMODE_LEN_LO: 0] CSMODE_LEN;
 wire [1: 0] CS_IDX;
+reg [NCS-1:0] spi_sel;
+assign S_SPI_SEL = spi_sel;
 
 reg wvalid_pos_edge;
 reg awvalid_pos_edge;
@@ -270,6 +272,7 @@ begin
                 spi_cs_b[CS_IDX] <= 1'b0;
                 frame_go <= 1;
                 frame_go_trig <= 1;
+                spi_sel <= {NCS{1'b0}};
                 frame_en_go <= 0;
                 chr_go <= 0;
                 csbef_count <= CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
@@ -345,6 +348,7 @@ begin
         cs_idx <= 0;
         spmode_x <= CSMODE_DEF;
         spmodex_updated <= 0;
+        spi_sel <= {NCS{1'b1}};
     end
     else begin
         if (spmodex_updated) begin
@@ -595,28 +599,6 @@ inst_spi_trx_ch
     .S_CHAR_DONE(chr_done),
     .S_WCHAR(32'h12345678),   // output character
     .S_RCHAR(data_rx)    // input character
-);
-wire [CHAR_LEN_MAX-1:0] slv_data_rx;
-wire slv_done;
-
-spi_slave_trx_char #(.CHAR_NBITS(CHAR_LEN_MAX))
-inst_spi_slv_trx
-(
-    .S_SYSCLK(S_SYSCLK),           // platform clock
-    .S_RESETN(S_RESETN),           // reset
-    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CSMODE[CSMODE_CPOL]),  // clock polary
-    .S_CPHA( CSMODE[CSMODE_CPHA]),  // clock phase, the first edge or second
-    .S_REV(CSMODE[CSMODE_REV]),    // msb first or lsb first
-    .S_CHAR_LEN(CSMODE_LEN),             // characters in bits length
-    .S_LOOP(1'b0 /* SPMODE[SPMODE_LOOP] */),  // internal loopback mode, invalid in slave mode
-    .S_SPI_CS(S_SPI_SEL[0]),
-    .S_SPI_SCK(S_SPI_SCK),
-    .S_SPI_MISO(S_SPI_MISO),
-    .S_SPI_MOSI(S_SPI_MOSI),
-    .S_CHAR_DONE(slv_done),
-    .S_WCHAR(32'h1faa5510),        // output character
-    .S_RCHAR(slv_data_rx)          // input character
 );
 
 endmodule

@@ -6,7 +6,6 @@ module spi_slave_trx_char
     input  wire        S_ENABLE,  // enable
     input  wire        S_CPOL,    // clock polary
     input  wire        S_CPHA,    // clock phase, the first edge or second
-    input  wire        S_LOOP,    // internal loopback mode
     input  wire        S_REV,     // msb first or lsb first
     input  wire [3:0]  S_CHAR_LEN,// characters in bits length
     output wire        S_CHAR_DONE,

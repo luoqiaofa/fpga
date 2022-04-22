@@ -9,22 +9,15 @@ reg sysclk;            // system clock input
 reg rst_n;             // module reset
 reg enable;            // module enable
 reg go;                // start transmit
-reg CPOL;              // clock polarity
-reg CPHA;              // clock phase
-reg LOOP;              // loop mode test
-reg MSB_FIRST;
 reg [C_DIVIDER_WIDTH-1:0] divider_i; // divider;
 reg [CHAR_NBITS - 1: 0] data_in;
 reg [3:0] char_len;
 
 
-wire [3:0] SPI_CS;
 wire SPI_SCK;
 wire SPI_MISO;
 wire SPI_MOSI;
-reg  [3:0] s_spi_sel;
-
-assign SPI_CS = s_spi_sel;
+wire  [3:0] SPI_CS_B;
 
 // pullup pullup_spi_cs0 (SPI_CS[0]);
 // pullup pullup_spi_cs1 (SPI_CS[1]);
@@ -49,7 +42,6 @@ end
 
 initial
 begin
-    s_spi_sel  <= 0;
     char_len   <= 4'h7;
     data_tx    <= 16'h55aa;
     data_in    <= 8'hff;
@@ -57,10 +49,6 @@ begin
     rst_n      <= 0;      // module reset
     enable     <= 0;      // module enable
     go         <= 0;      // start transmit
-    CPOL       <= 0;      // clock polarity
-    CPHA       <= 0;      // clock phase
-    LOOP       <= 0;
-    MSB_FIRST  <= 1;
     divider_i  <= 0;      // divider;
     #50
     rst_n    <= 1;        // module reset
@@ -111,9 +99,6 @@ wire [1 : 0] S_RRESP;
 wire S_WREADY;
 wire S_AWREADY;
 
-wire S_SPI_SCK;
-wire S_SPI_MISO;
-wire S_SPI_MOSI;
 wire [3:0 ] S_SPI_CS_B;
 
 reg S_BREADY;
@@ -140,13 +125,13 @@ begin
     S_WDATA <= 0;
     S_BREADY <= 0;
     #50;
+    SPMODE[SPMODE_EN] <= 1;
     SPIE    <= 32'hFFFF_FFFF;
-    SPMODE  <= 32'h8000_100F;
     SPMODE0[CSMODE_DIV16] <= 1'b1;
     SPMODE0[CSMODE_CPOL]  <= 1'b0;
     SPMODE0[CSMODE_CPHA]  <= 1'b0;
     SPMODE0[CSMODE_REV]   <= 1'b1;
-    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'hf;
+    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'h0;
     SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
     #10;
@@ -225,7 +210,7 @@ begin
     SPITF   <= 32'h1122_3344;
     #10;
 
-    #7500;
+    #13500;
     SPMODE[SPMODE_EN] <= 0;
     #10;
     S_WVALID <= 0;
@@ -277,59 +262,30 @@ spi_master
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
-    .S_SPI_SEL(SPI_CS)
-);
-// */
-/*
-spi_trx_one_char #(.CHAR_NBITS(CHAR_LEN_MAX))
-inst_spi_trx_ch
-(
-    .S_SYSCLK(sysclk),  // platform clock
-    .S_RESETN(rst_n),  // reset
-    .S_ENABLE(enable),  // enable
-    .S_CPOL(CPOL),    // clock polary
-    .S_CPHA(CPHA),    // clock phase, the first edge or second
-    .S_TX_ONLY(1'b0), // transmit only
-    .S_LOOP(LOOP),    // internal loopback mode
-    .S_REV(MSB_FIRST),     // msb first or lsb first
-    .S_CHAR_LEN(char_len),// characters in bits length
-    .S_NDIVIDER(divider_i),// clock divider
-    .S_SPI_SCK(SPI_SCK),
-    .S_SPI_MISO(SPI_MISO),
-    .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_GO(go),
-    .S_CHAR_DONE(s_done),
-    .S_WCHAR(data_tx),   // output character
-    .S_RCHAR(data_rx)    // input character
+    .S_SPI_SEL(SPI_CS_B)
 );
 
-always @(posedge s_done)
-begin
-    go <= 0;
-    data_tx <= data_tx + 1;
-    data_in <= data_rx[7:0];
-end
+wire [CHAR_LEN_MAX-1:0] slv_data_rx;
+wire slv_done;
 
-*/
-/*
-spi_slave_model #(.CHAR_NBITS(16))
-inst_slave
+spi_slave_trx_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+inst_spi_slv_trx
 (
-    .S_SYSCLK(sysclk),  // platform clock
-    .S_RESETN(rst_n),  // reset
+    .S_SYSCLK(sysclk),           // platform clock
+    .S_RESETN(rst_n),           // reset
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CPOL),    // clock polary
-    .S_CPHA(CPHA),    // clock phase, the first edge or second
-    .S_TX_ONLY(1'b0), // transmit only
-    .S_REV(MSB_FIRST),     // msb first or lsb first
-    .S_CHAR_LEN(char_len),// characters in bits length
+    .S_CPOL(SPMODE0[CSMODE_CPOL]),  // clock polary
+    .S_CPHA(SPMODE0[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_REV(SPMODE0[CSMODE_REV]),    // msb first or lsb first
+    .S_CHAR_LEN(SPMODE0[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
+    .S_SPI_CS(SPI_CS_B[0]),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_GO(go),
-    .S_CHAR_DONE(s_done)
+    .S_CHAR_DONE(slv_done),
+    .S_WCHAR(32'h1faa5510),        // output character
+    .S_RCHAR(slv_data_rx)          // input character
 );
-*/
 
 endmodule
 
