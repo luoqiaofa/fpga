@@ -270,7 +270,7 @@ begin
                 spi_cs_b[CS_IDX] <= 1'b0;
                 frame_go <= 1;
                 frame_go_trig <= 1;
-                spi_sel <= {NCS{1'b0}};
+                spi_sel[CS_IDX] <= 1'b0;
                 frame_en_go <= 0;
                 chr_go <= 0;
                 csbef_count <= CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
@@ -314,7 +314,7 @@ begin
     else begin
         chr_go <= 0;
         frame_go <= 0;
-        spi_sel <= {NCS{1'b1}};
+        spi_sel[CS_IDX] <= 1'b1;
     end
     if (chr_idx_one_word < chr_idx_one_word_max) begin
         chr_idx_one_word <= chr_idx_one_word + 1;
