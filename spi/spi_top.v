@@ -20,6 +20,7 @@ module spi_intface # (parameter NCS = 4)
     output wire S_BVALID,
     output wire [1 : 0] S_BRESP,
     output wire [1 : 0] S_RRESP,
+    output wire S_INTERRUPT,
     output wire S_SPI_SCK,
     input  wire S_SPI_MISO,
     output wire S_SPI_MOSI,
@@ -42,7 +43,6 @@ wire [31: 0] CSMODE;
 wire [CSMODE_LEN_HI - CSMODE_LEN_LO: 0] CSMODE_LEN;
 wire [1: 0] CS_IDX;
 reg [NCS-1:0] spi_sel;
-assign S_SPI_SEL = spi_sel;
 
 reg wvalid_pos_edge;
 reg awvalid_pos_edge;
@@ -117,6 +117,8 @@ wire i_spi_sel;
 wire o_spi_sel;
 wire s_spi_sel_oen;
 
+assign S_INTERRUPT = | (SPIM & SPIE);
+assign S_SPI_SEL = spi_sel;
 assign CS_IDX     = SPCOM[SPCOM_CS_HI: SPCOM_CS_LO];
 assign CSMODE     = CSX_SPMODE[CS_IDX];
 assign CSMODE_LEN = CSMODE[CSMODE_LEN_HI: CSMODE_LEN_LO];

@@ -47,7 +47,6 @@ localparam SPIM_DON          = 14;
 localparam SPIM_RXT          = 13;
 localparam SPIM_RXF          = 12;
 localparam SPIM_TXT          = 11;
-localparam SPIM_22           = 10;
 localparam SPIM_RNE          = 9;
 localparam SPIM_TNF          = 8;
 

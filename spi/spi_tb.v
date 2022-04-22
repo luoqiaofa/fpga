@@ -18,6 +18,7 @@ wire SPI_SCK;
 wire SPI_MISO;
 wire SPI_MOSI;
 wire  [3:0] SPI_CS_B;
+wire irq;
 
 // pullup pullup_spi_cs0 (SPI_CS[0]);
 // pullup pullup_spi_cs1 (SPI_CS[1]);
@@ -258,6 +259,7 @@ spi_master
     .S_BREADY(S_BREADY),
     .S_BVALID(S_BVALID),
     .S_RRESP(S_RRESP),
+    .S_INTERRUPT(irq),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
