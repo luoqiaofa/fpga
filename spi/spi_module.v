@@ -10,7 +10,7 @@ module spi_master_trx_char
     input  wire        S_LOOP,    // internal loopback mode
     input  wire        S_REV,     // msb first or lsb first
     input  wire [3:0]  S_CHAR_LEN,// characters in bits length
-    input  wire [7:0]  S_NDIVIDER,// clock divider
+    input  wire [9:0]  S_NDIVIDER,// clock divider
     input  wire        S_CHAR_GO,
     output wire        S_CHAR_DONE,
     input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character
@@ -44,7 +44,7 @@ assign spi_mode = {S_CPOL, S_CPHA};
 assign bits_per_char     = (0 == S_CHAR_LEN) ? 32 : S_CHAR_LEN + 1 ;
 assign bits_per_char_dec = (0 == S_CHAR_LEN) ? 31 : S_CHAR_LEN ;
 
-spi_clk_gen # (.C_DIVIDER_WIDTH(8)) clk_gen_char (
+spi_clk_gen # (.C_DIVIDER_WIDTH(10)) clk_gen_char (
     .sysclk(S_SYSCLK),       // system clock input
     .rst_n(S_RESETN),         // module reset
     .enable(S_ENABLE),       // module enable

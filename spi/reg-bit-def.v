@@ -57,8 +57,8 @@ localparam SPCOM_RXDLY       = 29; // reserved
 localparam SPCOM_DO          = 28;
 localparam SPCOM_RO          = 26; // Receive only
 localparam SPCOM_TO          = 27; // Transmit only
-localparam SPCOM_RxSKIP_HI   = 23;
-localparam SPCOM_RxSKIP_LO   = 16;
+localparam SPCOM_RSKIP_HI    = 23; // number of chars need to be read skip
+localparam SPCOM_RSKIP_LO    = 16;
 localparam SPCOM_TRANLEN_HI  = 15;
 localparam SPCOM_TRANLEN_LO  = 0;
 
@@ -66,7 +66,7 @@ localparam SPCOM_TRANLEN_LO  = 0;
 
 // 6. SPIRF
 
-// 7. ESPI_SPMODE31;
+// 7. ESPI_SPMODE0 ~ ESPI_SPMODEx ;
 localparam CSMODE_CPOL      = 31;
 localparam CSMODE_CPHA      = 30;
 localparam CSMODE_REV       = 29;
