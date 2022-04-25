@@ -103,9 +103,9 @@ reg [3:0] char_bit_cnt;
 localparam MAX_BITNO_OF_CHAR = 4'hf;
 /* spi transactions flags or counters end */
 
-reg [16:0] data_tx;
-reg [16:0] data_rx;
-wire [16:0] shift_tx;
+reg [15:0] data_tx;
+reg [15:0] data_rx;
+wire [15:0] shift_tx;
 
 assign shift_tx = data_tx;
 
@@ -541,18 +541,18 @@ begin
     else begin
         if (CSMODE_LEN > 7) begin
             if (spitf_trx_char_off) begin
-                data_tx <= {1'b0, SPITF[31:16]};
+                data_tx <= SPITF[31:16];
             end
             else begin
-                data_tx <= {1'b0, SPITF[15:0]};
+                data_tx <= SPITF[15:0];
             end
         end
         else begin
             case (spitf_trx_char_off)
-                0: data_tx <= {9'h000, SPITF[7:0]};
-                1: data_tx <= {9'h000, SPITF[15:8]};
-                2: data_tx <= {9'h000, SPITF[23:16]};
-                3: data_tx <= {9'h000, SPITF[31:24]};
+                0: data_tx <= {8'h00, SPITF[7:0]};
+                1: data_tx <= {8'h00, SPITF[15:8]};
+                2: data_tx <= {8'h00, SPITF[23:16]};
+                3: data_tx <= {8'h00, SPITF[31:24]};
                 default :;
             endcase
         end
