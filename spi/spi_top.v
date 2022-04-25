@@ -45,8 +45,8 @@ integer idx;
 reg spmodex_updated;
 reg [31: 0]  spmode_x;
 wire [31: 0] CSMODE;
-wire [CSMODE_PM_HI   - CSMODE_PM_LO  :0]   CSMODE_PM;
-wire [CSMODE_LEN_HI  - CSMODE_LEN_LO :0]   CSMODE_LEN;
+wire [CSMODE_PM_HI  - CSMODE_PM_LO  :0]    CSMODE_PM;
+wire [CSMODE_LEN_HI - CSMODE_LEN_LO :0]    CSMODE_LEN;
 wire [CSMODE_CSBEF_HI-CSMODE_CSBEF_LO:0]   CSMODE_CSBEF;
 wire [CSMODE_CSAFT_HI-CSMODE_CSAFT_LO:0]   CSMODE_CSAFT;
 wire [CSMODE_CSCG_HI -CSMODE_CSCG_LO :0]   CSMODE_CSCG;
@@ -89,6 +89,7 @@ reg [C_ADDR_WIDTH-1 : 0] awaddr;
 reg frame_in_process;
 reg chr_go;
 reg chr_done;
+reg chr_skip_calc;
 
 localparam FRAME_SM_IDLE      = 0;
 localparam FRAME_SM_BEF_WAIT  = 1;
@@ -98,9 +99,8 @@ localparam FRAME_SM_AFT_WAIT  = 4;
 localparam FRAME_SM_CG_WAIT   = 5;
 reg [2:0]  frame_state; // frame machine state;
 
-reg [5:0] char_bit_cnt;
-wire [5:0] max_bit_no_of_char;
-assign max_bit_no_of_char = CSMODE[CSMODE_CPHA] ? {1'b0, CSMODE_LEN} + 1: {1'b0, CSMODE_LEN};
+reg [3:0] char_bit_cnt;
+localparam MAX_BITNO_OF_CHAR = 4'hf;
 /* spi transactions flags or counters end */
 
 reg [16:0] data_tx;
@@ -252,110 +252,166 @@ begin
     end
 end
 
-wire brg_out_edge_active;
-assign brg_out_edge_active = CSMODE[CSMODE_CPOL] ? brg_pos_edge: brg_neg_edge;
-always @(negedge brg_out_edge_active)
+always @(posedge chr_go)
 begin
-    if (CSMODE[CSMODE_CPOL]) begin
-        case (frame_state)
-            FRAME_SM_IN_TRANS: data_rx[char_bit_cnt] <= i_spi_miso;
-            default:;
-        endcase
-    end
-    if (frame_in_process) begin
-        case (frame_state)
-            FRAME_SM_IDLE: ;
-            FRAME_SM_BEF_WAIT:
-            begin
-                if (cnt_csbef > 0) begin
-                    cnt_csbef <= cnt_csbef - 1;
-                end
-                else begin
-                    frame_state <= FRAME_SM_IN_TRANS;
-                    chr_go <= 1;
-                    if (CSMODE[CSMODE_REV]) begin
-                        char_bit_cnt <= max_bit_no_of_char;
-                    end
-                    else begin
-                        char_bit_cnt <= 0;
-                    end
-                end
-            end
-            FRAME_SM_DATA_WAIT:;
-            FRAME_SM_IN_TRANS:
-            begin
-                if (CSMODE[CSMODE_REV]) begin
-                    if (0 != char_bit_cnt) begin
-                        char_bit_cnt <= char_bit_cnt - 1;
-                    end
-                    else begin
-                        chr_done <= 1;
-                        char_trx_idx <= char_trx_idx + 1;
-                        char_bit_cnt <= max_bit_no_of_char;
-                        if (char_trx_idx == SPCOM_TRANLEN) begin
-                            char_trx_idx <= 0;
-                            frame_state <= FRAME_SM_AFT_WAIT;
-                        end
-                    end
-                end
-                else begin
-                    if (max_bit_no_of_char != char_bit_cnt) begin
-                        char_bit_cnt <= char_bit_cnt + 1;
-                    end
-                    else begin
-                        chr_done <= 1;
-                        char_bit_cnt <= 0;
-                        char_trx_idx <= char_trx_idx + 1;
-                        if (char_trx_idx == SPCOM_TRANLEN) begin
-                            char_trx_idx <= 0;
-                            frame_state <= FRAME_SM_AFT_WAIT;
-                        end
-                    end
-                end
-            end
-            FRAME_SM_AFT_WAIT:
-            begin
-                if (cnt_csaft > 0) begin
-                    cnt_csaft <= cnt_csaft - 1;
-                end
-                else begin
-                    frame_in_process <= 0;
-                    frame_state <= FRAME_SM_CG_WAIT;
-                    spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b1 : 1'b0;
-                end
-            end
-            FRAME_SM_CG_WAIT:
-            begin
-                if (cnt_cscg > 0) begin
-                    cnt_cscg <= cnt_cscg - 1;
-                end
-                if (0 == cnt_cscg) begin
-                    cnt_cscg <= CSMODE_CSCG;
-                    frame_state <= FRAME_SM_BEF_WAIT;
-                end
-            end
-            default:;
-        endcase
-    end
-    else begin
-        if (cnt_cscg > 0) begin
-            cnt_cscg <= cnt_cscg - 1;
+    if (CSMODE[CSMODE_CPHA]) begin
+        if (CSMODE_LEN == MAX_BITNO_OF_CHAR) begin
+            chr_skip_calc <= 1;
         end
         else begin
-            frame_state <= FRAME_SM_IDLE;
+            chr_skip_calc <= 0;
+        end
+        if (CSMODE[CSMODE_REV]) begin
+            char_bit_cnt <= CSMODE_LEN + 1;
+        end
+        else begin
+            char_bit_cnt <= MAX_BITNO_OF_CHAR;
+        end
+    end
+    else begin
+        chr_skip_calc <= 0;
+        if (CSMODE[CSMODE_REV]) begin
+            char_bit_cnt <= CSMODE_LEN;
+        end
+        else begin
+            char_bit_cnt <= 0;
         end
     end
 end
 
-wire spi_rxdata_smaple_edge;
-assign spi_rxdata_smaple_edge = CSMODE[CSMODE_CPOL] ? brg_neg_edge : brg_pos_edge;
-always @(negedge spi_rxdata_smaple_edge)
+wire brg_out_second_edge;
+assign brg_out_second_edge = CSMODE[CSMODE_CPOL] ? brg_pos_edge: brg_neg_edge;
+always @(negedge brg_out_second_edge)
 begin
-    if (!CSMODE[CSMODE_CPOL]) begin
-        case (frame_state)
-            FRAME_SM_IN_TRANS: data_rx[char_bit_cnt] <= i_spi_miso;
-            default:;
-        endcase
+    if (!CSMODE[CSMODE_CPHA])
+    begin
+        if (FRAME_SM_IN_TRANS == frame_state) begin
+            data_rx[char_bit_cnt] <= i_spi_miso;
+            if (CSMODE[CSMODE_REV]) begin
+                char_bit_cnt <= char_bit_cnt - 1;
+                if (0 == char_bit_cnt) begin
+                    if (chr_go) begin
+                        chr_go <= 0;
+                    end
+                    chr_done <= 1;
+                    char_bit_cnt <= CSMODE_LEN;
+                    char_trx_idx <= char_trx_idx + 1;
+                    if (char_trx_idx == SPCOM_TRANLEN) begin
+                        char_trx_idx <= 0;
+                        frame_state <= FRAME_SM_AFT_WAIT;
+                    end
+                end
+            end
+            else begin
+                char_bit_cnt <= char_bit_cnt + 1;
+                if (CSMODE_LEN == char_bit_cnt) begin
+                    if (chr_go) begin
+                        chr_go <= 0;
+                    end
+                    chr_done <= 1;
+                    char_bit_cnt <= 0;
+                    char_trx_idx <= char_trx_idx + 1;
+                    if (char_trx_idx == SPCOM_TRANLEN) begin
+                        char_trx_idx <= 0;
+                        frame_state <= FRAME_SM_AFT_WAIT;
+                    end
+                end
+            end
+        end
+    end
+    case (frame_state)
+        FRAME_SM_IDLE: ;
+        FRAME_SM_BEF_WAIT:
+        begin
+            if (cnt_csbef > 0) begin
+                cnt_csbef <= cnt_csbef - 1;
+            end
+            else begin
+                frame_state <= FRAME_SM_IN_TRANS;
+                chr_go <= 1;
+            end
+        end
+        FRAME_SM_DATA_WAIT:;
+        FRAME_SM_IN_TRANS:;
+        FRAME_SM_AFT_WAIT:
+        begin
+            if (cnt_csaft > 0) begin
+                cnt_csaft <= cnt_csaft - 1;
+            end
+            else begin
+                frame_in_process <= 0;
+                frame_state <= FRAME_SM_CG_WAIT;
+                spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b1 : 1'b0;
+            end
+        end
+        FRAME_SM_CG_WAIT:
+        begin
+            if (cnt_cscg > 0) begin
+                cnt_cscg <= cnt_cscg - 1;
+            end
+            else begin
+                cnt_cscg <= CSMODE_CSCG;
+                if (frame_in_process) begin
+                    frame_state <= FRAME_SM_BEF_WAIT;
+                end
+                else begin
+                    frame_state <= FRAME_SM_IDLE;
+                end
+            end
+        end
+        default:;
+    endcase
+end
+
+wire brg_out_first_edge;
+assign brg_out_first_edge = CSMODE[CSMODE_CPOL] ? brg_neg_edge : brg_pos_edge;
+always @(negedge brg_out_first_edge)
+begin
+    if (CSMODE[CSMODE_CPHA])
+    begin
+        if (FRAME_SM_IN_TRANS == frame_state) begin
+            data_rx[char_bit_cnt] <= i_spi_miso;
+            if (CSMODE[CSMODE_REV]) begin
+                char_bit_cnt <= char_bit_cnt - 1;
+                if (0 == char_bit_cnt) begin
+                    if (chr_go) begin
+                        chr_go <= 0;
+                    end
+                    chr_done <= 1;
+                    if (chr_skip_calc) begin
+                        chr_skip_calc <= 0;
+                    end
+                    else begin
+                        char_trx_idx <= char_trx_idx + 1;
+                    end
+                    char_bit_cnt <= CSMODE_LEN;
+                    if (char_trx_idx == SPCOM_TRANLEN) begin
+                        char_trx_idx <= 0;
+                        frame_state <= FRAME_SM_AFT_WAIT;
+                    end
+                end
+            end
+            else begin
+                char_bit_cnt <= char_bit_cnt + 1;
+                if (CSMODE_LEN == char_bit_cnt) begin
+                    if (chr_go) begin
+                        chr_go <= 0;
+                    end
+                    chr_done <= 1;
+                    char_bit_cnt <= 0;
+                    if (chr_skip_calc) begin
+                        chr_skip_calc <= 0;
+                    end
+                    else begin
+                        char_trx_idx <= char_trx_idx + 1;
+                    end
+                    if (char_trx_idx == SPCOM_TRANLEN) begin
+                        char_trx_idx <= 0;
+                        frame_state <= FRAME_SM_AFT_WAIT;
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -403,9 +459,12 @@ begin
         num_trx_char <= 0;
     end
     else begin
-        chr_go <= 0;
+        // chr_go <= 0;
         chr_done <= 0;
         spcom_updated <= 0;
+        if (chr_done) begin
+            chr_done <= 0;
+        end
         if (spcom_updated) begin
             if (SPMODE[SPMODE_EN]) begin
                 spi_brg_go <= 1;
@@ -460,6 +519,7 @@ begin
         data_rx <= 17'h00000;
         chr_go <= 0;
         chr_done <= 0;
+        chr_skip_calc <= 0;
         spi_brg_go <= 0;
         char_bit_cnt <= 0;
         frame_in_process <= 0;
