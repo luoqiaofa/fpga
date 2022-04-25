@@ -21,10 +21,10 @@ module spi_intface # (parameter NCS = 4)
     output wire [1 : 0] S_BRESP,
     output wire [1 : 0] S_RRESP,
     output wire S_INTERRUPT,
-    output wire S_SPI_SCK,
-    input  wire S_SPI_MISO,
-    output wire S_SPI_MOSI,
-    output wire [NCS-1:0] S_SPI_SEL
+    inout  wire S_SPI_SCK,
+    inout  wire S_SPI_MISO,
+    inout  wire S_SPI_MOSI,
+    inout  wire [NCS-1:0] S_SPI_SEL
 );
 `include "reg-bit-def.v"
 `include "const.v"
@@ -145,8 +145,6 @@ wire i_spi_mosi;
 wire o_spi_mosi;
 wire t_spi_mosi;
 
-assign o_spi_mosi = shift_tx[char_bit_cnt];
-
 wire i_spi_miso;
 wire o_spi_miso;
 wire t_spi_miso_oen;
@@ -155,14 +153,52 @@ wire i_spi_sck;
 wire o_spi_sck;
 wire t_spi_sck;
 
-assign o_spi_sck = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
+assign t_spi_sck  = !SPMODE[SPMODE_MASTER];
+assign t_spi_mosi = !SPMODE[SPMODE_MASTER];
+assign t_spi_miso =  SPMODE[SPMODE_MASTER];
+assign o_spi_sck  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
+assign o_spi_mosi = shift_tx[char_bit_cnt];
 
 wire [NCS-1:0] i_spi_sel;
 wire [NCS-1:0] o_spi_sel;
 wire [NCS-1:0] t_spi_sel;
 
-assign S_INTERRUPT  = | (SPIM & SPIE);
-assign S_SPI_SEL = spi_sel;
+iobuf ioc_spi_sck(
+    .T(t_spi_sck),
+    .IO(S_SPI_SCK),
+    .I(o_spi_sck),
+    .O(i_spi_sck)
+);
+
+iobuf ioc_spi_miso(
+    .T(t_spi_miso),
+    .IO(S_SPI_MISO),
+    .I(o_spi_miso),
+    .O(i_spi_miso)
+);
+
+iobuf ioc_spi_mosi(
+    .T(t_spi_mosi),
+    .IO(S_SPI_MOSI),
+    .I(o_spi_mosi),
+    .O(i_spi_mosi)
+);
+
+iosbuf #(.NUM_IO(NCS))iocs_spi_cs(
+    .Ts(t_spi_sel),
+    .IOs(S_SPI_SEL),
+    .Is(o_spi_sel),
+    .Os(i_spi_sel)
+);
+
+assign S_INTERRUPT = | (SPIM & SPIE);
+assign o_spi_sel = spi_sel;
+genvar var_cs;
+generate for (var_cs = 0; var_cs < NCS; var_cs = var_cs + 1)
+begin : gen_spi_cs
+    assign t_spi_sel[var_cs] = !SPMODE[SPMODE_MASTER];
+end
+endgenerate
 
 assign SPCOM_CS     = SPCOM[SPCOM_CS_HI: SPCOM_CS_LO];
 assign SPCOM_RSKIP  = SPCOM[SPCOM_RSKIP_HI:SPCOM_RSKIP_LO];
@@ -284,8 +320,8 @@ begin
                 end
                 else begin
                     frame_in_process <= 0;
-                    frame_state <= FRAME_SM_IDLE;
-                    spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 0 : 1;
+                    frame_state <= FRAME_SM_CG_WAIT;
+                    spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b1 : 1'b0;
                 end
             end
             FRAME_SM_CG_WAIT:
@@ -305,6 +341,9 @@ begin
         if (cnt_cscg > 0) begin
             cnt_cscg <= cnt_cscg - 1;
         end
+        else begin
+            frame_state <= FRAME_SM_IDLE;
+        end
     end
 end
 
@@ -322,7 +361,7 @@ end
 
 always @(posedge frame_in_process)
 begin
-    spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 0 : 1;
+    spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin
         cnt_csbef <= CSMODE_CSBEF - 1;
     end
@@ -417,7 +456,8 @@ begin
         rresp   <= 2'b00;
         reg_data_out <= 0;
         cs_idx <= 0;
-        data_tx <= 16'h0000;
+        data_tx <= 17'h00000;
+        data_rx <= 17'h00000;
         chr_go <= 0;
         chr_done <= 0;
         spi_brg_go <= 0;

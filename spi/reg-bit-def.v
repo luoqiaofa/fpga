@@ -85,7 +85,7 @@ localparam CSMODE_CSCG_HI   = 7;
 localparam CSMODE_CSCG_LO   = 3;
 
 // defaut register value
-localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO) | (15 << SPMODE_RXTHR_LO);
+localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO)|(15 << SPMODE_RXTHR_LO)|(1 << SPMODE_MASTER);
 localparam SPIE_DEF         = 32 << SPIE_TXCNT_LO;
 localparam SPIM_DEF         = 32'h0000_0000;
 localparam SPCOM_DEF        = 32'h0000_0000;

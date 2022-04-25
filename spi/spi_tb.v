@@ -67,7 +67,7 @@ begin
     #(1000 * CHAR_NBITS / 8)
     // #50
     enable       <= 0;   // module enable
-    #10000;
+    #15000;
     rst_n       <= 0;
 
     #2000
@@ -125,7 +125,7 @@ begin
     S_WSTRB <= 4'hf;
     S_WDATA <= 0;
     S_BREADY <= 0;
-    #50;
+    #100;
     SPMODE[SPMODE_EN] <= 1;
     SPIE    <= 32'hFFFF_FFFF;
     SPMODE0[CSMODE_DIV16] <= 1'b1;
@@ -139,7 +139,7 @@ begin
     SPMODE0[CSMODE_CSCG_HI:CSMODE_CSCG_LO] <= 4'h4;
     SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
-    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 15'h0003;
+    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 15'h0002;
     #10;
     // SPMODE0[CSMODE_CSCG_HI : CSMODE_CSCG_LO] <= 3;
 
@@ -216,7 +216,7 @@ begin
     SPITF   <= 32'h1122_3344;
     #10;
 
-    #13500;
+    #15000;
     SPMODE[SPMODE_EN] <= 0;
     #10;
     S_WVALID <= 0;
@@ -289,7 +289,7 @@ inst_spi_slv_trx
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
     .S_CHAR_DONE(slv_done),
-    .S_WCHAR(32'h1faa5510),        // output character
+    .S_WCHAR(32'h1faa505a),        // output character
     .S_RCHAR(slv_data_rx)          // input character
 );
 
