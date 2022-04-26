@@ -131,15 +131,15 @@ begin
     SPMODE0[CSMODE_DIV16] <= 1'b1;
     SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h0;
     SPMODE0[CSMODE_CPOL]  <= 1'b0;
-    SPMODE0[CSMODE_CPHA]  <= 1'b0;
-    SPMODE0[CSMODE_REV]   <= 1'b1;
-    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'h7;
+    SPMODE0[CSMODE_CPHA]  <= 1'b1;
+    SPMODE0[CSMODE_REV]   <= 1'b0;
+    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'hf;
     SPMODE0[CSMODE_CSBEF_HI:CSMODE_CSBEF_LO] <= 4'h3;
     SPMODE0[CSMODE_CSAFT_HI:CSMODE_CSAFT_LO] <= 4'h5;
     SPMODE0[CSMODE_CSCG_HI:CSMODE_CSCG_LO] <= 4'h4;
     SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
-    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 15'h0002;
+    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 15'h0001;
     #10;
     // SPMODE0[CSMODE_CSCG_HI : CSMODE_CSCG_LO] <= 3;
 
@@ -289,7 +289,7 @@ inst_spi_slv_trx
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
     .S_CHAR_DONE(slv_done),
-    .S_WCHAR(32'h1faa505a),        // output character
+    .S_WCHAR(32'h1faa1234),        // output character
     .S_RCHAR(slv_data_rx)          // input character
 );
 

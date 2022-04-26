@@ -251,7 +251,7 @@ begin
     end
 end
 
-always @(posedge chr_go)
+always @(negedge chr_go)
 begin
     if (CSMODE[CSMODE_CPHA]) begin
         if (CSMODE[CSMODE_REV]) begin
@@ -440,43 +440,51 @@ begin
         cnt_txcnt <= 0;
         cnt_trans <= 0;
 
+        spcom_updated <= 0;
+        spitf_updated <= 0;
+        spirf_updated <= 0;
         spitf_idx <= 0;
+
         char_trx_idx <= 0;
         num_trx_char <= 0;
     end
     else begin
         chr_go <= 0;
         chr_done <= 0;
-        spcom_updated <= 0;
-        chr_done <= 0;
-        if (spcom_updated) begin
-            if (SPMODE[SPMODE_EN]) begin
-                spi_brg_go <= 1;
-                frame_in_process <= 1;
-                if (&cnt_cscg) begin
-                    frame_state <= FRAME_SM_CG_WAIT;
-                end
-                else begin
-                    frame_state <= FRAME_SM_BEF_WAIT;
-                end
-            end
-            else begin
-                frame_state <= FRAME_SM_IDLE;
-            end
-        end
 
+        spcom_updated <= 0;
         spitf_updated <= 0;
-        if (spitf_updated) begin
-            if (CSMODE_LEN > 7) begin
-                num_trx_char <= {spitf_idx[15:0], 1'b0};
-            end
-            else begin
-                num_trx_char <= {spitf_idx[14:0], 2'b00};
-            end
-            if (!frame_in_process) begin
-                char_trx_idx   <= 0;
-            end
+        spirf_updated <= 0;
+    end
+end
+
+always @(negedge spcom_updated)
+begin
+    if (SPMODE[SPMODE_EN]) begin
+        spi_brg_go <= 1;
+        frame_in_process <= 1;
+        if (&cnt_cscg) begin
+            frame_state <= FRAME_SM_CG_WAIT;
         end
+        else begin
+            frame_state <= FRAME_SM_BEF_WAIT;
+        end
+    end
+    else begin
+        frame_state <= FRAME_SM_IDLE;
+    end
+end
+
+always @(negedge spitf_updated)
+begin
+    if (CSMODE_LEN > 7) begin
+        num_trx_char <= {spitf_idx[15:0], 1'b0};
+    end
+    else begin
+        num_trx_char <= {spitf_idx[14:0], 2'b00};
+    end
+    if (!frame_in_process) begin
+        char_trx_idx   <= 0;
     end
 end
 
@@ -508,9 +516,6 @@ begin
         frame_in_process <= 0;
         frame_state <= FRAME_SM_IDLE;
 
-        spcom_updated <= 0;
-        spitf_updated <= 0;
-        spirf_updated <= 0;
         for (byte_index = 0; byte_index < NUM_TX_FIFO; byte_index = byte_index + 1) 
         begin
             SPI_TXFIFO[byte_index] <= 0;
