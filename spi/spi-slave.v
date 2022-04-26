@@ -218,10 +218,10 @@ always @(negedge S_REV)
 begin
     if (slave_active) begin
         if (S_REV) begin
-            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : S_CHAR_LEN);
+            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
         end
         else begin
-            bit_cnt  <= 0;
+            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
         end
     end
 end
