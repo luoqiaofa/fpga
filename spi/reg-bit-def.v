@@ -62,6 +62,7 @@ localparam SPCOM_RSKIP_LO    = 16;
 localparam SPCOM_TRANLEN_HI  = 15;
 localparam SPCOM_TRANLEN_LO  = 0;
 
+
 // 5. SPITF
 
 // 6. SPIRF
@@ -83,6 +84,20 @@ localparam CSMODE_CSAFT_HI  = 11;
 localparam CSMODE_CSAFT_LO  = 8;
 localparam CSMODE_CSCG_HI   = 7;
 localparam CSMODE_CSCG_LO   = 3;
+
+// num bits define
+localparam NUM_BITS_TXTHR   = SPMODE_TXTHR_HI - SPMODE_TXTHR_LO + 1;
+localparam NUM_BITS_RXTHR   = SPMODE_RXTHR_HI - SPMODE_RXTHR_LO + 1;
+localparam NUM_BITS_RXCNT   = SPIE_RXCNT_HI - SPIE_RXCNT_LO + 1;
+localparam NUM_BITS_TXCNT   = SPIE_TXCNT_HI - SPIE_TXCNT_LO + 1;
+localparam NUM_BITS_CS      = SPCOM_CS_HI - SPCOM_CS_HI + 1;
+localparam NUM_BITS_RSKIP   = SPCOM_RSKIP_HI - SPCOM_RSKIP_HI + 1;
+localparam NUM_BITS_TRANLEN = SPCOM_TRANLEN_HI - SPCOM_TRANLEN_HI + 1;
+localparam NUM_BITS_PM      = CSMODE_PM_HI - CSMODE_PM_LO + 1;
+localparam NUM_BITS_CHARLEN = CSMODE_LEN_HI - CSMODE_LEN_LO + 1;
+localparam NUM_BITS_CSBEF   = CSMODE_CSBEF_HI - CSMODE_CSBEF_LO + 1;
+localparam NUM_BITS_CSAFT   = CSMODE_CSAFT_HI - CSMODE_CSAFT_LO + 1;
+localparam NUM_BITS_CSCG    = CSMODE_CSCG_HI - CSMODE_CSCG_LO + 1;
 
 // defaut register value
 localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO)|(15 << SPMODE_RXTHR_LO)|(1 << SPMODE_MASTER);

@@ -118,18 +118,27 @@ wire [9:0] brg_divider;
 
 reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_trx_char;
 reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] char_trx_idx;
+// one word is 32 bit. half word is 16 bit
+wire [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_spitf_trx;
+reg  [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_spitf_upd;
+wire TXE; // Tx FIFO empty flag;
+wire TXF; // Tx FIFO full flag;
 
 reg [1:0] cs_idx;
-reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_idx;
+reg [4:0] spitf_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1 
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
-wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_trx_idx;
+wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] spitf_trx_idx;
 //  char offset in spitf
-wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO + 1:0] spitf_trx_char_off;
+wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] spitf_trx_char_off;
 
-assign spitf_trx_idx = CSMODE_LEN > 7 ? char_trx_idx[7:1] : char_trx_idx[8:2];
-assign spitf_trx_char_off = CSMODE_LEN > 7 ? {6'h00, char_trx_idx[0]}:{5'h00, char_trx_idx[1:0]};
+assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[6:1] : char_trx_idx[7:2];
+assign spitf_trx_char_off = CSMODE_LEN > 7 ? {5'b00, char_trx_idx[0]}:{4'h0, char_trx_idx[1:0]};
 assign SPITF = SPI_TXFIFO[spitf_trx_idx];
+// Tx FIFO is empty or not
+assign num_spitf_trx = CSMODE_LEN > 7 ?  {1'b0, char_trx_idx[15:1]} : {2'b00, char_trx_idx[15:2]};
+assign TXE = (num_spitf_trx == num_spitf_upd) ? 1'b1: 1'b0;
+assign TXF = (num_spitf_upd - num_spitf_trx) == NUM_TX_FIFO ? 1'b1: 1'b0;
 
 reg spcom_updated;
 reg spitf_updated;
@@ -271,6 +280,21 @@ begin
     end
 end
 
+always @(negedge chr_done)
+begin
+    if (frame_in_process) begin
+        case(frame_state)
+            FRAME_SM_IN_TRANS:
+            begin
+                if (TXE) begin
+                    frame_state <= FRAME_SM_DATA_WAIT;
+                end
+            end
+            default:;
+        endcase
+    end
+end
+
 wire brg_out_second_edge;
 assign brg_out_second_edge = CSMODE[CSMODE_CPOL] ? brg_pos_edge: brg_neg_edge;
 always @(negedge brg_out_second_edge)
@@ -284,7 +308,6 @@ begin
                     chr_done <= 1;
                     char_trx_idx <= char_trx_idx + 1;
                     if (char_trx_idx == SPCOM_TRANLEN) begin
-                        char_trx_idx <= 0;
                         frame_state <= FRAME_SM_AFT_WAIT;
                     end
                     else begin
@@ -297,7 +320,7 @@ begin
                     chr_done <= 1;
                     char_trx_idx <= char_trx_idx + 1;
                     if (char_trx_idx == SPCOM_TRANLEN) begin
-                        char_trx_idx <= 0;
+                        // char_trx_idx <= 0;
                         frame_state <= FRAME_SM_AFT_WAIT;
                     end
                     else begin
@@ -343,11 +366,22 @@ begin
                 cnt_csbef <= cnt_csbef - 1;
             end
             else begin
+                if (TXE) begin
+                    frame_state <= FRAME_SM_DATA_WAIT;
+                end
+                else begin
+                    frame_state <= FRAME_SM_IN_TRANS;
+                    chr_go <= 1;
+                end
+            end
+        end
+        FRAME_SM_DATA_WAIT:
+        begin
+            if (!TXE) begin
                 frame_state <= FRAME_SM_IN_TRANS;
                 chr_go <= 1;
             end
         end
-        FRAME_SM_DATA_WAIT:;
         FRAME_SM_IN_TRANS:;
         FRAME_SM_AFT_WAIT:
         begin
@@ -403,6 +437,10 @@ end
 
 always @(posedge frame_in_process)
 begin
+    char_trx_idx <= 0;
+    spitf_idx <= 0;
+    num_spitf_upd <= 0;
+
     spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin
         cnt_csbef <= CSMODE_CSBEF - 1;
@@ -447,6 +485,7 @@ begin
 
         char_trx_idx <= 0;
         num_trx_char <= 0;
+        num_spitf_upd <= 0;
     end
     else begin
         chr_go <= 0;
@@ -463,7 +502,7 @@ begin
     if (SPMODE[SPMODE_EN]) begin
         spi_brg_go <= 1;
         frame_in_process <= 1;
-        if (&cnt_cscg) begin
+        if (|cnt_cscg) begin
             frame_state <= FRAME_SM_CG_WAIT;
         end
         else begin
@@ -478,10 +517,10 @@ end
 always @(negedge spitf_updated)
 begin
     if (CSMODE_LEN > 7) begin
-        num_trx_char <= {spitf_idx[15:0], 1'b0};
+        num_trx_char <= {10'h000, spitf_idx, 1'b0};
     end
     else begin
-        num_trx_char <= {spitf_idx[14:0], 2'b00};
+        num_trx_char <= {9'h000, spitf_idx, 2'b00};
     end
     if (!frame_in_process) begin
         char_trx_idx   <= 0;
@@ -585,20 +624,24 @@ begin
                 ADDR_SPIM[7:2]: SPIM <= S_WDATA;
                 ADDR_SPCOM[7:2]:
                 begin
-                    SPCOM <= S_WDATA;
-                    spcom_updated <= 1;
-                    if (!frame_in_process & SPMODE[SPMODE_EN]) begin
-                        if (SPCOM_CS != S_WDATA[SPCOM_CS_HI:SPCOM_CS_LO]) begin
-                            spi_brg_go <= 0;
+                    if (!frame_in_process) begin
+                        SPCOM <= S_WDATA;
+                        spcom_updated <= 1;
+                        if (SPMODE[SPMODE_EN]) begin
+                            if (SPCOM_CS != S_WDATA[SPCOM_CS_HI:SPCOM_CS_LO]) begin
+                                spi_brg_go <= 0;
+                            end
                         end
                     end
                 end
                 ADDR_SPITF[7:2]:
                 begin
-                    spitf_updated <= 1;
-                    SPI_TXFIFO[spitf_idx] <= S_WDATA;
-                    spitf_idx = spitf_idx + 1;
-
+                    if (!TXF) begin
+                        spitf_updated <= 1;
+                        SPI_TXFIFO[spitf_idx] <= S_WDATA;
+                        spitf_idx <= spitf_idx + 1;
+                        num_spitf_upd <= num_spitf_upd  + 1;
+                    end
                 end
                 ADDR_SPIRF[7:2]: ; // read only for SPIRF
                 ADDR_SPMODE0[7:2], ADDR_SPMODE0[7:2], ADDR_SPMODE2[7:2], ADDR_SPMODE3[7:2]:

@@ -68,10 +68,6 @@ begin
     // #50
     enable       <= 0;   // module enable
     #15000;
-    rst_n       <= 0;
-
-    #2000
-    $stop;
 end
 
 reg [REG_WIDTH-1: 0] SPMODE;
@@ -128,18 +124,18 @@ begin
     #100;
     SPMODE[SPMODE_EN] <= 1;
     SPIE    <= 32'hFFFF_FFFF;
-    SPMODE0[CSMODE_DIV16] <= 1'b1;
-    SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h0;
+    SPMODE0[CSMODE_DIV16] <= 1'b0;
+    SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h3;
     SPMODE0[CSMODE_CPOL]  <= 1'b0;
     SPMODE0[CSMODE_CPHA]  <= 1'b1;
     SPMODE0[CSMODE_REV]   <= 1'b0;
-    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'hf;
+    SPMODE0[CSMODE_LEN_HI: CSMODE_LEN_LO] <= 4'h7;
     SPMODE0[CSMODE_CSBEF_HI:CSMODE_CSBEF_LO] <= 4'h3;
     SPMODE0[CSMODE_CSAFT_HI:CSMODE_CSAFT_LO] <= 4'h5;
     SPMODE0[CSMODE_CSCG_HI:CSMODE_CSCG_LO] <= 4'h4;
     SPITF   <= 32'h0403_0201;
     SPCOM   <= 32'h0003_0006;
-    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 15'h0001;
+    SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO] <= 16'h0006;
     #10;
     // SPMODE0[CSMODE_CSCG_HI : CSMODE_CSCG_LO] <= 3;
 
@@ -196,12 +192,12 @@ begin
     S_AWVALID <= 0;
     #10;
 
-    S_AWADDR <= ADDR_SPITF;
-    S_WDATA <= SPITF;
-    #10;
-    S_WVALID <= 1;
-    S_AWVALID <= 1;
-    #50;
+    // S_AWADDR <= ADDR_SPITF;
+    // S_WDATA <= SPITF;
+    // #10;
+    // S_WVALID <= 1;
+    // S_AWVALID <= 1;
+    // #50;
     S_WVALID <= 0;
     S_AWVALID <= 0;
     #10;
@@ -216,7 +212,7 @@ begin
     SPITF   <= 32'h1122_3344;
     #10;
 
-    #15000;
+    #150000;
     SPMODE[SPMODE_EN] <= 0;
     #10;
     S_WVALID <= 0;
@@ -228,10 +224,28 @@ begin
     S_WVALID <= 1;
     S_AWVALID <= 1;
     #500;
-
+    rst_n <= 0;
+    #500;
+    $stop;
 end
+
 initial begin
-    #4500;
+    #9045;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    S_AWADDR <= ADDR_SPITF;
+    S_WDATA <= 32'h12345678;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #50;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+end
+
+initial begin
+    #3000;
     S_AWADDR <= ADDR_SPITF;
     S_WDATA <= SPITF;
     #10;
