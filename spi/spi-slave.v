@@ -99,14 +99,12 @@ begin
                     if (0 == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= shift_rx;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= shift_rx;
                     end
                 end
             end
@@ -116,22 +114,33 @@ begin
                     if (0 == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= {shift_rx[32:1], S_SPI_MOSI};
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        if (S_CHAR_LEN > 7) begin
-                            data_in[15:0] <= shift_rx;
-                        end
-                        else begin
-                            data_in[7:0] <= shift_rx[7:0];
-                        end
                     end
                 end
             end
+        endcase
+    end
+end
+
+always @(posedge done)
+begin
+    if (S_CHAR_LEN > 7) begin
+        case (char_idx[0])
+            0 : data_in[15:0]  <= shift_rx;
+            1 : data_in[31:16] <= shift_rx;
+        endcase
+    end
+    else begin
+        case (char_idx[0])
+            0 : data_in[7:0]   <= shift_rx;
+            1 : data_in[15:8]  <= shift_rx;
+            2 : data_in[23:16] <= shift_rx;
+            3 : data_in[31:24] <= shift_rx;
         endcase
     end
 end
@@ -158,14 +167,12 @@ begin
                     if (0 == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= shift_rx;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= shift_rx;
                     end
                 end
             end
@@ -175,20 +182,12 @@ begin
                     if (0 == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        data_in <= {shift_rx[32:1], S_SPI_MOSI};
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
                         char_idx <= char_idx + 1;
-                        if (S_CHAR_LEN > 7) begin
-                            data_in[15:0] <= shift_rx;
-                        end
-                        else begin
-                            data_in[7:0] <= shift_rx[7:0];
-                        end
-
                     end
                 end
             end

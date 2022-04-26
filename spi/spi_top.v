@@ -155,7 +155,7 @@ wire t_spi_mosi;
 
 wire i_spi_miso;
 wire o_spi_miso;
-wire t_spi_miso_oen;
+wire t_spi_miso;
 
 wire i_spi_sck;
 wire o_spi_sck;
