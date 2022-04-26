@@ -302,7 +302,7 @@ begin
     if (CSMODE[CSMODE_CPHA])
     begin
         if (FRAME_SM_IN_TRANS == frame_state) begin
-            data_rx[char_bit_cnt] <= i_spi_miso;
+            data_rx[char_bit_cnt] <= SPMODE[SPMODE_LOOP]? o_spi_mosi : i_spi_miso;
             if (CSMODE[CSMODE_REV]) begin
                 if (0 == char_bit_cnt) begin
                     chr_done <= 1;
@@ -430,7 +430,7 @@ begin
     end
     else begin
         if (FRAME_SM_IN_TRANS == frame_state) begin
-            data_rx[char_bit_cnt] <= i_spi_miso;
+            data_rx[char_bit_cnt] <= SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
         end
     end
 end

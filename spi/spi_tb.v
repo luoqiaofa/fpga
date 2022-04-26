@@ -123,6 +123,7 @@ begin
     S_BREADY <= 0;
     #100;
     SPMODE[SPMODE_EN] <= 1;
+    SPMODE[SPMODE_LOOP] <= 1;
     SPIE    <= 32'hFFFF_FFFF;
     SPMODE0[CSMODE_DIV16] <= 1'b0;
     SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h3;
