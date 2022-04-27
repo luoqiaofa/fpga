@@ -28,11 +28,11 @@ module spi_intface # (parameter NCS = 4)
 );
 `include "reg-bit-def.v"
 `include "const.v"
-localparam NBYTES_TXFIFO     = 1 << NBITS_TXCNT;
-localparam NBYTES_RXFIFO     = 1 << NBITS_RXCNT;
-localparam NCHAR_PER_WORD    = (NBITS_PER_WORD / NBITS_CHAR_LEN_MAX);
-localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NCHAR_PER_WORD;
-localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NCHAR_PER_WORD;
+localparam NBYTES_TXFIFO     = 1 << (NBITS_TXCNT - 1);
+localparam NBYTES_RXFIFO     = 1 << (NBITS_RXCNT - 1);
+localparam NBYTES_PER_WORD   = (NBITS_PER_WORD / NBITS_PER_BYTE);
+localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
+localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
 localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO);
 localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO);
 
@@ -40,11 +40,11 @@ reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
 reg [31: 0] SPIM;
 reg [31: 0] SPCOM;
-wire [31: 0] SPITF;
+reg [31: 0] SPITF;
 reg [31: 0] SPIRF;
 reg [31: 0] CSX_SPMODE[0:NCS-1];
-reg [31: 0] SPI_TXFIFO[0:NBYTES_TXFIFO-1];
-reg [31: 0] SPI_RXFIFO[0:NBYTES_RXFIFO-1];
+reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
+reg [31: 0] SPI_RXFIFO[0:NWORD_RXFIFO-1];
 
 integer idx;
 reg spmodex_updated;
@@ -121,29 +121,47 @@ wire brg_neg_edge;
 wire [4:0] csmode_pm;
 wire [9:0] brg_divider;
 
-reg [NBITS_TRANLEN-1:0] num_trx_char;
+wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
 reg [NBITS_TRANLEN-1:0] char_trx_idx;
 // one word is 32 bit. half word is 16 bit
-wire [NBITS_TRANLEN-1:0] num_spitf_trx;
 reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
+wire [NBITS_TRANLEN-1:0] num_spitf_trx;
 wire TXE; // Tx FIFO empty flag;
-wire TXF; // Tx FIFO full flag;
+wire TNF; // Tx FIFO full flag;
+wire TXT; // Tx FIFO has less than TXTHR bytes, that is, at most TXTHR - 1 bytes
 
 reg [1:0] cs_idx;
-reg [4:0] spitf_idx;
+reg [NBITS_WORD_TXFIFO-1:0] spitf_idx;
+reg [NBITS_WORD_RXFIFO-1:0] spirf_wr_idx;
+reg [NBITS_WORD_RXFIFO-1:0] spirf_rd_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
 wire [NBITS_TXTHR-1:0] spitf_trx_idx;
 //  char offset in spitf
 wire [NBITS_TXTHR-1:0] spitf_trx_char_off;
+wire [NBITS_TRANLEN-1:0] num_bytes_to_mosi;
+wire [NBITS_TRANLEN-1:0] nbytes_need_tx;
+wire [NBITS_TRANLEN-1:0] TXCNT;
 
 assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[6:1] : char_trx_idx[7:2];
 assign spitf_trx_char_off = CSMODE_LEN > 7 ? {5'b00, char_trx_idx[0]}:{4'h0, char_trx_idx[1:0]};
-assign SPITF = SPI_TXFIFO[spitf_trx_idx];
 // Tx FIFO is empty or not
+assign num_bytes_to_mosi = CSMODE_LEN > 7 ? {char_trx_idx[NBITS_TRANLEN-2:0], 1'b0} : char_trx_idx;
+
+wire [NBITS_TRANLEN-1:0] nbytes_word_aligned_trx;
+wire [NBITS_TRANLEN-1:0] nword_need_tx_in_fifo;
+assign nbytes_word_aligned_trx = (num_bytes_to_mosi + 3) & {{(NBITS_TRANLEN-2){1'b1}}, 2'b00};
 assign num_spitf_trx = CSMODE_LEN > 7 ?  {1'b0, char_trx_idx[15:1]} : {2'b00, char_trx_idx[15:2]};
+
+// 4 bytes per word
+assign nbytes_to_spitf = {num_spitf_upd[NBITS_TRANLEN-3:0], 2'b00};
+assign nbytes_need_tx = nbytes_to_spitf - num_bytes_to_mosi;
+assign nword_need_tx_in_fifo = {2'b00, nbytes_need_tx[NBITS_TRANLEN-2:2]};
 assign TXE = (num_spitf_trx == num_spitf_upd) ? 1'b1: 1'b0;
-assign TXF = (num_spitf_upd - num_spitf_trx) == NBYTES_TXFIFO ? 1'b1: 1'b0;
+assign TXCNT = NBYTES_TXFIFO - nbytes_need_tx;
+// assign TNF = TXCNT > 0 ? 1'b1: 1'b0;
+assign TNF = TXCNT > (NBYTES_PER_WORD - 1) ? 1'b1 : 1'b0;
+assign TXT = nbytes_need_tx < SPMODE_TXTHR ? 1'b1 : 1'b0;
 
 reg spcom_updated;
 reg spitf_updated;
@@ -395,6 +413,7 @@ begin
             end
             else begin
                 frame_in_process <= 0;
+                SPIE[SPIE_DON] = 1'b1;
                 frame_state <= FRAME_SM_CG_WAIT;
                 spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b1 : 1'b0;
             end
@@ -445,6 +464,7 @@ begin
     char_trx_idx <= 0;
     spitf_idx <= 0;
     num_spitf_upd <= 0;
+    SPITF <= SPI_TXFIFO[0];
 
     spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin
@@ -487,10 +507,12 @@ begin
         spitf_updated <= 0;
         spirf_updated <= 0;
         spitf_idx <= 0;
+        spirf_rd_idx <= 0;
+        spirf_wr_idx <= 0;
 
         char_trx_idx <= 0;
-        num_trx_char <= 0;
         num_spitf_upd <= 0;
+        SPITF <= 0;
     end
     else begin
         chr_go <= 0;
@@ -499,6 +521,7 @@ begin
         spcom_updated <= 0;
         spitf_updated <= 0;
         spirf_updated <= 0;
+        SPITF <= SPI_TXFIFO[spitf_trx_idx];
     end
 end
 
@@ -521,12 +544,6 @@ end
 
 always @(negedge spitf_updated)
 begin
-    if (CSMODE_LEN > 7) begin
-        num_trx_char <= {10'h000, spitf_idx, 1'b0};
-    end
-    else begin
-        num_trx_char <= {9'h000, spitf_idx, 2'b00};
-    end
     if (!frame_in_process) begin
         char_trx_idx   <= 0;
     end
@@ -560,11 +577,11 @@ begin
         frame_in_process <= 0;
         frame_state <= FRAME_SM_IDLE;
 
-        for (byte_index = 0; byte_index < NBYTES_TXFIFO; byte_index = byte_index + 1)
+        for (byte_index = 0; byte_index < NWORD_TXFIFO; byte_index = byte_index + 1)
         begin
             SPI_TXFIFO[byte_index] <= 0;
         end
-        for (byte_index = 0; byte_index < NBYTES_RXFIFO; byte_index = byte_index + 1)
+        for (byte_index = 0; byte_index < NWORD_TXFIFO; byte_index = byte_index + 1)
         begin
             SPI_RXFIFO[byte_index] <= 0;
         end
@@ -641,7 +658,8 @@ begin
                 end
                 ADDR_SPITF[7:2]:
                 begin
-                    if (!TXF) begin
+                    // if (TNF) 
+                    begin
                         spitf_updated <= 1;
                         SPI_TXFIFO[spitf_idx] <= S_WDATA;
                         spitf_idx <= spitf_idx + 1;
