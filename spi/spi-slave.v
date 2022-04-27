@@ -9,8 +9,8 @@ module spi_slave_trx_char
     input  wire        S_REV,     // msb first or lsb first
     input  wire [3:0]  S_CHAR_LEN,// characters in bits length
     output wire        S_CHAR_DONE,
-    input  wire [CHAR_NBITS-1:0] S_WCHAR,   // output character, output to SPI_MISO
-    output wire [CHAR_NBITS-1:0] S_RCHAR,   // output character, read from SPI_MOSI
+    input  wire [31:0] S_WCHAR,   // output character, output to SPI_MISO
+    output wire [31:0] S_RCHAR,   // output character, read from SPI_MOSI
     input  wire        S_SPI_CS,  // chip select, low active
     input  wire        S_SPI_SCK,
     output wire        S_SPI_MISO,
@@ -21,11 +21,11 @@ localparam MAX_BITNO_OF_CHAR = 4'hf;
 
 reg done;
 wire slave_active;
-reg [CHAR_NBITS - 1: 0] data_in;
+reg [31: 0] data_in;
 reg [3:0] bit_cnt;
 reg [1:0] char_idx;
-reg [15 : 0] shift_tx;
-reg [15 : 0] shift_rx;
+reg [NBITS_CHAR_LEN_MAX-1 : 0] shift_tx;
+reg [NBITS_CHAR_LEN_MAX-1 : 0] shift_rx;
 wire [1:0] spi_mode;
 wire pos_edge; // positive edge flag
 wire neg_edge; // negtive edge flag

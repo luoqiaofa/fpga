@@ -28,8 +28,8 @@ wire irq;
 /* pullup pullup_miso (SPI_MISO); */
 
 wire s_done;
-wire  [CHAR_LEN_MAX -1:0] data_rx;
-reg   [CHAR_LEN_MAX -1:0] data_tx;
+wire  [NBITS_CHAR_LEN_MAX-1:0] data_rx;
+reg   [NBITS_CHAR_LEN_MAX-1:0] data_tx;
 
 // 100 MHz axi clock input
 always @(sysclk)
@@ -286,10 +286,10 @@ spi_master
     .S_SPI_SEL(SPI_CS_B)
 );
 
-wire [CHAR_LEN_MAX-1:0] slv_data_rx;
+wire [31: 0] slv_data_rx;
 wire slv_done;
 
-spi_slave_trx_char #(.CHAR_NBITS(CHAR_LEN_MAX))
+spi_slave_trx_char #(.CHAR_NBITS(32))
 inst_spi_slv_trx
 (
     .S_SYSCLK(sysclk),           // platform clock

@@ -28,8 +28,13 @@ module spi_intface # (parameter NCS = 4)
 );
 `include "reg-bit-def.v"
 `include "const.v"
-localparam NUM_TX_FIFO = 32;
-localparam NUM_RX_FIFO = 32;
+localparam NUM_TX_FIFO     = 32;
+localparam NUM_RX_FIFO     = 32;
+localparam NCHAR_PER_WORD  = (NBITS_PER_WORD / NBITS_CHAR_LEN_MAX);
+localparam NUM_WORD_TXFIFO = NUM_TX_FIFO / NCHAR_PER_WORD;
+localparam NUM_WORD_RXFIFO = NUM_TX_FIFO / NCHAR_PER_WORD;
+localparam NBITS_WORD_TXFIFO = clogb2 (NUM_WORD_TXFIFO);
+localparam NBITS_WORD_RXFIFO = clogb2 (NUM_WORD_RXFIFO);
 
 reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
