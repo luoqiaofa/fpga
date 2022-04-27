@@ -50,28 +50,28 @@ integer idx;
 reg spmodex_updated;
 reg [31: 0]  spmode_x;
 wire [31: 0] CSMODE;
-wire [CSMODE_PM_HI  - CSMODE_PM_LO  :0]    CSMODE_PM;
-wire [CSMODE_LEN_HI - CSMODE_LEN_LO :0]    CSMODE_LEN;
-wire [CSMODE_CSBEF_HI-CSMODE_CSBEF_LO:0]   CSMODE_CSBEF;
-wire [CSMODE_CSAFT_HI-CSMODE_CSAFT_LO:0]   CSMODE_CSAFT;
-wire [CSMODE_CSCG_HI -CSMODE_CSCG_LO :0]   CSMODE_CSCG;
-wire [SPCOM_CS_HI-SPCOM_CS_LO : 0]         SPCOM_CS;
-wire [SPCOM_RSKIP_HI-SPCOM_RSKIP_LO:0]     SPCOM_RSKIP;
-wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0]   SPMODE_TXTHR;
-wire [SPMODE_RXTHR_HI-SPMODE_RXTHR_LO:0]   SPMODE_RXTHR;
-wire [SPIE_RXCNT_HI-SPIE_RXCNT_LO:0]       SPIE_RXCNT;
-wire [SPIE_TXCNT_HI-SPIE_TXCNT_LO:0]       SPIE_TXCNT;
-wire [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] SPCOM_TRANLEN;
+wire [NBITS_PM-1:0]    CSMODE_PM;
+wire [NBITS_CHARLEN-1:0]    CSMODE_LEN;
+wire [NBITS_CSBEF-1:0]   CSMODE_CSBEF;
+wire [NBITS_CSAFT-1:0]   CSMODE_CSAFT;
+wire [NBITS_CSCG-1:0]   CSMODE_CSCG;
+wire [NBITS_CS-1: 0]         SPCOM_CS;
+wire [NBITS_RSKIP-1:0]     SPCOM_RSKIP;
+wire [NBITS_TXTHR-1:0]   SPMODE_TXTHR;
+wire [NBITS_RXTHR-1:0]   SPMODE_RXTHR;
+wire [NBITS_RXCNT-1:0]       SPIE_RXCNT;
+wire [NBITS_TXCNT-1:0]       SPIE_TXCNT;
+wire [NBITS_TRANLEN-1:0] SPCOM_TRANLEN;
 
-reg [CSMODE_CSBEF_HI-CSMODE_CSBEF_LO:0]   cnt_csbef;
-reg [CSMODE_CSAFT_HI-CSMODE_CSAFT_LO:0]   cnt_csaft;
+reg [NBITS_CSBEF-1:0]   cnt_csbef;
+reg [NBITS_CSAFT-1:0]   cnt_csaft;
 reg [CSMODE_CSCG_HI -CSMODE_CSCG_LO+1:0]  cnt_cscg;
-reg [SPCOM_RSKIP_HI-SPCOM_RSKIP_LO:0]     cnt_rskip;
-reg [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0]   cnt_txthr;
-reg [SPMODE_RXTHR_HI-SPMODE_RXTHR_LO:0]   cnt_rxthr;
-reg [SPIE_RXCNT_HI-SPIE_RXCNT_LO:0]       cnt_rxcnt;
-reg [SPIE_TXCNT_HI-SPIE_TXCNT_LO:0]       cnt_txcnt;
-reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] cnt_trans;
+reg [NBITS_RSKIP-1:0]     cnt_rskip;
+reg [NBITS_TXTHR-1:0]   cnt_txthr;
+reg [NBITS_RXTHR-1:0]   cnt_rxthr;
+reg [NBITS_RXCNT-1:0]       cnt_rxcnt;
+reg [NBITS_TXCNT-1:0]       cnt_txcnt;
+reg [NBITS_TRANLEN-1:0] cnt_trans;
 
 reg [NCS-1:0] spi_sel;
 
@@ -121,11 +121,11 @@ wire brg_neg_edge;
 wire [4:0] csmode_pm;
 wire [9:0] brg_divider;
 
-reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_trx_char;
-reg [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] char_trx_idx;
+reg [NBITS_TRANLEN-1:0] num_trx_char;
+reg [NBITS_TRANLEN-1:0] char_trx_idx;
 // one word is 32 bit. half word is 16 bit
-wire [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_spitf_trx;
-reg  [SPCOM_TRANLEN_HI-SPCOM_TRANLEN_LO:0] num_spitf_upd;
+wire [NBITS_TRANLEN-1:0] num_spitf_trx;
+reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
 wire TXE; // Tx FIFO empty flag;
 wire TXF; // Tx FIFO full flag;
 
@@ -133,9 +133,9 @@ reg [1:0] cs_idx;
 reg [4:0] spitf_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1 
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
-wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] spitf_trx_idx;
+wire [NBITS_TXTHR-1:0] spitf_trx_idx;
 //  char offset in spitf
-wire [SPMODE_TXTHR_HI-SPMODE_TXTHR_LO:0] spitf_trx_char_off;
+wire [NBITS_TXTHR-1:0] spitf_trx_char_off;
 
 assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[6:1] : char_trx_idx[7:2];
 assign spitf_trx_char_off = CSMODE_LEN > 7 ? {5'b00, char_trx_idx[0]}:{4'h0, char_trx_idx[1:0]};
