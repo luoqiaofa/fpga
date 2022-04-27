@@ -28,13 +28,13 @@ module spi_intface # (parameter NCS = 4)
 );
 `include "reg-bit-def.v"
 `include "const.v"
-localparam NUM_TX_FIFO     = 32;
-localparam NUM_RX_FIFO     = 32;
-localparam NCHAR_PER_WORD  = (NBITS_PER_WORD / NBITS_CHAR_LEN_MAX);
-localparam NUM_WORD_TXFIFO = NUM_TX_FIFO / NCHAR_PER_WORD;
-localparam NUM_WORD_RXFIFO = NUM_TX_FIFO / NCHAR_PER_WORD;
-localparam NBITS_WORD_TXFIFO = clogb2 (NUM_WORD_TXFIFO);
-localparam NBITS_WORD_RXFIFO = clogb2 (NUM_WORD_RXFIFO);
+localparam NBYTES_TXFIFO     = 1 << NBITS_TXCNT;
+localparam NBYTES_RXFIFO     = 1 << NBITS_RXCNT;
+localparam NCHAR_PER_WORD    = (NBITS_PER_WORD / NBITS_CHAR_LEN_MAX);
+localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NCHAR_PER_WORD;
+localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NCHAR_PER_WORD;
+localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO);
+localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO);
 
 reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
@@ -43,8 +43,8 @@ reg [31: 0] SPCOM;
 wire [31: 0] SPITF;
 reg [31: 0] SPIRF;
 reg [31: 0] CSX_SPMODE[0:NCS-1];
-reg [31: 0] SPI_TXFIFO[0:NUM_TX_FIFO-1];
-reg [31: 0] SPI_RXFIFO[0:NUM_RX_FIFO-1];
+reg [31: 0] SPI_TXFIFO[0:NBYTES_TXFIFO-1];
+reg [31: 0] SPI_RXFIFO[0:NBYTES_RXFIFO-1];
 
 integer idx;
 reg spmodex_updated;
@@ -131,7 +131,7 @@ wire TXF; // Tx FIFO full flag;
 
 reg [1:0] cs_idx;
 reg [4:0] spitf_idx;
-// if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1 
+// if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
 wire [NBITS_TXTHR-1:0] spitf_trx_idx;
 //  char offset in spitf
@@ -143,7 +143,7 @@ assign SPITF = SPI_TXFIFO[spitf_trx_idx];
 // Tx FIFO is empty or not
 assign num_spitf_trx = CSMODE_LEN > 7 ?  {1'b0, char_trx_idx[15:1]} : {2'b00, char_trx_idx[15:2]};
 assign TXE = (num_spitf_trx == num_spitf_upd) ? 1'b1: 1'b0;
-assign TXF = (num_spitf_upd - num_spitf_trx) == NUM_TX_FIFO ? 1'b1: 1'b0;
+assign TXF = (num_spitf_upd - num_spitf_trx) == NBYTES_TXFIFO ? 1'b1: 1'b0;
 
 reg spcom_updated;
 reg spitf_updated;
@@ -560,11 +560,11 @@ begin
         frame_in_process <= 0;
         frame_state <= FRAME_SM_IDLE;
 
-        for (byte_index = 0; byte_index < NUM_TX_FIFO; byte_index = byte_index + 1) 
+        for (byte_index = 0; byte_index < NBYTES_TXFIFO; byte_index = byte_index + 1)
         begin
             SPI_TXFIFO[byte_index] <= 0;
         end
-        for (byte_index = 0; byte_index < NUM_RX_FIFO; byte_index = byte_index + 1) 
+        for (byte_index = 0; byte_index < NBYTES_RXFIFO; byte_index = byte_index + 1)
         begin
             SPI_RXFIFO[byte_index] <= 0;
         end
