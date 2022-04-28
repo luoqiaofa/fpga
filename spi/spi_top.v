@@ -167,7 +167,6 @@ assign TXT = nbytes_need_tx < SPMODE_TXTHR ? 1'b1 : 1'b0;
 
 assign char_rx_idx = char_trx_idx < SPCOM_RSKIP ? 0 : char_trx_idx - SPCOM_RSKIP;
 wire   [NBITS_TRANLEN-1:0] nbytes_rx_from_miso;
-wire   [NBITS_TRANLEN-1:0] nbytes_need_rd_in_rxfifo;
 wire   [NBITS_TRANLEN-1:0] nbytes_valid_in_rxfifo;
 wire   RNE;   // Not empty. Indicates that the Rx FIFO register contains a received character.
 wire   RXT;   // Rx FIFO has more than RXTHR bytes, that is, at least RXTHR + 1 bytes
@@ -1015,10 +1014,10 @@ begin
                 begin
                     if (RNE) begin
                         rdata <= SPI_RXFIFO[spirf_rd_idx];
-                        if (nbytes_need_rd_in_rxfifo < NBYTES_PER_WORD) begin
+                        if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
                             spirf_rd_idx <= 0;
                             spirf_char_idx <= 0;
-                            nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_need_rd_in_rxfifo;
+                            nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
                         end
                         else begin
                             spirf_rd_idx <= spirf_rd_idx + 1;
