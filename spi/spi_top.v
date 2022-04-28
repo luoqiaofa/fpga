@@ -39,7 +39,7 @@ reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
 reg [31: 0] SPIM;
 reg [31: 0] SPCOM;
-reg [31: 0] SPITF;
+wire [31: 0] SPITF;
 reg [31: 0] SPIRF;
 reg [31: 0] CSX_SPMODE[0:NCS-1];
 reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
@@ -55,9 +55,9 @@ wire [NBITS_CSBEF-1:0]      CSMODE_CSBEF;
 wire [NBITS_CSAFT-1:0]      CSMODE_CSAFT;
 wire [NBITS_CSCG-1:0]       CSMODE_CSCG;
 wire [NBITS_CS-1: 0]        SPCOM_CS;
-wire [NBITS_RSKIP-1:0]      SPCOM_RSKIP;
-wire [NBITS_TXTHR-1:0]      SPMODE_TXTHR;
-wire [NBITS_RXTHR-1:0]      SPMODE_RXTHR;
+wire [NBITS_TRANLEN-1:0]    SPCOM_RSKIP;
+wire [NBITS_TRANLEN-1:0]    SPMODE_TXTHR;
+wire [NBITS_TRANLEN-1:0]    SPMODE_RXTHR;
 wire [NBITS_RXCNT-1:0]      SPIE_RXCNT;
 wire [NBITS_TXCNT-1:0]      SPIE_TXCNT;
 wire [NBITS_TRANLEN-1:0]    SPCOM_TRANLEN;
@@ -121,7 +121,8 @@ wire [4:0] csmode_pm;
 wire [9:0] brg_divider;
 
 wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
-reg [NBITS_TRANLEN-1:0] char_trx_idx;
+reg [NBITS_TRANLEN-1:0]  char_trx_idx;
+wire [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
 // one word is 32 bit. half word is 16 bit
 reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
 wire [NBITS_TRANLEN-1:0] num_spitf_trx;
@@ -130,9 +131,10 @@ wire TNF; // Tx FIFO full flag;
 wire TXT; // Tx FIFO has less than TXTHR bytes, that is, at most TXTHR - 1 bytes
 
 reg [1:0] cs_idx;
-reg [NBITS_WORD_TXFIFO-1:0] spitf_idx;
-reg [NBITS_WORD_RXFIFO-1:0] spirf_wr_idx;
-reg [NBITS_WORD_RXFIFO-1:0] spirf_rd_idx;
+reg [NBITS_WORD_TXFIFO-1:0]  spitf_idx;
+wire [NBITS_WORD_RXFIFO-1:0] spirf_wr_idx; // rx data to spirf(rx fifo)
+reg [NBITS_WORD_RXFIFO-1:0]  spirf_char_idx; // char offset from miso to spirf(rx fifo)
+reg [NBITS_WORD_RXFIFO-1:0]  spirf_rd_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
 wire [NBITS_TXTHR-1:0] spitf_trx_idx;
@@ -141,7 +143,7 @@ wire [NBITS_TXTHR-1:0] spitf_trx_char_off;
 wire [NBITS_TRANLEN-1:0] num_bytes_to_mosi;
 wire [NBITS_TRANLEN-1:0] nbytes_need_tx;
 wire [NBITS_TRANLEN-1:0] TXCNT;
-
+assign SPITF = SPI_TXFIFO[spitf_trx_idx];
 assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[6:1] : char_trx_idx[7:2];
 assign spitf_trx_char_off = CSMODE_LEN > 7 ? {5'b00, char_trx_idx[0]}:{4'h0, char_trx_idx[1:0]};
 // Tx FIFO is empty or not
@@ -161,6 +163,23 @@ assign TXCNT = NBYTES_TXFIFO - nbytes_need_tx;
 // assign TNF = TXCNT > 0 ? 1'b1: 1'b0;
 assign TNF = TXCNT > (NBYTES_PER_WORD - 1) ? 1'b1 : 1'b0;
 assign TXT = nbytes_need_tx < SPMODE_TXTHR ? 1'b1 : 1'b0;
+
+assign char_rx_idx = char_trx_idx < SPCOM_RSKIP ? 0 : char_trx_idx - SPCOM_RSKIP;
+wire   [NBITS_TRANLEN-1:0] nbytes_rx_from_miso;
+wire   [NBITS_TRANLEN-1:0] nbytes_need_rd_in_rxfifo;
+wire   [NBITS_TRANLEN-1:0] nbytes_valid_in_rxfifo;
+wire   RNE;   // Not empty. Indicates that the Rx FIFO register contains a received character.
+wire   RXT;   // Rx FIFO has more than RXTHR bytes, that is, at least RXTHR + 1 bytes
+wire   RXF;   // Rx FIFO is full
+wire   [NBITS_TRANLEN-1:0] RXCNT; // The current number of free Tx FIFO bytes
+reg    [NBITS_TRANLEN-1:0] nbytes_read_from_spirf;
+assign nbytes_rx_from_miso = CSMODE_LEN > 7 ? {char_rx_idx[NBITS_TRANLEN-1:1], 1'b0} : char_rx_idx;
+assign nbytes_valid_in_rxfifo = nbytes_rx_from_miso - nbytes_read_from_spirf;
+assign spirf_wr_idx = CSMODE_LEN > 7 ? spirf_char_idx >> 1 : spirf_char_idx >> 2;
+assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
+assign RXF   = NBYTES_RXFIFO == nbytes_valid_in_rxfifo ? 1'b1 : 1'b0;
+assign RXT   = nbytes_valid_in_rxfifo > SPMODE_RXTHR ? 1'b1 : 1'b0;
+assign RXCNT = nbytes_valid_in_rxfifo;
 
 reg spcom_updated;
 reg spitf_updated;
@@ -231,11 +250,11 @@ end
 endgenerate
 
 assign SPCOM_CS     = SPCOM[SPCOM_CS_HI: SPCOM_CS_LO];
-assign SPCOM_RSKIP  = SPCOM[SPCOM_RSKIP_HI:SPCOM_RSKIP_LO];
+assign SPCOM_RSKIP  = {{(NBITS_TRANLEN-NBITS_RSKIP){1'b0}}, SPCOM[SPCOM_RSKIP_HI:SPCOM_RSKIP_LO]};
 assign SPCOM_TRANLEN= SPCOM[SPCOM_TRANLEN_HI:SPCOM_TRANLEN_LO];
 
-assign SPMODE_TXTHR = SPCOM[SPMODE_TXTHR_HI:SPMODE_TXTHR_LO];
-assign SPMODE_RXTHR = SPCOM[SPMODE_RXTHR_HI:SPMODE_RXTHR_LO];
+assign SPMODE_TXTHR = {{(NBITS_TRANLEN-NBITS_TXTHR){1'b0}},SPCOM[SPMODE_TXTHR_HI:SPMODE_TXTHR_LO]};
+assign SPMODE_RXTHR = {{(NBITS_TRANLEN-NBITS_RXTHR){1'b0}},SPCOM[SPMODE_RXTHR_HI:SPMODE_RXTHR_LO]};
 assign SPIE_RXCNT   = SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO];
 assign SPIE_TXCNT   = SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO];
 
@@ -463,7 +482,6 @@ begin
     char_trx_idx <= 0;
     spitf_idx <= 0;
     num_spitf_upd <= 0;
-    SPITF <= SPI_TXFIFO[0];
 
     spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin
@@ -507,11 +525,13 @@ begin
         spirf_updated <= 0;
         spitf_idx <= 0;
         spirf_rd_idx <= 0;
-        spirf_wr_idx <= 0;
 
         char_trx_idx <= 0;
         num_spitf_upd <= 0;
-        SPITF <= 0;
+
+        spirf_rd_idx <= 0;
+        spirf_char_idx <= 0;
+        nbytes_read_from_spirf <= 0;
     end
     else begin
         chr_go <= 0;
@@ -520,7 +540,6 @@ begin
         spcom_updated <= 0;
         spitf_updated <= 0;
         spirf_updated <= 0;
-        SPITF <= SPI_TXFIFO[spitf_trx_idx];
     end
 end
 
