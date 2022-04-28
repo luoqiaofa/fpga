@@ -23,7 +23,7 @@ localparam ADDR_SPMODE3      = 8'h2c;
 // 1. SPMODE
 localparam SPMODE_EN         = 31;
 localparam SPMODE_LOOP       = 30;
-localparam SPMODE_MASTER     = 29;
+localparam SPMODE_SLAVE      = 29;
 localparam SPMODE_HO_ADJ_HI  = 18; // reserved
 localparam SPMODE_HO_ADJ_LO  = 16; // reserved
 localparam SPMODE_TXTHR_HI   = 13;
@@ -103,7 +103,7 @@ localparam NBITS_CSAFT      = CSMODE_CSAFT_HI - CSMODE_CSAFT_LO + 1;
 localparam NBITS_CSCG       = CSMODE_CSCG_HI - CSMODE_CSCG_LO + 1;
 
 // defaut register value
-localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO)|(15 << SPMODE_RXTHR_LO)|(1 << SPMODE_MASTER);
+localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO)|(15 << SPMODE_RXTHR_LO);
 localparam SPIE_DEF         = 32 << SPIE_TXCNT_LO;
 localparam SPIM_DEF         = 32'h0000_0000;
 localparam SPCOM_DEF        = 32'h0000_0000;

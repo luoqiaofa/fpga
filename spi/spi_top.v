@@ -206,9 +206,9 @@ wire t_spi_sck;
 
 wire din;
 
-assign t_spi_sck  = !SPMODE[SPMODE_MASTER];
-assign t_spi_mosi = !SPMODE[SPMODE_MASTER];
-assign t_spi_miso =  SPMODE[SPMODE_MASTER];
+assign t_spi_sck  = SPMODE[SPMODE_SLAVE];
+assign t_spi_mosi = SPMODE[SPMODE_SLAVE];
+assign t_spi_miso = !SPMODE[SPMODE_SLAVE];
 assign o_spi_sck  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
 assign o_spi_mosi = shift_tx[char_bit_cnt];
 
@@ -251,7 +251,7 @@ assign o_spi_sel = spi_sel;
 genvar var_cs;
 generate for (var_cs = 0; var_cs < NCS; var_cs = var_cs + 1)
 begin : gen_spi_cs
-    assign t_spi_sel[var_cs] = !SPMODE[SPMODE_MASTER];
+    assign t_spi_sel[var_cs] = SPMODE[SPMODE_SLAVE];
 end
 endgenerate
 
