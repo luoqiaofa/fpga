@@ -45,13 +45,13 @@ localparam SPIE_RNE          = 9;
 localparam SPIE_TNF          = 8;
 
 // 3. SPIM
-localparam SPIM_TXE          = 15;
-localparam SPIM_DON          = 14;
-localparam SPIM_RXT          = 13;
-localparam SPIM_RXF          = 12;
-localparam SPIM_TXT          = 11;
-localparam SPIM_RNE          = 9;
-localparam SPIM_TNF          = 8;
+localparam SPIM_TXE          = SPIE_TXE;
+localparam SPIM_DON          = SPIE_DON;
+localparam SPIM_RXT          = SPIE_RXT;
+localparam SPIM_RXF          = SPIE_RXF;
+localparam SPIM_TXT          = SPIE_TXT;
+localparam SPIM_RNE          = SPIE_RNE;
+localparam SPIM_TNF          = SPIE_TNF;
 
 // 4. SPCOM
 localparam SPCOM_CS_HI       = 31;
