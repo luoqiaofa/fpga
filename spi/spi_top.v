@@ -690,12 +690,11 @@ begin
         spcom_updated <= 0;
         spitf_updated <= 0;
         spirf_updated <= 0;
-        spitf_idx <= 0;
-        spirf_rd_idx <= 0;
 
         char_trx_idx <= 0;
         num_spitf_upd <= 0;
 
+        spitf_idx <= 0;
         spirf_rd_idx <= 0;
         spirf_char_idx <= 0;
         nbytes_read_from_spirf <= 0;
@@ -758,7 +757,7 @@ begin
     if (!S_RESETN)
     begin
         rrvalid <= 0;
-        arready <= 0;
+        arready <= 1;
         rresp   <= 2'b00;
         reg_data_out <= 0;
         cs_idx <= 0;
@@ -1006,7 +1005,32 @@ begin
         // output the read dada
         if (slv_reg_rden)
         begin
-            rdata <= reg_data_out;     // register read data
+            case (S_ARADDR)
+                ADDR_SPIE:
+                begin
+                    rdata <= SPIE;     // register read data
+                end
+
+                ADDR_SPIRF:
+                begin
+                    if (RNE) begin
+                        rdata <= SPI_RXFIFO[spirf_rd_idx];
+                        if (nbytes_need_rd_in_rxfifo < NBYTES_PER_WORD) begin
+                            spirf_rd_idx <= 0;
+                            spirf_char_idx <= 0;
+                            nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_need_rd_in_rxfifo;
+                        end
+                        else begin
+                            spirf_rd_idx <= spirf_rd_idx + 1;
+                            nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
+                        end
+                end
+                else begin
+                    rdata <= 0;
+                end
+                end
+                default: rdata <= 0;
+            endcase
         end
     end
 end

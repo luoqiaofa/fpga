@@ -323,5 +323,51 @@ inst_spi_slv_trx
     .S_RCHAR(slv_data_rx)          // input character
 );
 
+reg [3:0]  state;
+localparam SM_IDLE      = 0;
+localparam SM_RD_SPIE   = 1;
+localparam SM_RD_SPIRF  = 2;
+always @(posedge sysclk, negedge rst_n)
+begin
+    if (!rst_n) begin
+        state <= SM_IDLE;
+        S_ARADDR <= ADDR_SPIE;
+    end
+    if (rst_n) begin
+        S_ARVALID <= 1;
+        // S_BREADY <= 1;
+        S_RREADY <= 1;
+    end
+end
+
+reg [31:0] data_read;
+always @(posedge S_RVALID, negedge rst_n)
+begin
+    if (!rst_n) begin
+        data_read <= 0;
+    end
+    else begin
+        case (state)
+            SM_IDLE: state <= SM_RD_SPIE;
+            SM_RD_SPIE:
+            begin
+                data_read <= S_RDATA;
+                if (data_read[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > (NBYTES_PER_WORD - 1))
+                begin
+                    state <= SM_RD_SPIRF;
+                    S_ARADDR <= ADDR_SPIRF;
+                end
+            end
+            SM_RD_SPIRF:
+            begin
+                data_read <= S_RDATA;
+                state <= SM_RD_SPIE;
+                S_ARADDR <= ADDR_SPIE;
+            end
+            default:;
+        endcase
+    end
+end
+
 endmodule
 
