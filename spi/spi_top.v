@@ -117,8 +117,9 @@ reg  spi_brg_go;
 wire brg_clk;
 wire brg_pos_edge;
 wire brg_neg_edge;
-wire [4:0] csmode_pm;
-wire [9:0] brg_divider;
+localparam NBITS_BRG_DIVIDER = NBITS_PM + 4 + 2;
+wire [NBITS_BRG_DIVIDER-1:0] csmode_pm;
+wire [NBITS_BRG_DIVIDER-1:0] brg_divider;
 
 wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
 reg [NBITS_TRANLEN-1:0]  char_trx_idx;
@@ -265,8 +266,9 @@ assign CSMODE_CSBEF = CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
 assign CSMODE_CSAFT = CSMODE[CSMODE_CSAFT_HI: CSMODE_CSAFT_LO];
 assign CSMODE_CSCG  = CSMODE[CSMODE_CSCG_HI : CSMODE_CSCG_LO];
 
-assign csmode_pm   = {1'b0, CSMODE_PM} + 1;
-assign brg_divider = CSMODE[CSMODE_DIV16] ? {1'b0, csmode_pm, 4'h0}-1 : {4'h0, csmode_pm, 1'b0}-1;
+assign csmode_pm   = {{(NBITS_BRG_DIVIDER-NBITS_PM){1'b0}}, CSMODE_PM} + 1;
+assign brg_divider = CSMODE[CSMODE_DIV16] ? (csmode_pm << 4)-1 : csmode_pm-1;
+// assign brg_divider = {{(NBITS_BRG_DIVIDER-4){1'b0}}, 4'h3};
 
 assign S_AWREADY = awready;
 assign S_WREADY  = wready;
@@ -832,14 +834,14 @@ begin
     end
 end
 
-spi_clk_gen # (.C_DIVIDER_WIDTH(8)) spi_brg (
+spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .sysclk(S_SYSCLK),           // system clock input
     .rst_n(S_RESETN),            // module reset
     .enable(SPMODE[SPMODE_EN]),  // module enable
     .go(spi_brg_go),                 // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(brg_last_clk),     // last clock
-    .divider_i(brg_divider[7:0]),     // divider;
+    .divider_i(brg_divider),     // divider;
     .clk_out(brg_clk),           // clock output
     .pos_edge(brg_pos_edge),     // positive edge flag
     .neg_edge(brg_neg_edge)      // negtive edge flag

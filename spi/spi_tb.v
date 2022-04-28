@@ -126,7 +126,7 @@ begin
     SPMODE[SPMODE_LOOP] <= 0;
     SPIE    <= 32'hFFFF_FFFF;
     SPMODE0[CSMODE_DIV16] <= 1'b0;
-    SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h3;
+    SPMODE0[CSMODE_PM_HI:CSMODE_PM_LO] <= 4'h2;
     SPMODE0[CSMODE_CPOL]  <= 1'b0;
     SPMODE0[CSMODE_CPHA]  <= 1'b1;
     SPMODE0[CSMODE_REV]   <= 1'b1;
@@ -231,7 +231,7 @@ begin
 end
 
 initial begin
-    #9045;
+    #3545;
     S_WVALID <= 0;
     S_AWVALID <= 0;
     S_AWADDR <= ADDR_SPITF;
@@ -246,7 +246,7 @@ initial begin
 end
 
 initial begin
-    #3000;
+    #905;
     S_AWADDR <= ADDR_SPITF;
     S_WDATA <= SPITF;
     #10;
