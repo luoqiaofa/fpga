@@ -181,6 +181,8 @@ assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
 assign RXF   = NBYTES_RXFIFO == nbytes_valid_in_rxfifo ? 1'b1 : 1'b0;
 assign RXT   = nbytes_valid_in_rxfifo > SPMODE_RXTHR ? 1'b1 : 1'b0;
 assign RXCNT = nbytes_valid_in_rxfifo;
+wire   [31:0] SPIRF_WR;
+assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
 
 reg spcom_updated;
 reg spitf_updated;
@@ -203,11 +205,15 @@ wire i_spi_sck;
 wire o_spi_sck;
 wire t_spi_sck;
 
+wire din;
+
 assign t_spi_sck  = !SPMODE[SPMODE_MASTER];
 assign t_spi_mosi = !SPMODE[SPMODE_MASTER];
 assign t_spi_miso =  SPMODE[SPMODE_MASTER];
 assign o_spi_sck  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
 assign o_spi_mosi = shift_tx[char_bit_cnt];
+
+assign din = SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
 
 wire [NCS-1:0] i_spi_sel;
 wire [NCS-1:0] o_spi_sel;
@@ -323,6 +329,157 @@ begin
     end
 end
 
+always @(posedge chr_done)
+begin
+    if (CSMODE[CSMODE_CPHA]) begin
+        if (CSMODE_LEN > 7) begin // occupy two bytes(16 bit)
+            if (spirf_char_idx[0]) begin
+                SPIRF <= SPIRF_WR[15:0];
+                if (CSMODE[CSMODE_REV]) begin
+                    SPIRF[31:16] <= {data_rx[15:1], din};
+                end
+                else begin
+                    SPIRF[CSMODE_LEN + 16] <= din;
+                    for(idx = 0; idx < 16; idx = idx + 1) begin
+                        if (idx < CSMODE_LEN) begin
+                            SPIRF[idx + 16] <= data_rx[idx];
+                        end
+                    end
+                end
+            end
+            else begin
+                SPIRF[31:16] <= 16'h0000;
+                if (CSMODE[CSMODE_REV]) begin
+                    SPIRF[15:0] <= {data_rx[15:1], din};
+                end
+                else begin
+                    SPIRF[CSMODE_LEN] <= din;
+                    for(idx = 0; idx < 16; idx = idx + 1) begin
+                        if (idx < CSMODE_LEN) begin
+                            SPIRF[idx] <= data_rx[idx];
+                        end
+                    end
+                end
+            end
+        end
+        else begin // occupy two bytes(8 bit)
+            if (CSMODE[CSMODE_REV]) begin
+                case(spirf_char_idx[1:0])
+                    0 :
+                    begin
+                        SPIRF[31:8] <= 24'h000000;
+                        SPIRF[7:0]  <= {data_rx[7:1], din};
+                    end
+                    1 :
+                    begin
+                        SPIRF[7:0]   <= SPIRF_WR[7:0];
+                        SPIRF[15:8]  <= {data_rx[7:1], din};
+                        SPIRF[31:16] <= 16'h0000;
+                    end
+                    2 :
+                    begin
+                        SPIRF[15:0]  <= SPIRF_WR[15:0];
+                        SPIRF[23:16] <= {data_rx[7:1], din};
+                        SPIRF[31:24] <= 8'h00;
+                    end
+                    3 :
+                    begin
+                        SPIRF[23:0]  <= SPIRF_WR[24:0];
+                        SPIRF[31:24] <= {data_rx[7:1], din};
+                    end
+                endcase
+            end
+            else begin /* CSMODE_REV = 0 */
+                case(spirf_char_idx[1:0])
+                    0 :
+                    begin
+                        SPIRF[31:8] <= 24'h000000;
+                        SPIRF[CSMODE_LEN] <= din;
+                        for (idx = 0; idx < 8; idx = idx + 1) begin
+                            SPIRF[idx] <= din;
+                        end
+                    end
+                    1 :
+                    begin
+                        SPIRF[7:0]   <= SPIRF_WR[7:0];
+                        SPIRF[31:16] <= 16'h0000;
+                        SPIRF[8+CSMODE_LEN] <= din;
+                        for (idx = 0; idx < 8; idx = idx + 1) begin
+                            SPIRF[8+idx] <= din;
+                        end
+                    end
+                    2 :
+                    begin
+                        SPIRF[15:0]  <= SPIRF_WR[15:0];
+                        SPIRF[16+CSMODE_LEN] <= din;
+                        for (idx = 0; idx < 8; idx = idx + 1) begin
+                            SPIRF[16+idx] <= din;
+                        end
+                        SPIRF[31:24] <= 8'h00;
+                    end
+                    3 :
+                    begin
+                        SPIRF[23:0]  <= SPIRF_WR[24:0];
+                        SPIRF[24+CSMODE_LEN] <= din;
+                        for (idx = 0; idx < 8; idx = idx + 1) begin
+                            SPIRF[24+idx] <= din;
+                        end
+                    end
+                endcase
+            end
+        end
+    end
+    else begin /* CP=0 full char received from din */
+        if (CSMODE_LEN > 7) begin
+            if (spirf_char_idx[0]) begin
+                SPIRF[15:0]  <= SPIRF_WR[15:0];
+                SPIRF[31:16] <= data_rx;
+            end
+            else begin
+                SPIRF[31:16] <= 16'h0000;
+                SPIRF[15:0]  <= data_rx;
+            end
+        end
+        else begin
+            case(spirf_char_idx[1:0])
+                0 :
+                begin
+                    SPIRF[31:8] <= 24'h000000;
+                    SPIRF[7:0]  <= data_rx[7:0];
+                end
+                1 :
+                begin
+                    SPIRF[7:0]   <= SPIRF_WR[7:0];
+                    SPIRF[15:8]  <= data_rx[7:0];
+                    SPIRF[31:16] <= 16'h0000;
+                end
+                2 :
+                begin
+                    SPIRF[15:0]  <= SPIRF_WR[15:0];
+                    SPIRF[23:16] <= data_rx[7:0];
+                    SPIRF[31:24] <= 8'h00;
+                end
+                3 :
+                begin
+                    SPIRF[23:0]  <= SPIRF_WR[24:0];
+                    SPIRF[31:24] <= data_rx[7:0];
+                end
+            endcase
+        end
+    end
+end
+
+always @(negedge chr_done)
+begin
+    if (char_rx_idx > 0) begin
+        SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
+        spirf_char_idx <= spirf_char_idx + 1;
+    end
+    else begin
+        spirf_char_idx <= 0;
+    end
+end
+
 always @(negedge chr_done)
 begin
     if (frame_in_process) begin
@@ -345,7 +502,7 @@ begin
     if (CSMODE[CSMODE_CPHA])
     begin
         if (FRAME_SM_IN_TRANS == frame_state) begin
-            data_rx[char_bit_cnt] <= SPMODE[SPMODE_LOOP]? o_spi_mosi : i_spi_miso;
+            data_rx[char_bit_cnt] <= din;
             if (CSMODE[CSMODE_REV]) begin
                 if (0 == char_bit_cnt) begin
                     chr_done <= 1;
@@ -474,7 +631,7 @@ begin
     end
     else begin
         if (FRAME_SM_IN_TRANS == frame_state) begin
-            data_rx[char_bit_cnt] <= SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
+            data_rx[char_bit_cnt] <= din;
         end
     end
 end
@@ -678,7 +835,7 @@ begin
                 end
                 ADDR_SPITF[7:2]:
                 begin
-                    // if (TNF) 
+                    // if (TNF)
                     begin
                         spitf_updated <= 1;
                         SPI_TXFIFO[spitf_idx] <= S_WDATA;
