@@ -257,6 +257,21 @@ initial begin
     S_AWVALID <= 0;
     #10;
 end
+
+initial begin
+    #3000;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    S_AWADDR <= ADDR_SPIE;
+    S_WDATA <= 32'hffff_ffff;
+    #10;
+    S_WVALID <= 1;
+    S_AWVALID <= 1;
+    #20;
+    S_WVALID <= 0;
+    S_AWVALID <= 0;
+    #10;
+end
 // /*
 spi_intface # (.NCS(4))
 spi_master
