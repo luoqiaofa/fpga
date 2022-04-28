@@ -30,7 +30,6 @@ module spi_intface # (parameter NCS = 4)
 `include "const.v"
 localparam NBYTES_TXFIFO     = 1 << (NBITS_TXCNT - 1);
 localparam NBYTES_RXFIFO     = 1 << (NBITS_RXCNT - 1);
-localparam NBYTES_PER_WORD   = (NBITS_PER_WORD / NBITS_PER_BYTE);
 localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
 localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
 localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO);
