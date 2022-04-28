@@ -347,12 +347,16 @@ begin
         data_read <= 0;
     end
     else begin
+        if (S_RREADY)
+            S_RREADY <= 0;
+        else
+            S_RREADY <= 1;
         case (state)
             SM_IDLE: state <= SM_RD_SPIE;
             SM_RD_SPIE:
             begin
                 data_read <= S_RDATA;
-                if (data_read[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > (NBYTES_PER_WORD - 1))
+                if (S_RDATA[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > (NBYTES_PER_WORD - 1))
                 begin
                     state <= SM_RD_SPIRF;
                     S_ARADDR <= ADDR_SPIRF;
