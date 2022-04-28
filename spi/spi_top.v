@@ -396,7 +396,9 @@ begin
                         SPIRF[31:8] <= 24'h000000;
                         SPIRF[CSMODE_LEN] <= din;
                         for (idx = 0; idx < 8; idx = idx + 1) begin
-                            SPIRF[idx] <= din;
+                            if (idx < CSMODE_LEN) begin
+                                SPIRF[idx] <= data_rx[idx];
+                            end
                         end
                     end
                     1 :
@@ -405,7 +407,9 @@ begin
                         SPIRF[31:16] <= 16'h0000;
                         SPIRF[8+CSMODE_LEN] <= din;
                         for (idx = 0; idx < 8; idx = idx + 1) begin
-                            SPIRF[8+idx] <= din;
+                            if (idx < CSMODE_LEN) begin
+                                SPIRF[8+idx] <= data_rx[idx];
+                            end
                         end
                     end
                     2 :
@@ -413,7 +417,9 @@ begin
                         SPIRF[15:0]  <= SPIRF_WR[15:0];
                         SPIRF[16+CSMODE_LEN] <= din;
                         for (idx = 0; idx < 8; idx = idx + 1) begin
-                            SPIRF[16+idx] <= din;
+                            if (idx < CSMODE_LEN) begin
+                                SPIRF[16+idx] <= data_rx[idx];
+                            end
                         end
                         SPIRF[31:24] <= 8'h00;
                     end
@@ -422,7 +428,9 @@ begin
                         SPIRF[23:0]  <= SPIRF_WR[24:0];
                         SPIRF[24+CSMODE_LEN] <= din;
                         for (idx = 0; idx < 8; idx = idx + 1) begin
-                            SPIRF[24+idx] <= din;
+                            if (idx < CSMODE_LEN) begin
+                                SPIRF[24+idx] <= data_rx[idx];
+                            end
                         end
                     end
                 endcase
@@ -699,6 +707,15 @@ begin
         spcom_updated <= 0;
         spitf_updated <= 0;
         spirf_updated <= 0;
+
+        SPIE[SPIE_TXE] <= TXE;
+        SPIE[SPIE_TNF] <= TNF;
+        SPIE[SPIE_TXT] <= TXT;
+        SPIE[SPIE_RNE] <= RNE;
+        SPIE[SPIE_RXF] <= RXF;
+        SPIE[SPIE_RXT] <= RXT;
+        SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] <= RXCNT[NBITS_RXCNT-1: 0];
+        SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO] <= TXCNT[NBITS_TXCNT-1: 0];
     end
 end
 
@@ -815,11 +832,14 @@ begin
                 case (awaddr[7:2])
                     ADDR_SPMODE : SPMODE[31:0] <= S_WDATA;
                 ADDR_SPIE[7:2]:
-                    for (idx = SPIE_TXT; idx <= SPIE_TXE; idx = idx + 1) begin
+                begin
+                    // SPIE <= S_WDATA;
+                    for (idx = 0; idx < NBITS_PER_WORD; idx = idx + 1) begin
                         if (S_WDATA[idx]) begin
                             SPIE[idx] <= 1'b0;
                         end
                     end
+                end
                 ADDR_SPIM[7:2]: SPIM <= S_WDATA;
                 ADDR_SPCOM[7:2]:
                 begin
