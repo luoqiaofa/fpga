@@ -31,6 +31,7 @@ begin
     if (enable) begin
         in_process <= 1;
         cnt <= divider_i;
+        clk_out <= CPOL;
     end
 end
 
@@ -42,6 +43,7 @@ begin
     end
     else begin
         if (!enable || cnt_zero || !is_active) begin
+            clk_out <= CPOL;
             cnt   <= divider_i;
         end
         else begin

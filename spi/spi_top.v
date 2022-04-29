@@ -91,8 +91,14 @@ reg [C_ADDR_WIDTH-1 : 0] awaddr;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
-reg chr_go;
-reg chr_done;
+reg  chr_go;
+wire char_go_posedge;
+wire char_go_negedge;
+wire char_go_dual_edge;
+reg  chr_done;
+wire char_done_posedge;
+wire char_done_negedge;
+wire char_done_dual_edge;
 
 localparam FRAME_SM_IDLE      = 0;
 localparam FRAME_SM_BEF_WAIT  = 1;
@@ -117,6 +123,9 @@ reg  spi_brg_go;
 wire brg_clk;
 wire brg_pos_edge;
 wire brg_neg_edge;
+wire brg_negedge_posedge;
+wire brg_negedge_negedge;
+wire brg_negedge_dualedge;
 localparam NBITS_BRG_DIVIDER = NBITS_PM + 4 + 2;
 wire [NBITS_BRG_DIVIDER-1:0] csmode_pm;
 wire [NBITS_BRG_DIVIDER-1:0] brg_divider;
@@ -186,6 +195,18 @@ assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
 reg spcom_updated;
 reg spitf_updated;
 reg spirf_updated;
+
+wire spcom_updated_posedge;
+wire spcom_updated_negedge;
+wire spcom_updated_duledge;
+
+wire spitf_updated_posedge;
+wire spitf_updated_negedge;
+wire spitf_updated_duledge;
+
+wire spirf_updated_posedge;
+wire spirf_updated_negedge;
+wire spirf_updated_duledge;
 
 integer byte_index;
 
@@ -272,8 +293,9 @@ begin
     end
 end
 
-always @(negedge chr_go)
+always @(posedge char_go_posedge)
 begin
+    chr_go <= 0;
     if (CSMODE[CSMODE_CPHA]) begin
         if (CSMODE[CSMODE_REV]) begin
             char_bit_cnt <= CSMODE_LEN + 1;
@@ -440,8 +462,9 @@ begin
     end
 end
 
-always @(negedge chr_done)
+always @(posedge char_done_posedge)
 begin
+    chr_done <= 0;
     if (char_rx_idx > 0) begin
         SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
         spirf_char_idx <= spirf_char_idx + 1;
@@ -456,7 +479,7 @@ begin
     end
 end
 
-always @(negedge chr_done)
+always @(posedge char_done_posedge)
 begin
     if (frame_in_process) begin
         case(frame_state)
@@ -472,8 +495,8 @@ begin
 end
 
 wire brg_out_second_edge;
-assign brg_out_second_edge = CSMODE[CSMODE_CPOL] ? brg_pos_edge: brg_neg_edge;
-always @(negedge brg_out_second_edge)
+assign brg_out_second_edge = CSMODE[CSMODE_CPOL] ? brg_clk: brg_negedge_posedge;
+always @(posedge brg_out_second_edge)
 begin
     if (CSMODE[CSMODE_CPHA])
     begin
@@ -591,8 +614,8 @@ begin
 end
 
 wire brg_out_first_edge;
-assign brg_out_first_edge = CSMODE[CSMODE_CPOL] ? brg_neg_edge : brg_pos_edge;
-always @(negedge brg_out_first_edge)
+assign brg_out_first_edge = CSMODE[CSMODE_CPOL] ? brg_negedge_posedge : brg_clk;
+always @(posedge brg_out_first_edge)
 begin
     if (CSMODE[CSMODE_CPHA])
     begin
@@ -673,8 +696,6 @@ begin
         t_spi_mosi <= 0;
     end
     else begin
-        chr_go <= 0;
-        chr_done <= 0;
 
         spcom_updated <= 0;
         spitf_updated <= 0;
@@ -691,7 +712,7 @@ begin
     end
 end
 
-always @(negedge spcom_updated)
+always @(posedge spcom_updated_posedge)
 begin
     if (SPMODE[SPMODE_EN]) begin
         spi_brg_go <= 1;
@@ -708,7 +729,7 @@ begin
     end
 end
 
-always @(negedge spitf_updated)
+always @(posedge spitf_updated_posedge)
 begin
     if (!frame_in_process) begin
         char_trx_idx   <= 0;
@@ -1019,6 +1040,60 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .clk_out(brg_clk),           // clock output
     .pos_edge(brg_pos_edge),     // positive edge flag
     .neg_edge(brg_neg_edge)      // negtive edge flag
+);
+
+Edge_Detect char_go_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(chr_go)    ,
+    .pos_edge(char_go_posedge) ,
+    .neg_edge(char_go_negedge) ,
+    .data_edge(char_go_dual_edge)
+);
+
+Edge_Detect char_done_dual_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(chr_done)    ,
+    .pos_edge(char_done_posedge) ,
+    .neg_edge(char_done_negedge) ,
+    .data_edge(char_done_dual_edge)
+);
+
+Edge_Detect spcom_upd_dual_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(spcom_updated)    ,
+    .pos_edge(spcom_updated_posedge) ,
+    .neg_edge(spcom_updated_negedge) ,
+    .data_edge(spcom_updated_duledge)
+);
+
+Edge_Detect spitf_upd_dual_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(spitf_updated)    ,
+    .pos_edge(spitf_updated_posedge) ,
+    .neg_edge(spitf_updated_negedge) ,
+    .data_edge(spitf_updated_duledge)
+);
+
+Edge_Detect spirf_upd_dual_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(spirf_updated)    ,
+    .pos_edge(spirf_updated_posedge) ,
+    .neg_edge(spirf_updated_negedge) ,
+    .data_edge(spirf_updated_duledge)
+);
+
+Edge_Detect brg_clk_negedge_dual_det(
+    .clk_i(S_SYSCLK)    ,
+    .rst_n_i(S_RESETN)  ,
+    .dat_i(brg_neg_edge)    ,
+    .pos_edge(brg_negedge_posedge) ,
+    .neg_edge(brg_negedge_negedge) ,
+    .data_edge(brg_negedge_dualedge)
 );
 
 endmodule
