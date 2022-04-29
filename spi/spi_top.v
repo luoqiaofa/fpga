@@ -118,7 +118,6 @@ wire [15:0] shift_tx;
 
 assign shift_tx = data_tx;
 
-reg  brg_last_clk;
 reg  spi_brg_go;
 wire brg_clk;
 wire brg_pos_edge;
@@ -696,7 +695,6 @@ begin
         t_spi_mosi <= 0;
     end
     else begin
-
         spcom_updated <= 0;
         spitf_updated <= 0;
         spirf_updated <= 0;
@@ -733,16 +731,6 @@ always @(posedge spitf_updated_posedge)
 begin
     if (!frame_in_process) begin
         char_trx_idx   <= 0;
-    end
-end
-
-always @(negedge SPMODE[SPMODE_EN] or negedge S_RESETN)
-begin
-    if (!S_RESETN) begin
-        brg_last_clk <= 0;
-    end
-    else begin
-        brg_last_clk <= 1;
     end
 end
 
@@ -1035,7 +1023,7 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .enable(SPMODE[SPMODE_EN]),  // module enable
     .go(spi_brg_go),                 // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
-    .last_clk(brg_last_clk),     // last clock
+    .last_clk(1'b0),     // last clock
     .divider_i(brg_divider),     // divider;
     .clk_out(brg_clk),           // clock output
     .pos_edge(brg_pos_edge),     // positive edge flag
