@@ -58,8 +58,8 @@ localparam SPCOM_CS_HI       = 31;
 localparam SPCOM_CS_LO       = 30;
 localparam SPCOM_RXDLY       = 29; // reserved
 localparam SPCOM_DO          = 28;
-localparam SPCOM_RO          = 26; // Receive only
 localparam SPCOM_TO          = 27; // Transmit only
+localparam SPCOM_RO          = 26; // Receive only
 localparam SPCOM_RSKIP_HI    = 23; // number of chars need to be read skip
 localparam SPCOM_RSKIP_LO    = 16;
 localparam SPCOM_TRANLEN_HI  = 15;
@@ -77,7 +77,9 @@ localparam CSMODE_REV       = 29;
 localparam CSMODE_DIV16     = 28;
 localparam CSMODE_PM_HI     = 27;
 localparam CSMODE_PM_LO     = 24;
-localparam CSMODE_3WIRE     = 23;
+// read data from MOSI pin, some spi slave use one pin for rx and tx
+// that is sdio pin. at this time, RXSKIP must bigger than 0;
+localparam CSMODE_IS3WIRE   = 23;
 localparam CSMODE_POL       = 20;
 localparam CSMODE_LEN_HI    = 19;
 localparam CSMODE_LEN_LO    = 16;
