@@ -196,7 +196,7 @@ ESPI_SPCOM field descriptions
 | 25-24 |This field is reserved.                                                                                     |
 |       |Reserved, should be cleared.                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-| 23-16 |If (RXSKIP ≠ 0)-Number of characters skipped for reception from frame start.                                |
+| 23-16 |If (RXSKIP != 0)-Number of characters skipped for reception from frame start.                               |
 | RxSKIP|Non-zero values of RxSKIP force the eSPI to half-duplex mode, and therefore this causes TRANLEN-            |
 |       |RxSKIP characters to be skipped for transmission.                                                           |
 |       |RXSKIP is useful for reads of SPI flash memories where the first valid read data is received several        |
@@ -287,10 +287,10 @@ SPIRF Example - CSMODEx[LENx]=15:
 
 ESPI_SPIRF field descriptions
 +-------+------------------------------------------------------------------------------------------------------------+
-| Field  |Description                                                                                                 |
+| Field  |Description                                                                                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-| 31-0   |Varies as parameters set                                                                                    |
-| DATA   |                                                                                                            |
+| 31-0   |Varies as parameters set                                                                                   |
+| DATA   |                                                                                                           |
 +-------+------------------------------------------------------------------------------------------------------------+
 
 7 eSPI CS0 mode register (ESPI_SPMODE0)
@@ -329,7 +329,7 @@ ESPI_CSMODE field descriptions
 |       |NOTE: System clock as used here is defined to be platform clock divided by 2                                |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 23    | MISO and MISO use complex one pin, that is SDIO pin, for some slave device                                 |
-|IS3WIRE| Note: At this mode, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                             | 
+|IS3WIRE| Note: At this mode, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                             |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 22-21 |This field is reserved.                                                                                     |
 |       |Reserved                                                                                                    |
