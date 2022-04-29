@@ -43,14 +43,7 @@ ESPI_SPMODE field descriptions
 |       |     internally connected to the receiver input. The receiver and transmitter operate normally, except that |
 |       |     received data is ignored.                                                                              |
 +-------+------------------------------------------------------------------------------------------------------------+
-| 29-19 |This field is reserved.                                                                                     |
-|       |Reserved                                                                                                    |
-+-------+------------------------------------------------------------------------------------------------------------+
-| 18-16 |Reserved                                                                                                    |
-|       |                                                                                                            |
-|       |                                                                                                            |
-+-------+------------------------------------------------------------------------------------------------------------+
-| 15-14 |This field is reserved.                                                                                     |
+| 29-14 |This field is reserved.                                                                                     |
 |       |Reserved                                                                                                    |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 13-8  |Tx FIFO threshold-if Tx FIFO has less than TXTHR bytes, an interrupt can be issued to the core.             |

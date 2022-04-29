@@ -23,7 +23,7 @@ localparam ADDR_SPMODE3      = 8'h2c;
 // 1. SPMODE
 localparam SPMODE_EN         = 31;
 localparam SPMODE_LOOP       = 30;
-localparam SPMODE_SLAVE      = 29;
+localparam SPMODE_SLAVE      = 29; // reserved
 localparam SPMODE_HO_ADJ_HI  = 18; // reserved
 localparam SPMODE_HO_ADJ_LO  = 16; // reserved
 localparam SPMODE_TXTHR_HI   = 13;

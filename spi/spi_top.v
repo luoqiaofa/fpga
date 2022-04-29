@@ -21,10 +21,10 @@ module spi_intface # (parameter NCS = 4)
     output wire [1 : 0] S_BRESP,
     output wire [1 : 0] S_RRESP,
     output wire S_INTERRUPT,
-    inout  wire S_SPI_SCK,
-    inout  wire S_SPI_MISO,
+    output wire S_SPI_SCK,
+    input  wire S_SPI_MISO,
     inout  wire S_SPI_MOSI,
-    inout  wire [NCS-1:0] S_SPI_SEL
+    output wire [NCS-1:0] S_SPI_SEL
 );
 `include "reg-bit-def.v"
 `include "const.v"
@@ -122,7 +122,7 @@ wire [NBITS_BRG_DIVIDER-1:0] csmode_pm;
 wire [NBITS_BRG_DIVIDER-1:0] brg_divider;
 
 wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
-reg [NBITS_TRANLEN-1:0]  char_trx_idx;
+reg  [NBITS_TRANLEN-1:0] char_trx_idx;
 wire [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
 // one word is 32 bit. half word is 16 bit
 reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
@@ -194,43 +194,21 @@ wire slv_reg_wren;
 
 wire i_spi_mosi;
 wire o_spi_mosi;
-wire t_spi_mosi;
+reg  t_spi_mosi;
 
 wire i_spi_miso;
-wire o_spi_miso;
-wire t_spi_miso;
-
-wire i_spi_sck;
-wire o_spi_sck;
-wire t_spi_sck;
 
 wire din;
 
-assign t_spi_sck  = SPMODE[SPMODE_SLAVE];
-assign t_spi_mosi = SPMODE[SPMODE_SLAVE];
-assign t_spi_miso = !SPMODE[SPMODE_SLAVE];
-assign o_spi_sck  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
+pullup pullup_miso_i(i_spi_miso);
+pullup pullup_mosi_i(i_spi_mosi);
+
 assign o_spi_mosi = shift_tx[char_bit_cnt];
+assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
+assign S_SPI_SEL  = spi_sel;
 
+assign i_spi_miso = CSMODE[CSMODE_IS3WIRE] ? i_spi_mosi : S_SPI_MISO;
 assign din = SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
-
-wire [NCS-1:0] i_spi_sel;
-wire [NCS-1:0] o_spi_sel;
-wire [NCS-1:0] t_spi_sel;
-
-iobuf ioc_spi_sck(
-    .T(t_spi_sck),
-    .IO(S_SPI_SCK),
-    .I(o_spi_sck),
-    .O(i_spi_sck)
-);
-
-iobuf ioc_spi_miso(
-    .T(t_spi_miso),
-    .IO(S_SPI_MISO),
-    .I(o_spi_miso),
-    .O(i_spi_miso)
-);
 
 iobuf ioc_spi_mosi(
     .T(t_spi_mosi),
@@ -239,21 +217,7 @@ iobuf ioc_spi_mosi(
     .O(i_spi_mosi)
 );
 
-iosbuf #(.NUM_IO(NCS))iocs_spi_cs(
-    .Ts(t_spi_sel),
-    .IOs(S_SPI_SEL),
-    .Is(o_spi_sel),
-    .Os(i_spi_sel)
-);
-
 assign S_INTERRUPT = | (SPIM & SPIE);
-assign o_spi_sel = spi_sel;
-genvar var_cs;
-generate for (var_cs = 0; var_cs < NCS; var_cs = var_cs + 1)
-begin : gen_spi_cs
-    assign t_spi_sel[var_cs] = SPMODE[SPMODE_SLAVE];
-end
-endgenerate
 
 assign SPCOM_CS     = SPCOM[SPCOM_CS_HI: SPCOM_CS_LO];
 assign SPCOM_RSKIP  = {{(NBITS_TRANLEN-NBITS_RSKIP){1'b0}}, SPCOM[SPCOM_RSKIP_HI:SPCOM_RSKIP_LO]};
@@ -485,6 +449,11 @@ begin
     else begin
         spirf_char_idx <= 0;
     end
+    if (CSMODE[CSMODE_IS3WIRE]) begin
+        if ((SPCOM_RSKIP > 0) && (char_trx_idx == SPCOM_RSKIP)) begin
+            t_spi_mosi <= 1'b1; // change mosi pin as input
+        end
+    end
 end
 
 always @(negedge chr_done)
@@ -649,6 +618,9 @@ begin
     spitf_idx <= 0;
     num_spitf_upd <= 0;
 
+    // 0: MOSI pin as output; 1: MOSI is input;
+    t_spi_mosi <= SPMODE[SPMODE_SLAVE];
+
     spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin
         cnt_csbef <= CSMODE_CSBEF - 1;
@@ -697,6 +669,8 @@ begin
         spirf_rd_idx <= 0;
         spirf_char_idx <= 0;
         nbytes_read_from_spirf <= 0;
+
+        t_spi_mosi <= 0;
     end
     else begin
         chr_go <= 0;
