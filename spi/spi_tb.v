@@ -120,7 +120,7 @@ localparam CSAFT        = (5 << CSMODE_CSAFT_LO);
 localparam CSCG         = (4 << CSMODE_CSCG_LO);
 localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT | CSCG | CSPOL);
 
-localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN);
+localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN) | (1 << SPMODE_LOOP);
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_VAL    = 32'h0003_0006;

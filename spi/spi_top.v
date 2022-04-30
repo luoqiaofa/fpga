@@ -91,6 +91,7 @@ reg [C_ADDR_WIDTH-1 : 0] awaddr;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
+reg frame_done;
 reg  chr_go;
 wire char_go_posedge;
 wire char_go_negedge;
@@ -168,7 +169,7 @@ assign nbytes_to_spitf = {num_spitf_upd[NBITS_TRANLEN-3:0], 2'b00};
 assign nbytes_need_tx = nbytes_to_spitf - num_bytes_to_mosi;
 assign nword_need_tx_in_fifo = {2'b00, nbytes_need_tx[NBITS_TRANLEN-2:2]};
 assign TXE = (num_spitf_trx == num_spitf_upd) ? 1'b1: 1'b0;
-assign TXCNT = NBYTES_TXFIFO - nbytes_need_tx;
+assign TXCNT = num_spitf_upd > 0 ? NBYTES_TXFIFO - nbytes_need_tx : NBYTES_TXFIFO;
 // assign TNF = TXCNT > 0 ? 1'b1: 1'b0;
 assign TNF = TXCNT > (NBYTES_PER_WORD - 1) ? 1'b1 : 1'b0;
 assign TXT = nbytes_need_tx < SPMODE_TXTHR ? 1'b1 : 1'b0;
@@ -587,6 +588,7 @@ begin
                 cnt_csaft <= cnt_csaft - 1;
             end
             else begin
+                frame_done <= 1;
                 frame_in_process <= 0;
                 SPIE[SPIE_DON] = 1'b1;
                 frame_state <= FRAME_SM_CG_WAIT;
@@ -664,6 +666,13 @@ begin
         cnt_cscg  <= CSMODE_CSCG;
         frame_state <= FRAME_SM_BEF_WAIT;
     end
+end
+
+always @(posedge frame_done)
+begin
+    frame_done <= 0;
+    char_trx_idx <= 0;
+    num_spitf_upd <= 0;
 end
 
 // counter processing
@@ -748,6 +757,7 @@ begin
         chr_done <= 0;
         spi_brg_go <= 0;
         char_bit_cnt <= 0;
+        frame_done <= 0;
         frame_in_process <= 0;
         frame_state <= FRAME_SM_IDLE;
 
