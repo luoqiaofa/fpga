@@ -191,13 +191,20 @@ begin
     master.regwrite(ADDR_SPCOM, SPCOM_VAL, 2);
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
-    #2500;
+    
     master.regread(ADDR_SPIE, SPIE, 2);
+    while (~SPIE[SPIE_TXE]) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+    end
+    #500;
 
     master.regwrite(ADDR_SPITF, 32'h12345678, 2);
-    #2500;
 
     master.regread(ADDR_SPIE, SPIE, 2);
+    while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+    end
+    master.regread(ADDR_SPIRF, SPIRF, 2);
 
 end
 
