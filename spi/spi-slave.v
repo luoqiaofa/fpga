@@ -6,6 +6,7 @@ module spi_slave_trx_char
     input  wire        S_ENABLE,  // enable
     input  wire        S_CPOL,    // clock polary
     input  wire        S_CPHA,    // clock phase, the first edge or second
+    input  wire        S_CSPOL,   // cs polary
     input  wire        S_REV,     // msb first or lsb first
     input  wire [3:0]  S_CHAR_LEN,// characters in bits length
     output wire        S_CHAR_DONE,
@@ -36,7 +37,7 @@ assign S_RCHAR     = data_in;
 assign S_CHAR_DONE = done;
 assign spi_mode = {S_CPOL, S_CPHA};
 assign S_SPI_MISO        = shift_tx[bit_cnt];
-assign slave_active = (S_ENABLE && !S_SPI_CS);
+assign slave_active = S_CSPOL ? (S_ENABLE && ~S_SPI_CS) : (S_ENABLE && S_SPI_CS);
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
@@ -55,8 +56,6 @@ begin
         case (char_idx)
             0 : shift_tx <= S_WCHAR[15:0];
             1 : shift_tx <= S_WCHAR[31:16];
-            2 : shift_tx <= 16'h1234;
-            3 : shift_tx <= 16'h5678;
         endcase
         end
         else begin
@@ -98,13 +97,11 @@ begin
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
             end
@@ -113,13 +110,11 @@ begin
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
             end
@@ -166,13 +161,11 @@ begin
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
             end
@@ -181,13 +174,11 @@ begin
                 if (S_REV) begin
                     if (0 == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
                 else begin
                     if (S_CHAR_LEN == bit_cnt) begin
                         done <= 1;
-                        char_idx <= char_idx + 1;
                     end
                 end
             end
@@ -201,26 +192,12 @@ begin
     end
 end
 
-always @(posedge S_REV)
+always @(posedge done)
 begin
-    if (slave_active) begin
-        if (S_REV) begin
-            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-        end
-        else begin
-            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
-        end
-    end
-end
-
-always @(negedge S_REV)
-begin
-    if (slave_active) begin
-        if (S_REV) begin
-            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-        end
-        else begin
-            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+    char_idx <= char_idx + 1;
+    if (S_CHAR_LEN > 7) begin
+        if (1 == char_idx) begin
+            char_idx <= 0;
         end
     end
 end

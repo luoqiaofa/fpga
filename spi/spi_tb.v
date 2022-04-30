@@ -114,12 +114,13 @@ localparam CPOL         = (0 << CSMODE_CPOL);
 localparam CPHA         = (1 << CSMODE_CPHA);
 localparam REV          = (1 << CSMODE_REV);
 localparam LEN          = (7 << CSMODE_LEN_LO);
+localparam CSPOL        = (1 << CSMODE_POL);
 localparam CSBEF        = (3 << CSMODE_CSBEF_LO);
 localparam CSAFT        = (5 << CSMODE_CSAFT_LO);
 localparam CSCG         = (4 << CSMODE_CSCG_LO);
-localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT | CSCG);
+localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT | CSCG | CSPOL);
 
-localparam SPMODE_VAL   = SPMODE_DEF;
+localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN);
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_VAL    = 32'h0003_0006;
@@ -143,6 +144,7 @@ inst_spi_slv_trx
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
     .S_CPOL(CSMODE0[CSMODE_CPOL]),  // clock polary
     .S_CPHA(CSMODE0[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_CSPOL(CSMODE0[CSMODE_POL]),  // clock phase, the first edge or second
     .S_REV(CSMODE0[CSMODE_REV]),    // msb first or lsb first
     .S_CHAR_LEN(CSMODE0[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
     .S_SPI_CS(SPI_CS_B[0]),
@@ -182,7 +184,7 @@ begin
 
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
 
-    master.regwrite(ADDR_SPMODE, SPMODE_DEF | (1 << SPMODE_EN), 2);
+    master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
     master.regwrite(ADDR_SPMODE0, CSMODE_VAL, 2);
 
