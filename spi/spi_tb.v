@@ -121,7 +121,7 @@ localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT 
 
 localparam SPMODE_VAL   = SPMODE_DEF;
 localparam SPIE_VAL     = SPIE_DEF;
-localparam SPIM_VAL     = 32'h0403_0201;
+localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_VAL    = 32'h0003_0006;
 localparam SPITF_VAL    = 32'h0403_0201;
 localparam SPIRF_VAL    = SPIRF_DEF;
@@ -180,9 +180,9 @@ begin
     SPIRF   <= SPIRF_VAL;
     CSMODE0 <= CSMODE_VAL;
 
-    master.regwrite(ADDR_SPMODE, SPMODE_DEF | (1 << SPMODE_EN), 2);
-
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
+
+    master.regwrite(ADDR_SPMODE, SPMODE_DEF | (1 << SPMODE_EN), 2);
 
     master.regwrite(ADDR_SPMODE0, CSMODE_VAL, 2);
 
@@ -192,7 +192,12 @@ begin
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
     #2500;
+    master.regread(ADDR_SPIE, SPIE, 2);
+
     master.regwrite(ADDR_SPITF, 32'h12345678, 2);
+    #2500;
+
+    master.regread(ADDR_SPIE, SPIE, 2);
 
 end
 

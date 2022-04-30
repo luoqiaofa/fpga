@@ -956,10 +956,9 @@ begin
     begin
         rvalid <= 0;
         rresp  <= 0;
-        arready <= 0;
+        arready <= 1;
     end
     else begin
-        arready <= 1;
         if (arready && S_ARVALID && ~rvalid)
         begin
             // Valid read data is available at the read data bus

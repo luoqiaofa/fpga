@@ -60,5 +60,26 @@ task regwrite;
     end
 endtask
 
+task regread;
+    input [7:0] addr;
+    output [31:0] value;
+    input delay;
+    integer delay;
+
+    begin
+        repeat(delay) @(posedge  S_SYSCLK);
+        #1;
+        S_ARADDR  = addr;
+        S_ARVALID  = 1;
+
+        @(posedge S_SYSCLK);
+        // wait for acknowledge from slave
+        while(~S_RVALID) @(posedge  S_SYSCLK);
+        #1;
+        value = S_RDATA;
+        S_ARVALID  = 0;
+    end
+endtask
+
 endmodule
 
