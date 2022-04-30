@@ -739,7 +739,6 @@ begin
     if (!S_RESETN)
     begin
         rrvalid <= 0;
-        arready <= 1;
         rresp   <= 2'b00;
         reg_data_out <= 0;
         cs_idx <= 0;
@@ -953,12 +952,14 @@ end
 
 always @( posedge S_SYSCLK)
 begin
-    if ( S_RESETN == 1'b0)
+    if (S_RESETN == 1'b0)
     begin
         rvalid <= 0;
         rresp  <= 0;
+        arready <= 0;
     end
     else begin
+        arready <= 1;
         if (arready && S_ARVALID && ~rvalid)
         begin
             // Valid read data is available at the read data bus
