@@ -68,6 +68,7 @@ reg [NBITS_RXCNT-1:0]       cnt_rxcnt;
 reg [NBITS_TXCNT-1:0]       cnt_txcnt;
 reg [NBITS_TRANLEN-1:0]     cnt_trans;
 
+
 reg [NCS-1:0] spi_sel;
 
 reg wvalid_pos_edge;
@@ -128,7 +129,7 @@ wire [NBITS_BRG_DIVIDER-1:0] brg_divider;
 
 wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
 reg  [NBITS_TRANLEN-1:0] char_trx_idx;
-wire [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
+reg  [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
 // one word is 32 bit. half word is 16 bit
 reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
 wire [NBITS_TRANLEN-1:0] num_spitf_trx;
@@ -170,7 +171,7 @@ assign TXCNT = num_spitf_upd > 0 ? NBYTES_TXFIFO - nbytes_need_tx : NBYTES_TXFIF
 assign TNF = TXCNT > (NBYTES_PER_WORD - 1) ? 1'b1 : 1'b0;
 assign TXT = nbytes_need_tx < SPMODE_TXTHR ? 1'b1 : 1'b0;
 
-assign char_rx_idx = char_trx_idx < SPCOM_RSKIP ? 0 : char_trx_idx - SPCOM_RSKIP;
+// assign char_rx_idx = char_trx_idx < SPCOM_RSKIP ? 0 : char_trx_idx - SPCOM_RSKIP;
 wire   [NBITS_TRANLEN-1:0] nbytes_rx_from_miso;
 wire   [NBITS_TRANLEN-1:0] nbytes_valid_in_rxfifo;
 wire   RNE;   // Not empty. Indicates that the Rx FIFO register contains a received character.
@@ -460,6 +461,16 @@ end
 
 always @(posedge char_done_posedge)
 begin
+    if (char_trx_idx < SPCOM_RSKIP) begin
+        char_rx_idx <= 0;
+    end
+    else begin
+        char_rx_idx = char_trx_idx - SPCOM_RSKIP;
+    end
+end
+
+always @(posedge char_done_posedge)
+begin
     chr_done <= 0;
     if (char_rx_idx > 0) begin
         SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
@@ -635,8 +646,11 @@ end
 always @(posedge frame_in_process)
 begin
     char_trx_idx <= 0;
-    spitf_idx <= 0;
-    num_spitf_upd <= 0;
+
+    char_rx_idx <= 0;
+    spirf_rd_idx <= 0;
+    spirf_char_idx <= 0;
+    nbytes_read_from_spirf <= 0;
 
     // 0: MOSI pin as output; 1: MOSI is input;
     t_spi_mosi <= SPMODE[SPMODE_SLAVE];
@@ -668,6 +682,7 @@ always @(posedge frame_done)
 begin
     frame_done <= 0;
     char_trx_idx <= 0;
+    spitf_idx <= 0;
     num_spitf_upd <= 0;
 end
 
@@ -692,6 +707,7 @@ begin
         char_trx_idx <= 0;
         num_spitf_upd <= 0;
 
+        char_rx_idx <= 0;
         spitf_idx <= 0;
         spirf_rd_idx <= 0;
         spirf_char_idx <= 0;
@@ -852,9 +868,9 @@ begin
                     end
                 end
                 ADDR_SPIRF[7:2]: ; // read only for SPIRF
-                ADDR_SPMODE0[7:2], ADDR_SPMODE0[7:2], ADDR_SPMODE2[7:2], ADDR_SPMODE3[7:2]:
+                ADDR_CSMODE0[7:2], ADDR_CSMODE1[7:2], ADDR_CSMODE2[7:2], ADDR_CSMODE3[7:2]:
                 begin
-                    cs_idx <= awaddr[7:2] - ADDR_SPMODE0[7:2];
+                    cs_idx <= awaddr[7:2] - ADDR_CSMODE0[7:2];
                     spmode_x <= S_WDATA;
                     spmodex_updated <= 1;
                 end
@@ -1001,10 +1017,10 @@ begin
                 ADDR_SPCOM  : rdata <= SPCOM;
                 ADDR_SPIM   : rdata <= SPIM;
                 ADDR_SPIM   : rdata <= SPIM;
-                ADDR_SPMODE0: rdata <= CSX_SPMODE[0];
-                ADDR_SPMODE1: rdata <= NCS < 1? {32{1'b0}} : CSX_SPMODE[2];
-                ADDR_SPMODE2: rdata <= NCS < 2? {32{1'b0}} : CSX_SPMODE[2];
-                ADDR_SPMODE3: rdata <= NCS < 3? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_CSMODE0: rdata <= CSX_SPMODE[0];
+                ADDR_CSMODE1: rdata <= NCS < 1? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_CSMODE2: rdata <= NCS < 2? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_CSMODE3: rdata <= NCS < 3? {32{1'b0}} : CSX_SPMODE[2];
                 ADDR_SPITF  : rdata <= SPITF;
                 ADDR_SPIRF  :
                 begin

@@ -34,9 +34,9 @@ wire neg_edge; // negtive edge flag
 assign pos_edge    = S_SPI_SCK;
 assign neg_edge    = S_SPI_SCK;
 assign S_RCHAR     = data_in;
-assign S_CHAR_DONE = done;
+assign S_CHAR_DONE = slave_active ? done : 1'bz;
 assign spi_mode = {S_CPOL, S_CPHA};
-assign S_SPI_MISO        = shift_tx[bit_cnt];
+assign S_SPI_MISO   = slave_active ? shift_tx[bit_cnt] : 1'bz;
 assign slave_active = S_CSPOL ? (S_ENABLE && ~S_SPI_CS) : (S_ENABLE && S_SPI_CS);
 
 always @(posedge S_SYSCLK or negedge S_RESETN)

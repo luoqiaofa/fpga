@@ -102,7 +102,10 @@ spi_master
     .S_SPI_SEL(SPI_CS_B)
 );
 
-wire [31: 0] slv_data_rx;
+wire [31: 0] slv0_data_rx;
+wire [31: 0] slv1_data_rx;
+wire         slv0_char_done;
+wire         slv1_char_done;
 reg  [31: 0] slv_data_tx[0:NWORD_TXFIFO];
 
 localparam DIV16        = (0 << CSMODE_DIV16);
@@ -120,7 +123,8 @@ localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT 
 localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN) | (1 << SPMODE_LOOP);
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
-localparam SPCOM_VAL    = 32'h0003_0006;
+localparam SPCOM_CS0    = ((0 << SPCOM_CS_LO)|(3<<SPCOM_RSKIP_LO)|(6<<SPCOM_TRANLEN_LO));
+localparam SPCOM_CS1    = ((1 << SPCOM_CS_LO)|(2<<SPCOM_RSKIP_LO)|(8<<SPCOM_TRANLEN_LO));
 localparam SPITF_VAL    = 32'h0403_0201;
 localparam SPIRF_VAL    = SPIRF_DEF;
 
@@ -133,7 +137,7 @@ reg [REG_WIDTH-1: 0] SPIRF;
 reg [REG_WIDTH-1: 0] CSMODE0;
 
 spi_slave_trx_char #(.CHAR_NBITS(32))
-inst_spi_slv_trx
+spi_slv_dev0
 (
     .S_SYSCLK(sysclk),           // platform clock
     .S_RESETN(rst_n),           // reset
@@ -147,11 +151,46 @@ inst_spi_slv_trx
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_DONE(slv_done),
+    .S_CHAR_DONE(slv0_char_done),
     .S_WCHAR(32'h1faa1234),        // output character
-    .S_RCHAR(slv_data_rx)          // input character
+    .S_RCHAR(slv0_data_rx)          // input character
 );
 
+spi_slave_trx_char #(.CHAR_NBITS(32))
+spi_slv_dev1
+(
+    .S_SYSCLK(sysclk),           // platform clock
+    .S_RESETN(rst_n),           // reset
+    .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
+    .S_CPOL(CSMODE0[CSMODE_CPOL]),  // clock polary
+    .S_CPHA(CSMODE0[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_CSPOL(CSMODE0[CSMODE_POL]),  // clock phase, the first edge or second
+    .S_REV(CSMODE0[CSMODE_REV]),    // msb first or lsb first
+    .S_CHAR_LEN(CSMODE0[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
+    .S_SPI_CS(SPI_CS_B[1]),
+    .S_SPI_SCK(SPI_SCK),
+    .S_SPI_MISO(SPI_MISO),
+    .S_SPI_MOSI(SPI_MOSI),
+    .S_CHAR_DONE(slv1_char_done),
+    .S_WCHAR(32'h1faa1234),        // output character
+    .S_RCHAR(slv1_data_rx)          // input character
+);
+
+initial
+begin
+    txdata[0] = SPITF_VAL;
+    txdata[1] = 32'h12345678;
+    txdata[2] = 32'h78563412;
+    txdata[3] = 32'h00000000;
+    txdata[4] = 32'h11223344;
+    txdata[5] = 32'h55aa55aa;
+    txdata[6] = 32'hffffffff;
+    txdata[7] = 32'h01020304;
+    txdata[8] = 32'h01050a0f;
+    txdata[9] = 32'h102030f0;
+    #300000;
+    $stop;
+end
 
 initial
 begin
@@ -174,7 +213,7 @@ begin
     SPMODE  <= SPMODE_VAL;
     SPIE    <= SPIE_VAL;
     SPIM    <= SPIM_VAL;
-    SPCOM   <= SPCOM_VAL;
+    SPCOM   <= SPCOM_CS0;
     SPITF   <= SPITF_VAL;
     SPIRF   <= SPIRF_VAL;
     CSMODE0 <= CSMODE_VAL;
@@ -201,11 +240,11 @@ begin
     // renable SPI
     master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
-    master.regwrite(ADDR_SPMODE0, CSMODE_VAL, 2);
+    master.regwrite(ADDR_CSMODE0, CSMODE_VAL, 2);
 
     master.regwrite(ADDR_SPIM, SPIM_VAL, 2);
 
-    master.regwrite(ADDR_SPCOM, SPCOM_VAL, 2);
+    master.regwrite(ADDR_SPCOM, SPCOM_CS0, 2);
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
 
@@ -223,22 +262,28 @@ begin
     end
     master.regread(ADDR_SPIRF, SPIRF, 2);
 
-end
+    // case #3 select cs#1 and write 3byte than read 4 bytes
+    // wait pre frame done
+    master.regread(ADDR_SPIE, SPIE, 2);
+    while (~SPIE[SPIE_TXE]) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+    end
+    #500;
+    // clear SPIE flags
+    // master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
+    // clear SPIE flags
+    master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
+    // renable SPI
+    // master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
-initial
-begin
-    txdata[0] = SPITF_VAL;
-    txdata[1] = 32'h12345678;
-    txdata[2] = 32'h78563412;
-    txdata[3] = 32'h00000000;
-    txdata[4] = 32'h11223344;
-    txdata[5] = 32'h55aa55aa;
-    txdata[6] = 32'hffffffff;
-    txdata[7] = 32'h01020304;
-    txdata[8] = 32'h01050a0f;
-    txdata[9] = 32'h102030f0;
-    #300000;
-    $stop;
+    master.regwrite(ADDR_CSMODE1, CSMODE_VAL, 2);
+
+    master.regwrite(ADDR_SPITF, 32'h78563412, 2);
+
+    master.regwrite(ADDR_SPCOM, SPCOM_CS1, 2);
+
+    master.regwrite(ADDR_SPITF, 32'h11223344, 2);
+    master.regwrite(ADDR_SPITF, 32'h12345678, 2);
 end
 
 endmodule

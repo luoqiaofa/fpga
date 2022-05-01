@@ -15,10 +15,10 @@ localparam ADDR_SPITF        = 8'h10;
 localparam ADDR_SPIRF        = 8'h14;
 localparam ADDR_REV0         = 8'h18;
 localparam ADDR_REV1         = 8'h1c;
-localparam ADDR_SPMODE0      = 8'h20;
-localparam ADDR_SPMODE1      = 8'h24;
-localparam ADDR_SPMODE2      = 8'h28;
-localparam ADDR_SPMODE3      = 8'h2c;
+localparam ADDR_CSMODE0      = 8'h20;
+localparam ADDR_CSMODE1      = 8'h24;
+localparam ADDR_CSMODE2      = 8'h28;
+localparam ADDR_CSMODE3      = 8'h2c;
 
 // 1. SPMODE
 localparam SPMODE_EN         = 31;
