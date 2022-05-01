@@ -28,10 +28,6 @@ module spi_intface # (parameter NCS = 4)
 );
 `include "reg-bit-def.v"
 `include "const.v"
-localparam NBYTES_TXFIFO     = 1 << (NBITS_TXCNT - 1);
-localparam NBYTES_RXFIFO     = 1 << (NBITS_RXCNT - 1);
-localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
-localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
 localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO);
 localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO);
 
@@ -845,12 +841,14 @@ begin
                 end
                 ADDR_SPITF[7:2]:
                 begin
-                    // if (TNF)
-                    begin
-                        spitf_updated <= 1;
-                        SPI_TXFIFO[spitf_idx] <= S_WDATA;
-                        spitf_idx <= spitf_idx + 1;
-                        num_spitf_upd <= num_spitf_upd  + 1;
+                    if (SPMODE[SPMODE_EN]) begin
+                        if (TNF)
+                        begin
+                            spitf_updated <= 1;
+                            SPI_TXFIFO[spitf_idx] <= S_WDATA;
+                            spitf_idx <= spitf_idx + 1;
+                            num_spitf_upd <= num_spitf_upd  + 1;
+                        end
                     end
                 end
                 ADDR_SPIRF[7:2]: ; // read only for SPIRF
@@ -998,12 +996,17 @@ begin
         if (slv_reg_rden)
         begin
             case (S_ARADDR)
-                ADDR_SPIE:
-                begin
-                    rdata <= SPIE;     // register read data
-                end
-
-                ADDR_SPIRF:
+                ADDR_SPMODE : rdata <= SPMODE;
+                ADDR_SPIE   : rdata <= SPIE;     // register read data
+                ADDR_SPCOM  : rdata <= SPCOM;
+                ADDR_SPIM   : rdata <= SPIM;
+                ADDR_SPIM   : rdata <= SPIM;
+                ADDR_SPMODE0: rdata <= CSX_SPMODE[0];
+                ADDR_SPMODE1: rdata <= NCS < 1? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_SPMODE2: rdata <= NCS < 2? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_SPMODE3: rdata <= NCS < 3? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_SPITF  : rdata <= SPITF;
+                ADDR_SPIRF  :
                 begin
                     if (RNE) begin
                         rdata <= SPI_RXFIFO[spirf_rd_idx];

@@ -113,3 +113,8 @@ localparam SPITF_DEF        = 32'h0000_0000;
 localparam SPIRF_DEF        = 32'h0000_0000;
 localparam CSMODE_DEF       = 1 << CSMODE_POL;
 
+localparam NBYTES_TXFIFO     = 1 << (NBITS_TXCNT - 1);
+localparam NBYTES_RXFIFO     = 1 << (NBITS_RXCNT - 1);
+localparam NWORD_TXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
+localparam NWORD_RXFIFO      = NBYTES_TXFIFO / NBYTES_PER_WORD;
+

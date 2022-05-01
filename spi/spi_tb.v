@@ -7,11 +7,7 @@ localparam C_DIVIDER_WIDTH = 8;
 localparam CHAR_NBITS = 8;
 reg sysclk;            // system clock input
 reg rst_n;             // module reset
-reg enable;            // module enable
-reg go;                // start transmit
-reg [CHAR_NBITS - 1: 0] data_in;
-reg [3:0] char_len;
-
+integer idx;
 
 wire SPI_SCK;
 wire SPI_MISO;
@@ -26,8 +22,9 @@ wire irq;
 
 /* pullup pullup_miso (SPI_MISO); */
 
-wire  [NBITS_CHAR_LEN_MAX-1:0] data_rx;
-reg   [NBITS_CHAR_LEN_MAX-1:0] data_tx;
+wire [NBITS_CHAR_LEN_MAX-1:0] data_rx;
+reg  [31: 0] data_tx[0:NWORD_TXFIFO];
+integer txdata[0: NWORD_TXFIFO+1];
 
 // 100 MHz axi clock input
 always @(sysclk)
@@ -106,7 +103,7 @@ spi_master
 );
 
 wire [31: 0] slv_data_rx;
-wire slv_done;
+reg  [31: 0] slv_data_tx[0:NWORD_TXFIFO];
 
 localparam DIV16        = (0 << CSMODE_DIV16);
 localparam PM           = (2 << CSMODE_PM_LO);
@@ -134,7 +131,6 @@ reg [REG_WIDTH-1: 0] SPCOM;
 reg [REG_WIDTH-1: 0] SPITF;
 reg [REG_WIDTH-1: 0] SPIRF;
 reg [REG_WIDTH-1: 0] CSMODE0;
-
 
 spi_slave_trx_char #(.CHAR_NBITS(32))
 inst_spi_slv_trx
@@ -171,6 +167,7 @@ begin
     SPIRF   <= SPIRF_DEF;
     CSMODE0 <= CSMODE_DEF;
 
+
     #100;
     rst_n      <= 1;      // module reset
     #100;
@@ -182,8 +179,26 @@ begin
     SPIRF   <= SPIRF_VAL;
     CSMODE0 <= CSMODE_VAL;
 
+    // case #1 test the tx fifo is full or not
+    // clear SPIE flags
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
 
+    master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
+    for (idx = 0; idx < NWORD_TXFIFO+1; idx = idx + 1) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+        master.regwrite(ADDR_SPITF, txdata[idx], 2);
+        $display("[%t] SPIE: %h, TXCNT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO]);
+    end
+    master.regread(ADDR_SPIE, SPIE, 2);
+    $display("[%t] SPIE: %h, TXCNT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO]);
+
+    // case #2 select cs#0 and write 3byte than read 4 bytes
+
+    // diable SPI to reset the txfifo
+    master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
+    // clear SPIE flags
+    master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
+    // renable SPI
     master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
     master.regwrite(ADDR_SPMODE0, CSMODE_VAL, 2);
@@ -193,7 +208,7 @@ begin
     master.regwrite(ADDR_SPCOM, SPCOM_VAL, 2);
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
-    
+
     master.regread(ADDR_SPIE, SPIE, 2);
     while (~SPIE[SPIE_TXE]) begin
         master.regread(ADDR_SPIE, SPIE, 2);
@@ -212,7 +227,17 @@ end
 
 initial
 begin
-    #100000;
+    txdata[0] = SPITF_VAL;
+    txdata[1] = 32'h12345678;
+    txdata[2] = 32'h78563412;
+    txdata[3] = 32'h00000000;
+    txdata[4] = 32'h11223344;
+    txdata[5] = 32'h55aa55aa;
+    txdata[6] = 32'hffffffff;
+    txdata[7] = 32'h01020304;
+    txdata[8] = 32'h01050a0f;
+    txdata[9] = 32'h102030f0;
+    #300000;
     $stop;
 end
 
