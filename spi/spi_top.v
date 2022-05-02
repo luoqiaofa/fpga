@@ -433,18 +433,17 @@ end
 
 always @(posedge char_done_posedge)
 begin
-    if (char_trx_idx < SPCOM_RSKIP) begin
-        char_rx_idx <= 0;
-    end
-    else begin
+    if (char_trx_idx > SPCOM_RSKIP) begin
         char_rx_idx = char_trx_idx - SPCOM_RSKIP;
+    end
+    else if (char_rx_idx > 0) begin
+        char_rx_idx <= char_rx_idx + 1;
     end
 end
 
 always @(posedge char_done_posedge)
 begin
     chr_done <= 0;
-    // SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
     if (char_rx_idx > 0) begin
         spirf_char_idx <= spirf_char_idx + 1;
     end
@@ -700,6 +699,13 @@ begin
         SPIE[SPIE_RXT] <= RXT;
         SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] <= RXCNT[NBITS_RXCNT-1: 0];
         SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO] <= TXCNT[NBITS_TXCNT-1: 0];
+
+        if (SPMODE[SPMODE_EN]) begin
+            SPIRF <= SPI_RXFIFO[spirf_rd_idx];
+        end
+        else begin
+            SPIRF <= 0;
+        end
     end
 end
 
