@@ -28,8 +28,8 @@ module spi_intface # (parameter NCS = 4)
 );
 `include "reg-bit-def.v"
 `include "const.v"
-localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO);
-localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO);
+localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO-1);
+localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO-1);
 
 reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
@@ -144,15 +144,15 @@ reg [NBITS_WORD_RXFIFO-1:0]  spirf_char_idx; // char offset from miso to spirf(r
 reg [NBITS_WORD_RXFIFO-1:0]  spirf_rd_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
-wire [NBITS_TXTHR-1:0] spitf_trx_idx;
+wire [NBITS_WORD_TXFIFO-1:0] spitf_trx_idx;
 //  char offset in spitf
-wire [NBITS_TXTHR-1:0] spitf_trx_char_off;
+wire [NBITS_WORD_TXFIFO-1:0] spitf_trx_char_off;
 wire [NBITS_TRANLEN-1:0] num_bytes_to_mosi;
 wire [NBITS_TRANLEN-1:0] nbytes_need_tx;
 wire [NBITS_TRANLEN-1:0] TXCNT;
 assign SPITF = SPI_TXFIFO[spitf_trx_idx];
-assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[6:1] : char_trx_idx[7:2];
-assign spitf_trx_char_off = CSMODE_LEN > 7 ? {5'b00, char_trx_idx[0]}:{4'h0, char_trx_idx[1:0]};
+assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[NBITS_WORD_TXFIFO:1] : char_trx_idx[NBITS_WORD_TXFIFO+1:2];
+assign spitf_trx_char_off = CSMODE_LEN > 7 ? {{(NBITS_WORD_TXFIFO-1){1'b0}}, char_trx_idx[0]}:{{(NBITS_WORD_TXFIFO-2){1'b0}}, char_trx_idx[1:0]};
 // Tx FIFO is empty or not
 assign num_bytes_to_mosi = CSMODE_LEN > 7 ? {char_trx_idx[NBITS_TRANLEN-2:0], 1'b0} : char_trx_idx;
 
