@@ -183,7 +183,7 @@ assign nbytes_rx_from_miso = CSMODE_LEN > 7 ? {char_rx_idx[NBITS_TRANLEN-1:1], 1
 assign nbytes_valid_in_rxfifo = nbytes_rx_from_miso - nbytes_read_from_spirf;
 assign spirf_wr_idx = CSMODE_LEN > 7 ? spirf_char_idx >> 1 : spirf_char_idx >> 2;
 assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
-assign RXF   = NBYTES_RXFIFO == nbytes_valid_in_rxfifo ? 1'b1 : 1'b0;
+assign RXF   = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? 1'b0 : 1'b1;
 assign RXT   = nbytes_valid_in_rxfifo > SPMODE_RXTHR ? 1'b1 : 1'b0;
 assign RXCNT = nbytes_valid_in_rxfifo;
 wire   [31:0] SPIRF_WR;
