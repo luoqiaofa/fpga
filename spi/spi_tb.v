@@ -108,19 +108,31 @@ wire         slv0_char_done;
 wire         slv1_char_done;
 reg  [31: 0] slv_data_tx[0:NWORD_TXFIFO];
 
-localparam DIV16        = (0 << CSMODE_DIV16);
-localparam PM           = (2 << CSMODE_PM_LO);
-localparam CPOL         = (0 << CSMODE_CPOL);
-localparam CPHA         = (1 << CSMODE_CPHA);
-localparam REV          = (1 << CSMODE_REV);
-localparam LEN          = (7 << CSMODE_LEN_LO);
-localparam CSPOL        = (1 << CSMODE_POL);
-localparam CSBEF        = (3 << CSMODE_CSBEF_LO);
-localparam CSAFT        = (5 << CSMODE_CSAFT_LO);
-localparam CSCG         = (4 << CSMODE_CSCG_LO);
-localparam CSMODE_VAL   = (DIV16 | PM | CPOL | CPHA | REV | LEN | CSBEF | CSAFT | CSCG | CSPOL);
+localparam DIV160       = (0 << CSMODE_DIV16);
+localparam PM0          = (2 << CSMODE_PM_LO);
+localparam CPOL0        = (0 << CSMODE_CPOL);
+localparam CPHA0        = (1 << CSMODE_CPHA);
+localparam REV0         = (1 << CSMODE_REV);
+localparam LEN0         = (7 << CSMODE_LEN_LO);
+localparam CS0POL       = (1 << CSMODE_POL);
+localparam CS0BEF       = (3 << CSMODE_CSBEF_LO);
+localparam CS0AFT       = (5 << CSMODE_CSAFT_LO);
+localparam CS0CG        = (4 << CSMODE_CSCG_LO);
+localparam CS0MODE_VAL  = (DIV160|PM0|CPOL0|CPHA0|REV0|LEN0|CS0BEF|CS0AFT|CS0CG|CS0POL);
 
-localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN) | (1 << SPMODE_LOOP);
+localparam DIV161       = (0 << CSMODE_DIV16);
+localparam PM1          = (2 << CSMODE_PM_LO);
+localparam CPOL1        = (0 << CSMODE_CPOL);
+localparam CPHA1        = (0 << CSMODE_CPHA);
+localparam REV1         = (0 << CSMODE_REV);
+localparam LEN1         = (7 << CSMODE_LEN_LO);
+localparam CS1POL       = (1 << CSMODE_POL);
+localparam CS1BEF       = (3 << CSMODE_CSBEF_LO);
+localparam CS1AFT       = (5 << CSMODE_CSAFT_LO);
+localparam CS1CG        = (4 << CSMODE_CSCG_LO);
+localparam CS1MODE_VAL  = (DIV161|PM1|CPOL1|CPHA1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
+
+localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)/* | (1 << SPMODE_LOOP)*/;
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_CS0    = ((0 << SPCOM_CS_LO)|(3<<SPCOM_RSKIP_LO)|(6<<SPCOM_TRANLEN_LO));
@@ -135,6 +147,7 @@ reg [REG_WIDTH-1: 0] SPCOM;
 reg [REG_WIDTH-1: 0] SPITF;
 reg [REG_WIDTH-1: 0] SPIRF;
 reg [REG_WIDTH-1: 0] CSMODE0;
+reg [REG_WIDTH-1: 0] CSMODE1;
 
 spi_slave_trx_char #(.CHAR_NBITS(32))
 spi_slv_dev0
@@ -152,7 +165,7 @@ spi_slv_dev0
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
     .S_CHAR_DONE(slv0_char_done),
-    .S_WCHAR(32'h1faa1234),        // output character
+    .S_WCHAR(32'h11223344),        // output character
     .S_RCHAR(slv0_data_rx)          // input character
 );
 
@@ -162,17 +175,17 @@ spi_slv_dev1
     .S_SYSCLK(sysclk),           // platform clock
     .S_RESETN(rst_n),           // reset
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CSMODE0[CSMODE_CPOL]),  // clock polary
-    .S_CPHA(CSMODE0[CSMODE_CPHA]),  // clock phase, the first edge or second
-    .S_CSPOL(CSMODE0[CSMODE_POL]),  // clock phase, the first edge or second
-    .S_REV(CSMODE0[CSMODE_REV]),    // msb first or lsb first
-    .S_CHAR_LEN(CSMODE0[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
+    .S_CPOL(CSMODE1[CSMODE_CPOL]),  // clock polary
+    .S_CPHA(CSMODE1[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_CSPOL(CSMODE1[CSMODE_POL]),  // clock phase, the first edge or second
+    .S_REV(CSMODE1[CSMODE_REV]),    // msb first or lsb first
+    .S_CHAR_LEN(CSMODE1[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
     .S_SPI_CS(SPI_CS_B[1]),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
     .S_SPI_MOSI(SPI_MOSI),
     .S_CHAR_DONE(slv1_char_done),
-    .S_WCHAR(32'h1faa1234),        // output character
+    .S_WCHAR(32'h78563412),        // output character
     .S_RCHAR(slv1_data_rx)          // input character
 );
 
@@ -216,7 +229,8 @@ begin
     SPCOM   <= SPCOM_CS0;
     SPITF   <= SPITF_VAL;
     SPIRF   <= SPIRF_VAL;
-    CSMODE0 <= CSMODE_VAL;
+    CSMODE0 <= CS0MODE_VAL;
+    CSMODE1 <= CS1MODE_VAL;
 
     // case #1 test the tx fifo is full or not
     // clear SPIE flags
@@ -240,7 +254,7 @@ begin
     // renable SPI
     master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
-    master.regwrite(ADDR_CSMODE0, CSMODE_VAL, 2);
+    master.regwrite(ADDR_CSMODE0, CS0MODE_VAL, 2);
 
     master.regwrite(ADDR_SPIM, SPIM_VAL, 2);
 
@@ -276,7 +290,7 @@ begin
     // renable SPI
     // master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
-    master.regwrite(ADDR_CSMODE1, CSMODE_VAL, 2);
+    master.regwrite(ADDR_CSMODE1, CS1MODE_VAL, 2);
 
     master.regwrite(ADDR_SPITF, 32'h78563412, 2);
 
@@ -284,6 +298,17 @@ begin
 
     master.regwrite(ADDR_SPITF, 32'h11223344, 2);
     master.regwrite(ADDR_SPITF, 32'h12345678, 2);
+
+    master.regread(ADDR_SPIE, SPIE, 2);
+    while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+    end
+    master.regread(ADDR_SPIRF, SPIRF, 2);
+    master.regread(ADDR_SPIE, SPIE, 2);
+    while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h03) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+    end
+    master.regread(ADDR_SPIRF, SPIRF, 2);
 end
 
 endmodule
