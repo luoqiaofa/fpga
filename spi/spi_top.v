@@ -472,8 +472,8 @@ end
 always @(posedge char_done_posedge)
 begin
     chr_done <= 0;
+    SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
     if (char_rx_idx > 0) begin
-        SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
         spirf_char_idx <= spirf_char_idx + 1;
     end
     else begin

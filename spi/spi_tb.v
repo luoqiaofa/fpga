@@ -275,6 +275,7 @@ begin
         master.regread(ADDR_SPIE, SPIE, 2);
     end
     master.regread(ADDR_SPIRF, SPIRF, 2);
+    $display("[%t] SPIRF: %h", $time, SPIRF);
 
     // case #3 select cs#1 and write 3byte than read 4 bytes
     // wait pre frame done
@@ -304,11 +305,13 @@ begin
         master.regread(ADDR_SPIE, SPIE, 2);
     end
     master.regread(ADDR_SPIRF, SPIRF, 2);
+    $display("[%t] SPIRF: %h", $time, SPIRF);
     master.regread(ADDR_SPIE, SPIE, 2);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h03) begin
         master.regread(ADDR_SPIE, SPIE, 2);
     end
     master.regread(ADDR_SPIRF, SPIRF, 2);
+    $display("[%t] SPIRF: %h", $time, SPIRF);
 end
 
 endmodule
