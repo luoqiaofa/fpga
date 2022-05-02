@@ -140,7 +140,7 @@ wire TXT; // Tx FIFO has less than TXTHR bytes, that is, at most TXTHR - 1 bytes
 reg [1:0] cs_idx;
 reg [NBITS_WORD_TXFIFO-1:0]  spitf_idx;
 wire [NBITS_WORD_RXFIFO-1:0] spirf_wr_idx; // rx data to spirf(rx fifo)
-reg [NBITS_WORD_RXFIFO-1:0]  spirf_char_idx; // char offset from miso to spirf(rx fifo)
+reg [NBITS_TRANLEN-1:0]  spirf_char_idx; // char offset from miso to spirf(rx fifo)
 reg [NBITS_WORD_RXFIFO-1:0]  spirf_rd_idx;
 // if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
 // else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
@@ -181,11 +181,11 @@ wire   [NBITS_TRANLEN-1:0] RXCNT; // The current number of free Tx FIFO bytes
 reg    [NBITS_TRANLEN-1:0] nbytes_read_from_spirf;
 assign nbytes_rx_from_miso = CSMODE_LEN > 7 ? {char_rx_idx[NBITS_TRANLEN-1:1], 1'b0} : char_rx_idx;
 assign nbytes_valid_in_rxfifo = nbytes_rx_from_miso - nbytes_read_from_spirf;
-assign spirf_wr_idx = CSMODE_LEN > 7 ? spirf_char_idx >> 1 : spirf_char_idx >> 2;
+assign spirf_wr_idx = CSMODE_LEN > 7 ? spirf_char_idx[NBITS_WORD_TXFIFO:1] : spirf_char_idx[NBITS_WORD_TXFIFO+1:2];
 assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
 assign RXF   = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? 1'b0 : 1'b1;
 assign RXT   = nbytes_valid_in_rxfifo > SPMODE_RXTHR ? 1'b1 : 1'b0;
-assign RXCNT = nbytes_valid_in_rxfifo;
+assign RXCNT = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? nbytes_valid_in_rxfifo : NBYTES_RXFIFO;
 wire   [31:0] SPIRF_WR;
 assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
 
