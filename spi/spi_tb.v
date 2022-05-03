@@ -108,29 +108,30 @@ wire         slv0_char_done;
 wire         slv1_char_done;
 reg  [31: 0] slv_data_tx[0:NWORD_TXFIFO];
 
+localparam SPIMODE0     = (0 << CSMODE_CPHA); /* CI = 0, CP=0 */
+localparam SPIMODE1     = (1 << CSMODE_CPHA); /* CI = 0, CP=1 */
+localparam SPIMODE2     = (2 << CSMODE_CPHA); /* CI = 1, CP=0 */
+localparam SPIMODE3     = (3 << CSMODE_CPHA); /* CI = 1, CP=1 */
+
 localparam DIV160       = (0 << CSMODE_DIV16);
 localparam PM0          = (2 << CSMODE_PM_LO);
-localparam CPOL0        = (0 << CSMODE_CPOL);
-localparam CPHA0        = (1 << CSMODE_CPHA);
 localparam REV0         = (1 << CSMODE_REV);
 localparam LEN0         = (7 << CSMODE_LEN_LO);
 localparam CS0POL       = (1 << CSMODE_POL);
 localparam CS0BEF       = (3 << CSMODE_CSBEF_LO);
 localparam CS0AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS0CG        = (4 << CSMODE_CSCG_LO);
-localparam CS0MODE_VAL  = (DIV160|PM0|CPOL0|CPHA0|REV0|LEN0|CS0BEF|CS0AFT|CS0CG|CS0POL);
+localparam CS0MODE_VAL  = (SPIMODE0|REV0|DIV160|PM0|LEN0|CS0BEF|CS0AFT|CS0CG|CS0POL);
 
 localparam DIV161       = (0 << CSMODE_DIV16);
 localparam PM1          = (2 << CSMODE_PM_LO);
-localparam CPOL1        = (0 << CSMODE_CPOL);
-localparam CPHA1        = (0 << CSMODE_CPHA);
 localparam REV1         = (0 << CSMODE_REV);
 localparam LEN1         = (7 << CSMODE_LEN_LO);
 localparam CS1POL       = (1 << CSMODE_POL);
 localparam CS1BEF       = (3 << CSMODE_CSBEF_LO);
 localparam CS1AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS1CG        = (4 << CSMODE_CSCG_LO);
-localparam CS1MODE_VAL  = (DIV161|PM1|CPOL1|CPHA1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
+localparam CS1MODE_VAL  = (SPIMODE1|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
 
 localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)/* | (1 << SPMODE_LOOP)*/;
 localparam SPIE_VAL     = SPIE_DEF;
