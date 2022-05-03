@@ -624,7 +624,7 @@ begin
     nbytes_read_from_spirf <= 0;
 
     // 0: MOSI pin as output; 1: MOSI is input;
-    t_spi_mosi <= SPMODE[SPMODE_SLAVE];
+    t_spi_mosi <= 1'b0;
 
     spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
     if (CSMODE_CSBEF > 0) begin

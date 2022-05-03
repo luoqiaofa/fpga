@@ -23,9 +23,9 @@ localparam ADDR_CSMODE3      = 8'h2c;
 // 1. SPMODE
 localparam SPMODE_EN         = 31;
 localparam SPMODE_LOOP       = 30;
-localparam SPMODE_SLAVE      = 29; // reserved
-localparam SPMODE_HO_ADJ_HI  = 18; // reserved
-localparam SPMODE_HO_ADJ_LO  = 16; // reserved
+// localparam SPMODE_SLAVE      = 29; // reserved
+// localparam SPMODE_HO_ADJ_HI  = 18; // reserved
+// localparam SPMODE_HO_ADJ_LO  = 16; // reserved
 localparam SPMODE_TXTHR_HI   = 13;
 localparam SPMODE_TXTHR_LO   = 8;
 localparam SPMODE_RXTHR_HI   = 4;
@@ -56,10 +56,10 @@ localparam SPIM_TNF          = SPIE_TNF;
 // 4. SPCOM
 localparam SPCOM_CS_HI       = 31;
 localparam SPCOM_CS_LO       = 30;
-localparam SPCOM_RXDLY       = 29; // reserved
+// localparam SPCOM_RXDLY       = 29; // reserved
 localparam SPCOM_DO          = 28;
 localparam SPCOM_TO          = 27; // Transmit only
-localparam SPCOM_RO          = 26; // Receive only
+// localparam SPCOM_RO          = 26; // Receive only
 localparam SPCOM_RSKIP_HI    = 23; // number of chars need to be read skip
 localparam SPCOM_RSKIP_LO    = 16;
 localparam SPCOM_TRANLEN_HI  = 15;
