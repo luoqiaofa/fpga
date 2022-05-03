@@ -363,13 +363,13 @@ begin
                 if (0 == spirf_char_idx[1:0]) begin
                     case(CSMODE_LEN)
                         0 : SPI_RXFIFO[spirf_wr_idx] <= {{31{1'b0}}, din};
-                        1 : SPI_RXFIFO[spirf_wr_idx] <= {{30{1'b0}}, din, SPIRF_WR[0]};
-                        2 : SPI_RXFIFO[spirf_wr_idx] <= {{29{1'b0}}, din, SPIRF_WR[1:0]};
-                        3 : SPI_RXFIFO[spirf_wr_idx] <= {{28{1'b0}}, din, SPIRF_WR[2:0]};
-                        4 : SPI_RXFIFO[spirf_wr_idx] <= {{27{1'b0}}, din, SPIRF_WR[3:0]};
-                        5 : SPI_RXFIFO[spirf_wr_idx] <= {{26{1'b0}}, din, SPIRF_WR[4:0]};
-                        6 : SPI_RXFIFO[spirf_wr_idx] <= {{25{1'b0}}, din, SPIRF_WR[5:0]};
-                        7 : SPI_RXFIFO[spirf_wr_idx] <= {{24{1'b0}}, din, SPIRF_WR[6:0]};
+                        1 : SPI_RXFIFO[spirf_wr_idx] <= {{30{1'b0}}, din, data_rx[0]};
+                        2 : SPI_RXFIFO[spirf_wr_idx] <= {{29{1'b0}}, din, data_rx[1:0]};
+                        3 : SPI_RXFIFO[spirf_wr_idx] <= {{28{1'b0}}, din, data_rx[2:0]};
+                        4 : SPI_RXFIFO[spirf_wr_idx] <= {{27{1'b0}}, din, data_rx[3:0]};
+                        5 : SPI_RXFIFO[spirf_wr_idx] <= {{26{1'b0}}, din, data_rx[4:0]};
+                        6 : SPI_RXFIFO[spirf_wr_idx] <= {{25{1'b0}}, din, data_rx[5:0]};
+                        7 : SPI_RXFIFO[spirf_wr_idx] <= {{24{1'b0}}, din, data_rx[6:0]};
                     endcase
                 end
                 if (1 == spirf_char_idx[1:0]) begin
