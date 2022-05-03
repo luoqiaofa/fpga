@@ -201,7 +201,7 @@ begin
     txdata[7] = 32'h01020304;
     txdata[8] = 32'h01050a0f;
     txdata[9] = 32'h102030f0;
-    #300000;
+    #50000;
     $stop;
 end
 
@@ -386,6 +386,12 @@ begin
 
     master.regread(ADDR_SPIE, SPIE, 2);
     $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
+
+    // at last disable spi
+    #500;
+    // diable SPI to reset the txfifo
+    master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
+    #500;
 
 end
 
