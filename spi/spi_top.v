@@ -292,7 +292,6 @@ end
 
 always @(posedge char_go_posedge)
 begin
-    chr_go <= 0;
     if (CSMODE[CSMODE_CPHA]) begin
         if (CSMODE[CSMODE_REV]) begin
             char_bit_cnt <= CSMODE_LEN + 1;
@@ -433,26 +432,29 @@ end
 
 always @(posedge char_done_posedge)
 begin
-    if (char_trx_idx > SPCOM_RSKIP) begin
-        char_rx_idx = char_trx_idx - SPCOM_RSKIP;
-    end
-    else if (char_rx_idx > 0) begin
-        char_rx_idx <= char_rx_idx + 1;
+    if (1'b0 == SPCOM[SPCOM_TO]) begin
+        if (char_trx_idx > SPCOM_RSKIP) begin
+            char_rx_idx = char_trx_idx - SPCOM_RSKIP;
+        end
+        else if (char_rx_idx > 0) begin
+            char_rx_idx <= char_rx_idx + 1;
+        end
     end
 end
 
 always @(posedge char_done_posedge)
 begin
-    chr_done <= 0;
-    if (char_rx_idx > 0) begin
-        spirf_char_idx <= spirf_char_idx + 1;
-    end
-    else begin
-        spirf_char_idx <= 0;
-    end
-    if (CSMODE[CSMODE_IS3WIRE]) begin
-        if ((SPCOM_RSKIP > 0) && (char_trx_idx == SPCOM_RSKIP)) begin
-            t_spi_mosi <= 1'b1; // change mosi pin as input
+    if (1'b0 == SPCOM[SPCOM_TO]) begin
+        if (char_rx_idx > 0) begin
+            spirf_char_idx <= spirf_char_idx + 1;
+        end
+        else begin
+            spirf_char_idx <= 0;
+        end
+        if (CSMODE[CSMODE_IS3WIRE]) begin
+            if ((SPCOM_RSKIP > 0) && (char_trx_idx == SPCOM_RSKIP)) begin
+                t_spi_mosi <= 1'b1; // change mosi pin as input
+            end
         end
     end
 end
@@ -762,6 +764,12 @@ begin
 
     end
     else begin
+        if (chr_done) begin
+            chr_done <= 0;
+        end
+        if (chr_go) begin
+            chr_go <= 0;
+        end
         if (CSMODE_LEN > 7) begin
             if (spitf_trx_char_off) begin
                 data_tx <= SPITF[31:16];
@@ -958,9 +966,10 @@ begin
     begin
         rvalid <= 0;
         rresp  <= 0;
-        arready <= 1;
+        arready <= 0;
     end
     else begin
+        arready <= 1;
         if (arready && S_ARVALID && ~rvalid)
         begin
             // Valid read data is available at the read data bus
