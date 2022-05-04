@@ -219,6 +219,7 @@ begin
     SPITF   <= SPITF_DEF;
     SPIRF   <= SPIRF_DEF;
     CSMODE0 <= CSMODE_DEF;
+    CSMODE1 <= CSMODE_DEF;
 
 
     #100;
@@ -233,7 +234,7 @@ begin
     CSMODE0 <= CS0MODE_VAL;
     CSMODE1 <= CS1MODE_VAL;
 
-    // case #1 test the tx fifo is full or not
+    $display("[%t] case #1 test the tx fifo is full or not", $time);
     // clear SPIE flags
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
 
@@ -245,8 +246,14 @@ begin
     end
     master.regread(ADDR_SPIE, SPIE, 2);
     $display("[%t] idx=%02d, SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, idx, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
+    if (SPIE[SPIE_TNF] == 1'b0) begin
+        $display("[%t] case #1 test ok", $time);
+    end
+    else begin
+        $display("[%t] case #1 test failed!", $time);
+    end
 
-    // case #2 select cs#0 and write 3byte than read 4 bytes
+    $display("[%t] case #2 select cs#0 and write 3byte than read 4 bytes", $time);
 
     // diable SPI to reset the txfifo
     master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
@@ -280,9 +287,19 @@ begin
     master.regread(ADDR_SPIRF, SPIRF, 2);
     $display("[%t] SPIRF: %h", $time, SPIRF);
     master.regread(ADDR_SPIE, SPIE, 2);
-    $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
+    while (!SPIE[SPIE_DON]) begin
+        master.regread(ADDR_SPIE, SPIE, 2);
+        #100;
+    end
+    $display("[%t] frame done, SPIE: %h, DON=%d", $time, SPIE, SPIE[SPIE_DON]);
+    if (SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO] == 0) begin
+        $display("[%t] case #2 test ok", $time);
+    end
+    else begin
+        $display("[%t] case #2 test failed!", $time);
+    end
 
-    // case #3 select cs#1 and write 3byte than read 4 bytes
+    $display("[%t] case #3 select cs#1 and write 2byte than read 7 bytes", $time);
     // wait pre frame done
     master.regread(ADDR_SPIE, SPIE, 2);
     while (~SPIE[SPIE_TXE]) begin
@@ -327,7 +344,6 @@ begin
     master.regread(ADDR_SPIE, SPIE, 2);
     $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
 
-    // case #4 select cs#1 and more than NWORD_RXFIFO transactions
     // clear SPIE flags
     // new spi frame start
     //SPIE[SPIE_DON]
@@ -338,12 +354,18 @@ begin
         #100;
     end
     $display("[%t] SPIE: %h, DON=%d", $time, SPIE, SPIE[SPIE_DON]);
+    if (SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO] == 0) begin
+        $display("[%t] case #3 test ok", $time);
+    end
+    else begin
+        $display("[%t] case #3 test failed!", $time);
+    end
 
+    $display("[%t] case #4 select cs#1, test the rx fifo is full", $time);
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
     master.regread(ADDR_SPIE, SPIE, 2);
     $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
 
-    $display("[%t]: last frame have done, start new frame", $time);
     #1000;
     master.regwrite(ADDR_SPCOM, ((1 << SPCOM_CS_LO)|(2<<SPCOM_RSKIP_LO)|((NBYTES_RXFIFO+3)<<SPCOM_TRANLEN_LO)), 2);
 
@@ -360,7 +382,15 @@ begin
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < NBYTES_RXFIFO) begin
         master.regread(ADDR_SPIE, SPIE, 2);
     end
-    $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
+    $display("[%t] SPIE: %h, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
+    if (SPIE[SPIE_RXF] == 1'b1) begin
+        $display("[%t] case #4 test ok", $time);
+    end
+    else begin
+        $display("[%t] case #4 test failed", $time);
+    end
+
+    $display("[%t] case #4 read out all received data", $time);
     idx = 0;
     master.regread(ADDR_SPIE, SPIE, 2);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 4) begin
@@ -378,12 +408,10 @@ begin
         #100;
     end
     $display("[%t] SPIE: %h, DON=%d, this frame have done", $time, SPIE, SPIE[SPIE_DON]);
-
-    master.regread(ADDR_SPIE, SPIE, 2);
-    $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
-
-    master.regread(ADDR_SPIRF,SPIRF, 2);
-    $display("[%t] SPIRF: %h", $time, SPIRF);
+    if (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 0) begin
+        master.regread(ADDR_SPIRF,SPIRF, 2);
+        $display("[%t] SPIRF: %h", $time, SPIRF);
+    end
 
     master.regread(ADDR_SPIE, SPIE, 2);
     $display("[%t] SPIE: %h, TXCNT=%d, TNF=%d,TXE=%d,TXT=%d, RXCNT=%d, RXF=%d,RNE=%d,RXT=%d", $time, SPIE, SPIE[SPIE_TXCNT_HI: SPIE_TXCNT_LO], SPIE[SPIE_TNF], SPIE[SPIE_TXE], SPIE[SPIE_TXT], SPIE[SPIE_RXCNT_HI: SPIE_RXCNT_LO], SPIE[SPIE_RXF], SPIE[SPIE_RNE], SPIE[SPIE_RXT]);
