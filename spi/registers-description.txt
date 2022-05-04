@@ -328,7 +328,7 @@ ESPI_CSMODE field descriptions
 |       |PM=0x0011 and DIV16 is set, the SPI_CLK/system clock rate will be 16 x (2 x (0x0011 + 1)) = 128             |
 |       |NOTE: System clock as used here is defined to be platform clock divided by 2                                |
 +-------+------------------------------------------------------------------------------------------------------------+
-| 23    | MISO and MISO use complex one pin, that is SDIO pin, for some slave device                                 |
+| 23    | MISO and MISO use one pin in half-duplex, that is SDIO pin, for some slave device                          |
 |IS3WIRE| Note: At this mode, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                             |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 22-21 |This field is reserved.                                                                                     |
