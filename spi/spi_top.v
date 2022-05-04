@@ -37,13 +37,13 @@ reg [31: 0] SPIM;
 reg [31: 0] SPCOM;
 wire [31: 0] SPITF;
 reg [31: 0] SPIRF;
-reg [31: 0] CSX_SPMODE[0:NCS-1];
+reg [31: 0] CSXMODE[0:NCS-1];
 reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
 reg [31: 0] SPI_RXFIFO[0:NWORD_RXFIFO-1];
 
 integer idx;
-reg spmodex_updated;
-reg [31: 0]  spmode_x;
+reg csmodex_updated;
+reg [31: 0]  csmodex;
 wire [31: 0] CSMODE;
 wire [NBITS_PM-1:0]         CSMODE_PM;
 wire [NBITS_CHARLEN-1:0]    CSMODE_LEN;
@@ -246,7 +246,7 @@ assign SPMODE_RXTHR = {{(NBITS_TRANLEN-NBITS_RXTHR){1'b0}},SPCOM[SPMODE_RXTHR_HI
 assign SPIE_RXCNT   = SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO];
 assign SPIE_TXCNT   = SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO];
 
-assign CSMODE       = CSX_SPMODE[SPCOM_CS];
+assign CSMODE       = CSXMODE[SPCOM_CS];
 assign CSMODE_LEN   = CSMODE[CSMODE_LEN_HI  : CSMODE_LEN_LO];
 assign CSMODE_PM    = CSMODE[CSMODE_PM_HI   : CSMODE_PM_LO];
 assign CSMODE_CSBEF = CSMODE[CSMODE_CSBEF_HI: CSMODE_CSBEF_LO];
@@ -801,17 +801,18 @@ begin
         SPCOM   <= SPCOM_DEF;
         SPIRF   <= SPIRF_DEF;
         for (idx = 0; idx < NCS; idx = idx + 1) begin
-            CSX_SPMODE[idx] <= CSMODE_DEF;
+            CSXMODE[idx] <= CSMODE_DEF;
         end
         cs_idx <= 0;
-        spmode_x <= CSMODE_DEF;
-        spmodex_updated <= 0;
+        csmodex <= CSMODE_DEF;
+        csmodex_updated <= 0;
         spi_sel <= {NCS{1'b1}};
     end
     else begin
-        if (spmodex_updated) begin
-            spmodex_updated <= 0;
-            CSX_SPMODE[cs_idx] <= spmode_x;
+        if (csmodex_updated) begin
+            csmodex_updated <= 0;
+            CSXMODE[cs_idx] <= csmodex;
+            spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
         end
         if (slv_reg_wren) begin
             wvalid_pos_edge <= 0;
@@ -857,8 +858,8 @@ begin
                 ADDR_CSMODE0[7:2], ADDR_CSMODE1[7:2], ADDR_CSMODE2[7:2], ADDR_CSMODE3[7:2]:
                 begin
                     cs_idx <= awaddr[7:2] - ADDR_CSMODE0[7:2];
-                    spmode_x <= S_WDATA;
-                    spmodex_updated <= 1;
+                    csmodex <= S_WDATA;
+                    csmodex_updated <= 1;
                 end
                 default : begin
                 end
@@ -1004,10 +1005,10 @@ begin
                 ADDR_SPCOM  : rdata <= SPCOM;
                 ADDR_SPIM   : rdata <= SPIM;
                 ADDR_SPIM   : rdata <= SPIM;
-                ADDR_CSMODE0: rdata <= CSX_SPMODE[0];
-                ADDR_CSMODE1: rdata <= NCS < 1? {32{1'b0}} : CSX_SPMODE[2];
-                ADDR_CSMODE2: rdata <= NCS < 2? {32{1'b0}} : CSX_SPMODE[2];
-                ADDR_CSMODE3: rdata <= NCS < 3? {32{1'b0}} : CSX_SPMODE[2];
+                ADDR_CSMODE0: rdata <= CSXMODE[0];
+                ADDR_CSMODE1: rdata <= NCS < 2? {32{1'b0}} : CSXMODE[1];
+                ADDR_CSMODE2: rdata <= NCS < 3? {32{1'b0}} : CSXMODE[2];
+                ADDR_CSMODE3: rdata <= NCS < 4? {32{1'b0}} : CSXMODE[3];
                 ADDR_SPITF  : rdata <= SPITF;
                 ADDR_SPIRF  :
                 begin
