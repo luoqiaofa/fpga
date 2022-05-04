@@ -394,7 +394,10 @@ begin
     idx = 0;
     master.regread(ADDR_SPIE, SPIE, 2);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 4) begin
-        master.regread(ADDR_SPIRF,SPIRF, 2);
+        master.regread(ADDR_SPIRF,SPIRF, 0);
+        // clear SPIE flags
+        master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 0);
+
         master.regread(ADDR_SPIE, SPIE, 2);
         idx = idx + 1;
         $display("[%t] idx=%02d,SPIRF: %h,RXCNT=%d",$time,idx,SPIRF,SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
