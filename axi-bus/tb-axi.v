@@ -42,7 +42,7 @@ end
 // 100MHz sysclk
 always #5 sysclk = ~sysclk;
 
-aix_slave_bus # ( 
+aix_slave_bus # (
     .C_S_AXI_DATA_WIDTH(C_AXI_DATA_WIDTH),
     .C_S_AXI_ADDR_WIDTH(C_AXI_ADDR_WIDTH)
 ) aix_slave_bus_inst (
