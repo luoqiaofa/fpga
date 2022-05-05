@@ -77,7 +77,7 @@ axi_master_model #
 aix_master
 (
     // Ports of Axi Slave Bus Interface S00_AXI
-    /* input */  .axi_aclk(sysclk),
+    /* input */  .s00_axi_aclk(sysclk),
     /* input */  .s00_axi_aresetn(aresetn),
     /* output */ .s00_axi_awaddr(s_axi_awaddr),
     /* output */ .s00_axi_awprot(s_axi_awprot),
