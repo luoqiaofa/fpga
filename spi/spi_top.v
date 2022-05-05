@@ -85,6 +85,7 @@ reg [1 : 0] bresp;
 reg [31:0] rdata;
 reg [31:0] reg_data_out;
 reg [C_ADDR_WIDTH-1 : 0] awaddr;
+reg [7 : 0] araddr;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
@@ -961,16 +962,36 @@ begin
     end
 end
 
+
+always @(posedge S_SYSCLK)
+begin
+    if ( S_RESETN == 1'b0 )
+    begin
+        arready <= 1'b0;
+        araddr  <= 32'b0;
+    end 
+    else
+    begin    
+    if (~arready && S_ARVALID)
+    begin
+        arready <= 1'b1;
+        araddr  <= S_ARADDR;
+    end
+    else
+    begin
+        arready <= 1'b0;
+    end
+end 
+end
+
 always @( posedge S_SYSCLK)
 begin
     if (S_RESETN == 1'b0)
     begin
         rvalid <= 0;
         rresp  <= 0;
-        arready <= 0;
     end
     else begin
-        arready <= 1;
         if (arready && S_ARVALID && ~rvalid)
         begin
             // Valid read data is available at the read data bus
