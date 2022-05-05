@@ -99,15 +99,14 @@ task regwrite;
 
     begin
         repeat(delay) @(posedge  s00_axi_aclk);
-        #1;
         s00_axi_awaddr  = addr;
         s00_axi_wdata   = value;
         s00_axi_wvalid  = 1;
         s00_axi_awvalid = 1;
 
+        while(~(s00_axi_wready & s00_axi_awready)) @(posedge s00_axi_aclk);
         @(posedge  s00_axi_aclk);
         // wait for acknowledge from slave
-        while(~(s00_axi_wready & s00_axi_wready)) @(posedge  s00_axi_aclk);
         #1;
         s00_axi_wvalid  = 0;
         s00_axi_awvalid = 0;
@@ -126,7 +125,6 @@ task regread;
         s00_axi_araddr  = addr;
         s00_axi_arvalid  = 1;
 
-        @(posedge s00_axi_aclk);
         // wait for acknowledge from slave
         while(~s00_axi_rvalid) @(posedge  s00_axi_aclk);
         #1;
