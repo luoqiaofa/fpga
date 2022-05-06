@@ -133,6 +133,10 @@ initial begin
     $display("[%t] reg#8=%h", $time, regval);
     aix_master.regread(12, regval, 2);
     $display("[%t] reg#c=%h", $time, regval);
+    $display("[%t] write reg#c=%h", $time, 32'haa55_aa55);
+    aix_master.regwrite(12, 32'haa55_aa55, 2);
+    aix_master.regread(12, regval, 2);
+    $display("[%t] reg#c=%h", $time, regval);
 
     aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 2);
     $display("[%t] SPMODE=%h", $time, regval);
