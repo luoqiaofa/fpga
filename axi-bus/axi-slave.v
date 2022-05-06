@@ -500,3 +500,4 @@ pwm_inf pwm_inf_inst(
 // User logic ends
 
 endmodule
+

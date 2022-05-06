@@ -6,10 +6,10 @@ module pwm_inf
 )
 (
     output wire pwm_out,
-    input wire  S_AXI_ACLK,
-    input wire  S_AXI_ARESETN,
-    input wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_AWADDR,
-    input wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_WDATA,
+    input  wire  S_AXI_ACLK,
+    input  wire  S_AXI_ARESETN,
+    input  wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_AWADDR,
+    input  wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_WDATA,
     input  wire [(C_S_AXI_DATA_WIDTH/8)-1 : 0] S_AXI_WSTRB,
     input  wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_ARADDR,
     
@@ -60,21 +60,21 @@ begin
     endcase
 end
 
-
 pwm_module
 #(
-	.N(C_S_AXI_DATA_WIDTH) //pwm bit width
+	.C_DATA_WIDTH(C_S_AXI_DATA_WIDTH) //pwm bit width
 )
 pwm_inst
 (
-    .I_SYS_CLK(S_AXI_ACLK),
-    .I_ASSERT(~S_AXI_ARESETN),
-    .I_PWM_MODE(PWM_MODE),
-    .I_PWM_FREQ_DIV(PWM_DIVIDER),
-    .I_PWM_DUTY(PWM_DUTY),
-    .I_BRIGHTNESS(PWM_BRIGHTNESS),
-    .O_PWM_OUT(pwm_out)
-);
+    .i_sysclk(S_AXI_ACLK),
+    .i_resetn(S_AXI_ARESETN),
+    .i_enable(PWM_MODE[0]),
+    .i_polar(PWM_MODE[1]),
+    .i_freq_cnt(PWM_DIVIDER),
+    .i_duty_cnt(PWM_DUTY),
+    .i_brightness(PWM_BRIGHTNESS[7:0]),
+    .o_pwm_out(pwm_out)
+    );
 
 endmodule
 

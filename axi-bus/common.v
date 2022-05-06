@@ -5,10 +5,10 @@ module common_module
     parameter integer C_S_AXI_ADDR_WIDTH = 12
 )
 (
-    input wire  S_AXI_ACLK,
-    input wire  S_AXI_ARESETN,
-    input wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_AWADDR,
-    input wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_WDATA,
+    input  wire  S_AXI_ACLK,
+    input  wire  S_AXI_ARESETN,
+    input  wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_AWADDR,
+    input  wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_WDATA,
     input  wire [(C_S_AXI_DATA_WIDTH/8)-1 : 0] S_AXI_WSTRB,
     input  wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_ARADDR,
     
