@@ -114,48 +114,48 @@ initial begin
     #20;
     aresetn = 1'b1;/*这一步是一定要加上的，因为，如果不加的话就等于没有进行初始化，输出信息是没有的，这一点已经验证过了*/
     #25;
-    aix_master.regread(0, regval, 2);
+    aix_master.regread(0, regval, 0);
     $display("[%t] reg#0=%h", $time, regval);
-    aix_master.regread(0, regval, 2);
+    aix_master.regread(0, regval, 0);
     $display("[%t] reg#0=%h", $time, regval);
 
-    aix_master.regread(4, regval, 2);
+    aix_master.regread(4, regval, 0);
     $display("[%t] reg#4=%h", $time, regval);
-    aix_master.regread(8, regval, 2);
+    aix_master.regread(8, regval, 0);
     $display("[%t] reg#8=%h", $time, regval);
-    aix_master.regread(12, regval, 2);
+    aix_master.regread(12, regval, 0);
     $display("[%t] reg#c=%h", $time, regval);
     $display("[%t] write reg#8=%h", $time, 32'h1234_5678);
-    aix_master.regwrite(8, 32'h1234_5678, 2);
-    aix_master.regread(8, regval, 2);
+    aix_master.regwrite(8, 32'h1234_5678, 0);
+    aix_master.regread(8, regval, 0);
     $display("[%t] reg#8=%h", $time, regval);
-    aix_master.regread(8, regval, 2);
+    aix_master.regread(8, regval, 0);
     $display("[%t] reg#8=%h", $time, regval);
-    aix_master.regread(12, regval, 2);
+    aix_master.regread(12, regval, 0);
     $display("[%t] reg#c=%h", $time, regval);
     $display("[%t] write reg#c=%h", $time, 32'haa55_aa55);
-    aix_master.regwrite(12, 32'haa55_aa55, 2);
-    aix_master.regread(12, regval, 2);
+    aix_master.regwrite(12, 32'haa55_aa55, 0);
+    aix_master.regread(12, regval, 0);
     $display("[%t] reg#c=%h", $time, regval);
 
-    aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 2);
+    aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 0);
     $display("[%t] SPMODE=%h", $time, regval);
-    aix_master.regread(ADDR_SPIE | (C_SPI_BASE << 8), regval, 2);
+    aix_master.regread(ADDR_SPIE | (C_SPI_BASE << 8), regval, 0);
     $display("[%t] SPIE=%h", $time, regval);
-    aix_master.regwrite(ADDR_SPMODE | (C_SPI_BASE << 8), SPMODE_DEF | (1 << SPMODE_EN), 2);
-    aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 2);
+    aix_master.regwrite(ADDR_SPMODE | (C_SPI_BASE << 8), SPMODE_DEF | (1 << SPMODE_EN), 0);
+    aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 0);
     $display("[%t] SPMODE=%h", $time, regval);
 
-    aix_master.regread(0 | (C_PWM_BASE << 8), regval, 2);
+    aix_master.regread(0 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_MODE=%h", $time, regval);
-    aix_master.regwrite(0 | (C_PWM_BASE << 8), 1, 2);
-    aix_master.regread(0 | (C_PWM_BASE << 8), regval, 2);
+    aix_master.regwrite(0 | (C_PWM_BASE << 8), 1, 0);
+    aix_master.regread(0 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_MODE=%h", $time, regval);
-    aix_master.regread(4 | (C_PWM_BASE << 8), regval, 2);
+    aix_master.regread(4 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_DIVIDER=%h", $time, regval);
-    aix_master.regread(8 | (C_PWM_BASE << 8), regval, 2);
+    aix_master.regread(8 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_DUTY=%h", $time, regval);
-    aix_master.regread(12 | (C_PWM_BASE << 8), regval, 2);
+    aix_master.regread(12 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_BRIGHTNESS=%h", $time, regval);
 end
 
