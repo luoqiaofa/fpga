@@ -1,6 +1,6 @@
 default:
 	echo "开始编译"
-	iverilog -o wave ax_pwm.v pwm_test.v
+	iverilog -o wave pwm.v pwm_test.v
 	echo "编译完成"
 	vvp -n wave -lxt2
 

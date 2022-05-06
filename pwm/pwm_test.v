@@ -31,7 +31,7 @@ module pwm_test();
     // parameter BRIGHTNESS = 0;
     localparam POLAR = 1;
     localparam DUTY = 50;
-    localparam BRIGHTNESS = 128;
+    localparam BRIGHTNESS = 8'd128;
     // localparam BRIGHTNESS = 255;
     localparam FREQ_CNT = 16384;
     localparam DUTY_CNT = (DUTY * FREQ_CNT) / 100;
