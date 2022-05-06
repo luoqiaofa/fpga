@@ -1,4 +1,4 @@
-srcs := $(wildcard *.v)
+srcs := $(wildcard *.v) ../pwm/ax_pwm.v
 $(info srcs:=$(srcs))
 default:
 	echo "开始编译"

@@ -10,7 +10,7 @@ module aix_slave_bus #
     // Width of S_AXI data bus
     parameter integer C_S_AXI_DATA_WIDTH    = 32,
     // Width of S_AXI address bus
-    parameter integer C_S_AXI_ADDR_WIDTH    = 4
+    parameter integer C_S_AXI_ADDR_WIDTH    = 12
 )
 (
     // Users to add ports here
@@ -120,7 +120,7 @@ assign S_AXI_WREADY    = axi_wready;
 assign S_AXI_BRESP    = axi_bresp;
 assign S_AXI_BVALID    = axi_bvalid;
 assign S_AXI_ARREADY    = axi_arready;
-assign S_AXI_RDATA    = axi_rdata;
+// assign S_AXI_RDATA    = axi_rdata;
 assign S_AXI_RRESP    = axi_rresp;
 assign S_AXI_RVALID    = axi_rvalid;
 // Implement axi_awready generation
@@ -225,45 +225,45 @@ begin
       slv_reg3 <= 32'h12345678;
     end
   else begin
-    if (slv_reg_wren)
-      begin
-        case ( axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
-          2'h0:
-            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-                // Respective byte enables are asserted as per write strobes
-                // Slave register 0
-                slv_reg0[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-              end
-          2'h1:
-            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-                // Respective byte enables are asserted as per write strobes
-                // Slave register 1
-                slv_reg1[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-              end
-          2'h2:
-            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-                // Respective byte enables are asserted as per write strobes
-                // Slave register 2
-                slv_reg2[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-              end
-          2'h3:
-            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-                // Respective byte enables are asserted as per write strobes
-                // Slave register 3
-                slv_reg3[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-              end
-          default : begin
-                      slv_reg0 <= slv_reg0;
-                      slv_reg1 <= slv_reg1;
-                      slv_reg2 <= slv_reg2;
-                      slv_reg3 <= slv_reg3;
-                    end
-        endcase
-      end
+    //if (slv_reg_wren)
+    //  begin
+    //    case ( axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
+    //      2'h0:
+    //        for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+    //          if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+    //            // Respective byte enables are asserted as per write strobes
+    //            // Slave register 0
+    //            slv_reg0[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+    //          end
+    //      2'h1:
+    //        for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+    //          if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+    //            // Respective byte enables are asserted as per write strobes
+    //            // Slave register 1
+    //            slv_reg1[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+    //          end
+    //      2'h2:
+    //        for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+    //          if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+    //            // Respective byte enables are asserted as per write strobes
+    //            // Slave register 2
+    //            slv_reg2[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+    //          end
+    //      2'h3:
+    //        for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+    //          if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+    //            // Respective byte enables are asserted as per write strobes
+    //            // Slave register 3
+    //            slv_reg3[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+    //          end
+    //      default : begin
+    //                  slv_reg0 <= slv_reg0;
+    //                  slv_reg1 <= slv_reg1;
+    //                  slv_reg2 <= slv_reg2;
+    //                  slv_reg3 <= slv_reg3;
+    //                end
+    //    endcase
+    //  end
   end
 end
 
@@ -397,6 +397,105 @@ begin
 end
 
 // Add user logic here
+wire common_reg_wren;
+wire common_reg_rden;
+wire [C_S_AXI_DATA_WIDTH-1 : 0] common_reg_data;
+
+wire gpio_reg_wren;
+wire gpio_reg_rden;
+wire [C_S_AXI_DATA_WIDTH-1 : 0] gpio_reg_data;
+
+wire pwm_reg_wren;
+wire pwm_reg_rden;
+wire [C_S_AXI_DATA_WIDTH-1 : 0] pwm_reg_data;
+
+wire i2c_reg_wren;
+wire i2c_reg_rden;
+wire [C_S_AXI_DATA_WIDTH-1 : 0] i2c_reg_data;
+
+wire spi_reg_wren;
+wire spi_reg_rden;
+wire [C_S_AXI_DATA_WIDTH-1 : 0] spi_reg_data;
+
+cpu_inf_common
+#(
+    .C_S_AXI_DATA_WIDTH(C_S_AXI_DATA_WIDTH),
+    // Width of S_AXI address bus
+    .C_S_AXI_ADDR_WIDTH(C_S_AXI_ADDR_WIDTH)
+)
+cpu_inf_common_inst
+(
+    /* input  wire */ .S_AXI_ACLK(S_AXI_ACLK),
+    /* input  wire */ .S_AXI_ARESETN(S_AXI_ARESETN),
+    /* input  wire */ .S_AXI_AWADDR(S_AXI_AWADDR),
+    /* input  wire */ .S_AXI_WDATA(S_AXI_WDATA),
+    /* input  wire */ .S_AXI_WSTRB(S_AXI_WSTRB),
+    /* input  wire */ .S_AXI_ARADDR(S_AXI_ARADDR),
+    /* output wire */ .S_AXI_RDATA(S_AXI_RDATA),
+    /* input  wire */ .slv_reg_wren(slv_reg_wren),
+    /* input  wire */ .slv_reg_rden(slv_reg_rden),
+    /* output wire */ .common_reg_wren(common_reg_wren),
+    /* output wire */ .common_reg_rden(common_reg_rden),
+    /* input  wire */ .common_reg_data(common_reg_data),
+
+    /* output wire */ .gpio_reg_wren(gpio_reg_wren),
+    /* output wire */ .gpio_reg_rden(gpio_reg_rden),
+    /* input  wire */ .gpio_reg_data(gpio_reg_data),
+
+    /* output wire */ .pwm_reg_wren(pwm_reg_wren),
+    /* output wire */ .pwm_reg_rden(pwm_reg_rden),
+    /* input  wire */ .pwm_reg_data(pwm_reg_data),
+
+    /* output wire */ .i2c_reg_wren(i2c_reg_wren),
+    /* output wire */ .i2c_reg_rden(i2c_reg_rden),
+    /* input  wire */ .i2c_reg_data(i2c_reg_data),
+
+    /* output wire */ .spi_reg_wren(spi_reg_wren),
+    /* output wire */ .spi_reg_rden(spi_reg_rden),
+    /* input  wire */ .spi_reg_data(spi_reg_data)
+);
+
+common_module common_inst(
+    .S_AXI_ACLK(S_AXI_ACLK),
+    .S_AXI_ARESETN(S_AXI_ARESETN),
+    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_WDATA(S_AXI_WDATA),
+    .S_AXI_WSTRB(S_AXI_WSTRB),
+    .S_AXI_ARADDR(S_AXI_ARADDR),
+    
+    .common_reg_wren(common_reg_wren),
+    .common_reg_rden(common_reg_rden),
+    .common_reg_data(common_reg_data)
+);
+
+spi_inf spi_inf_inst(
+    .S_AXI_ACLK(S_AXI_ACLK),
+    .S_AXI_ARESETN(S_AXI_ARESETN),
+    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_WDATA(S_AXI_WDATA),
+    .S_AXI_WSTRB(S_AXI_WSTRB),
+    .S_AXI_ARADDR(S_AXI_ARADDR),
+    
+    .spi_reg_wren(spi_reg_wren),
+    .spi_reg_rden(spi_reg_rden),
+    .spi_reg_data(spi_reg_data)
+);
+
+wire pwm_out;
+
+pwm_inf pwm_inf_inst(
+    .pwm_out(pwm_out),
+    .S_AXI_ACLK(S_AXI_ACLK),
+    .S_AXI_ARESETN(S_AXI_ARESETN),
+    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_WDATA(S_AXI_WDATA),
+    .S_AXI_WSTRB(S_AXI_WSTRB),
+    .S_AXI_ARADDR(S_AXI_ARADDR),
+    
+    .pwm_reg_wren(pwm_reg_wren),
+    .pwm_reg_rden(pwm_reg_rden),
+    .pwm_reg_data(pwm_reg_data)
+);
 
 // User logic ends
 
