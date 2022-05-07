@@ -427,10 +427,10 @@ cpu_inf_common_inst
 (
     /* input  wire */ .S_AXI_ACLK(S_AXI_ACLK),
     /* input  wire */ .S_AXI_ARESETN(S_AXI_ARESETN),
-    /* input  wire */ .S_AXI_AWADDR(S_AXI_AWADDR),
+    /* input  wire */ .S_AXI_AWADDR(axi_awaddr),
     /* input  wire */ .S_AXI_WDATA(S_AXI_WDATA),
     /* input  wire */ .S_AXI_WSTRB(S_AXI_WSTRB),
-    /* input  wire */ .S_AXI_ARADDR(S_AXI_ARADDR),
+    /* input  wire */ .S_AXI_ARADDR(axi_araddr),
     /* output wire */ .S_AXI_RDATA(S_AXI_RDATA),
     /* input  wire */ .slv_reg_wren(slv_reg_wren),
     /* input  wire */ .slv_reg_rden(slv_reg_rden),
@@ -458,10 +458,10 @@ cpu_inf_common_inst
 common_module common_inst(
     .S_AXI_ACLK(S_AXI_ACLK),
     .S_AXI_ARESETN(S_AXI_ARESETN),
-    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_AWADDR(axi_awaddr),
     .S_AXI_WDATA(S_AXI_WDATA),
     .S_AXI_WSTRB(S_AXI_WSTRB),
-    .S_AXI_ARADDR(S_AXI_ARADDR),
+    .S_AXI_ARADDR(axi_araddr),
     
     .common_reg_wren(common_reg_wren),
     .common_reg_rden(common_reg_rden),
@@ -471,14 +471,27 @@ common_module common_inst(
 spi_inf spi_inf_inst(
     .S_AXI_ACLK(S_AXI_ACLK),
     .S_AXI_ARESETN(S_AXI_ARESETN),
-    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_AWADDR(axi_awaddr),
     .S_AXI_WDATA(S_AXI_WDATA),
     .S_AXI_WSTRB(S_AXI_WSTRB),
-    .S_AXI_ARADDR(S_AXI_ARADDR),
+    .S_AXI_ARADDR(axi_araddr),
     
     .spi_reg_wren(spi_reg_wren),
     .spi_reg_rden(spi_reg_rden),
     .spi_reg_data(spi_reg_data)
+);
+
+i2c_inf i2c_inf_inst(
+    .S_AXI_ACLK(S_AXI_ACLK),
+    .S_AXI_ARESETN(S_AXI_ARESETN),
+    .S_AXI_AWADDR(axi_awaddr),
+    .S_AXI_WDATA(S_AXI_WDATA),
+    .S_AXI_WSTRB(S_AXI_WSTRB),
+    .S_AXI_ARADDR(axi_araddr),
+    
+    .i2c_reg_wren(i2c_reg_wren),
+    .i2c_reg_rden(i2c_reg_rden),
+    .i2c_reg_data(i2c_reg_data)
 );
 
 wire pwm_out;
@@ -487,10 +500,10 @@ pwm_inf pwm_inf_inst(
     .pwm_out(pwm_out),
     .S_AXI_ACLK(S_AXI_ACLK),
     .S_AXI_ARESETN(S_AXI_ARESETN),
-    .S_AXI_AWADDR(S_AXI_AWADDR),
+    .S_AXI_AWADDR(axi_awaddr),
     .S_AXI_WDATA(S_AXI_WDATA),
     .S_AXI_WSTRB(S_AXI_WSTRB),
-    .S_AXI_ARADDR(S_AXI_ARADDR),
+    .S_AXI_ARADDR(axi_araddr),
     
     .pwm_reg_wren(pwm_reg_wren),
     .pwm_reg_rden(pwm_reg_rden),

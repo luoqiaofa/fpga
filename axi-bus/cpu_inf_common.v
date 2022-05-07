@@ -42,12 +42,9 @@ module cpu_inf_common
     output wire spi_reg_rden,
     input  wire [C_S_AXI_DATA_WIDTH-1 : 0] spi_reg_data
 );
-
-localparam C_COMMON_BASE = 4'h0;
-localparam C_GPIO_BASE   = 4'h1;
-localparam C_PWM_BASE    = 4'h2;
-localparam C_SPI_BASE    = 4'h3;
-localparam C_I2C_BASE    = 4'h4;
+`include "reg_ranges_def.v"
+`include "../spi/reg-bit-def.v"
+`include "version.v"
 
 assign common_reg_wren = S_AXI_AWADDR[11:8] == C_COMMON_BASE ?  slv_reg_wren : 0;
 assign common_reg_rden = S_AXI_ARADDR[11:8] == C_COMMON_BASE ?  slv_reg_rden : 0;

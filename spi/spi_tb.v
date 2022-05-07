@@ -267,6 +267,8 @@ begin
     master.regwrite(ADDR_SPIM, SPIM_VAL, 2);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS0, 2);
+    master.regread(ADDR_SPCOM, SPCOM, 2);
+    $display("[%t]: SPCOM: %h", $time, SPCOM);
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
 

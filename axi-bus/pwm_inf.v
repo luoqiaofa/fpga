@@ -17,6 +17,7 @@ module pwm_inf
     input  wire pwm_reg_rden,
     output wire [C_S_AXI_DATA_WIDTH-1 : 0] pwm_reg_data
 );
+`include "reg_ranges_def.v"
 
 reg [31:0] PWM_MODE;
 reg [31:0] PWM_DIVIDER;
@@ -36,29 +37,32 @@ begin
         PWM_DUTY       <= 32'h0000c350;
         PWM_BRIGHTNESS <= 128;
     end
+    else begin
+        if (pwm_reg_wren) begin
+            case (S_AXI_AWADDR[7:2])
+                0 : PWM_MODE       <= S_AXI_WDATA;
+                1 : PWM_DIVIDER    <= S_AXI_WDATA;
+                2 : PWM_DUTY       <= S_AXI_WDATA;
+                3 : PWM_BRIGHTNESS <= S_AXI_WDATA;
+                default : ;
+            endcase
+        end
+    end
 end
 
-always @(posedge pwm_reg_rden)
+always @(*)
 begin
-    case (S_AXI_ARADDR[7:2])
-        0 : reg_out <= PWM_MODE;
-        1 : reg_out <= PWM_DIVIDER;
-        2 : reg_out <= PWM_DUTY;
-        3 : reg_out <= PWM_BRIGHTNESS;
-        default : reg_out <= 0;
-    endcase
+    if (S_AXI_ARADDR[11:8] == C_PWM_BASE) begin
+        case (S_AXI_ARADDR[7:2])
+            0 : reg_out <= PWM_MODE;
+            1 : reg_out <= PWM_DIVIDER;
+            2 : reg_out <= PWM_DUTY;
+            3 : reg_out <= PWM_BRIGHTNESS;
+            default : reg_out <= 0;
+        endcase
+    end
 end
 
-always @(posedge pwm_reg_wren)
-begin
-    case (S_AXI_AWADDR[7:2])
-        0 : PWM_MODE       <= S_AXI_WDATA;
-        1 : PWM_DIVIDER    <= S_AXI_WDATA;
-        2 : PWM_DUTY       <= S_AXI_WDATA;
-        3 : PWM_BRIGHTNESS <= S_AXI_WDATA;
-        default : ;
-    endcase
-end
 
 pwm_module
 #(

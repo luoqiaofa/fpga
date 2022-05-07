@@ -2,7 +2,12 @@
 
 `timescale 1ns/10ps
 module axi_bus_tb;
+
+`include "version.v"
+`include "reg_ranges_def.v"
 `include "../spi/reg-bit-def.v"
+`include "../i2c/i2c-reg-def.v"
+
 reg sysclk;
 reg aresetn;
 
@@ -101,26 +106,19 @@ aix_master
     /* output */ .s00_axi_rready(s_axi_rready)
 );
 
-localparam C_COMMON_BASE = 4'h0;
-localparam C_GPIO_BASE   = 4'h1;
-localparam C_PWM_BASE    = 4'h2;
-localparam C_SPI_BASE    = 4'h3;
-localparam C_I2C_BASE    = 4'h4;
-
 initial begin
     sysclk  = 1'b0;
     aresetn = 1'b0;
     regval  = 0;
     #20;
     aresetn = 1'b1;/*这一步是一定要加上的，因为，如果不加的话就等于没有进行初始化，输出信息是没有的，这一点已经验证过了*/
-    #25;
-    aix_master.regread(0, regval, 0);
-    $display("[%t] reg#0=%h", $time, regval);
+    #10;
     aix_master.regread(0, regval, 0);
     $display("[%t] reg#0=%h", $time, regval);
 
     aix_master.regread(4, regval, 0);
     $display("[%t] reg#4=%h", $time, regval);
+
     aix_master.regread(8, regval, 0);
     $display("[%t] reg#8=%h", $time, regval);
     aix_master.regread(12, regval, 0);
@@ -129,10 +127,6 @@ initial begin
     aix_master.regwrite(8, 32'h1234_5678, 0);
     aix_master.regread(8, regval, 0);
     $display("[%t] reg#8=%h", $time, regval);
-    aix_master.regread(8, regval, 0);
-    $display("[%t] reg#8=%h", $time, regval);
-    aix_master.regread(12, regval, 0);
-    $display("[%t] reg#c=%h", $time, regval);
     $display("[%t] write reg#c=%h", $time, 32'haa55_aa55);
     aix_master.regwrite(12, 32'haa55_aa55, 0);
     aix_master.regread(12, regval, 0);
@@ -145,6 +139,9 @@ initial begin
     aix_master.regwrite(ADDR_SPMODE | (C_SPI_BASE << 8), SPMODE_DEF | (1 << SPMODE_EN), 0);
     aix_master.regread(ADDR_SPMODE | (C_SPI_BASE << 8), regval, 0);
     $display("[%t] SPMODE=%h", $time, regval);
+    aix_master.regwrite(ADDR_SPCOM | (C_SPI_BASE << 8), 32'h00030006, 0);
+    aix_master.regread(ADDR_SPCOM | (C_SPI_BASE << 8), regval, 0);
+    $display("[%t] SPCOM=%h", $time, regval);
 
     aix_master.regread(0 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_MODE=%h", $time, regval);
@@ -157,6 +154,19 @@ initial begin
     $display("[%t] PWM_DUTY=%h", $time, regval);
     aix_master.regread(12 | (C_PWM_BASE << 8), regval, 0);
     $display("[%t] PWM_BRIGHTNESS=%h", $time, regval);
+
+    aix_master.regread((ADDR_ADR << 2)| (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CADR=%h", $time, regval);
+    aix_master.regread((ADDR_FDR << 2) | (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CFDR=%h", $time, regval);
+    aix_master.regread((ADDR_CR << 2) | (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CCR=%h", $time, regval);
+    aix_master.regread((ADDR_SR << 2)| (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CSR=%h", $time, regval);
+    aix_master.regread((ADDR_DR << 2) | (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CDR=%h", $time, regval);
+    aix_master.regread((ADDR_DFSRR<<2) | (C_I2C_BASE << 8), regval, 0);
+    $display("[%t] I2CDFSRR=%h", $time, regval);
 end
 
 endmodule

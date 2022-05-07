@@ -1,4 +1,15 @@
-srcs := $(wildcard *.v) ../pwm/pwm.v
+# srcs := $(wildcard *.v) ../pwm/pwm.v
+srcs := \
+    axi_master_model.v \
+	axi-slave.v \
+	common.v \
+	cpu_inf_common.v \
+	pwm_inf.v \
+	spi_inf.v \
+	i2c_inf.v \
+	tb-axi.v \
+	../pwm/pwm.v
+
 $(info srcs:=$(srcs))
 default:
 	echo "开始编译"

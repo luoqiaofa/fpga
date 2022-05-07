@@ -18,6 +18,8 @@ module spi_inf
 );
 
 `include "../spi/reg-bit-def.v"
+`include "./reg_ranges_def.v"
+`include "version.v"
 
 reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
@@ -41,32 +43,36 @@ begin
         SPITF   <= SPITF_DEF;
         SPIRF   <= SPIRF_DEF;
     end
+    else begin
+        if (spi_reg_wren) begin
+            case (S_AXI_AWADDR[7:2])
+                ADDR_SPMODE[7:2] : SPMODE <= S_AXI_WDATA;
+                ADDR_SPIE[7:2]   : SPIE   <= S_AXI_WDATA;
+                ADDR_SPIM[7:2]   : SPIM   <= S_AXI_WDATA;
+                ADDR_SPCOM[7:2]  : SPCOM  <= S_AXI_WDATA;
+                ADDR_SPITF[7:2]  : SPITF  <= S_AXI_WDATA;
+                default : ;
+            endcase
+        end
+    end
 end
 
-always @(posedge spi_reg_rden)
+always @(*)
 begin
-    case (S_AXI_ARADDR[7:2])
-        ADDR_SPMODE[7:2] : reg_out <= SPMODE;
-        ADDR_SPIE[7:2]   : reg_out <= SPIE;
-        ADDR_SPIM[7:2]   : reg_out <= SPIM;
-        ADDR_SPCOM[7:2]  : reg_out <= SPCOM;
-        ADDR_SPITF[7:2]  : reg_out <= SPITF;
-        ADDR_SPIRF[7:2]  : reg_out <= SPIRF;
-        default : reg_out <= 0;
-    endcase
+    if (S_AXI_ARADDR[11:8] == C_SPI_BASE)
+    begin
+        case (S_AXI_ARADDR[7:2])
+            ADDR_SPMODE[7:2] : reg_out <= SPMODE;
+            ADDR_SPIE[7:2]   : reg_out <= SPIE;
+            ADDR_SPIM[7:2]   : reg_out <= SPIM;
+            ADDR_SPCOM[7:2]  : reg_out <= SPCOM;
+            ADDR_SPITF[7:2]  : reg_out <= SPITF;
+            ADDR_SPIRF[7:2]  : reg_out <= SPIRF;
+            default : reg_out <= 0;
+        endcase
+    end
 end
 
-always @(posedge spi_reg_wren)
-begin
-    case (S_AXI_AWADDR[7:2])
-        ADDR_SPMODE[7:2] : SPMODE <= S_AXI_WDATA;
-        ADDR_SPIE[7:2]   : SPIE   <= S_AXI_WDATA;
-        ADDR_SPIM[7:2]   : SPIM   <= S_AXI_WDATA;
-        ADDR_SPCOM[7:2]  : SPCOM  <= S_AXI_WDATA;
-        ADDR_SPITF[7:2]  : SPITF  <= S_AXI_WDATA;
-        default : ;
-    endcase
-end
 
 endmodule
 
