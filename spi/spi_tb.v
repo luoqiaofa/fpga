@@ -30,26 +30,15 @@ integer txdata[0: NWORD_TXFIFO+1];
 always @(sysclk)
     #5 sysclk <= !sysclk;
 
-wire S_WVALID;
-wire S_AWVALID;
-wire S_ARVALID;
-wire S_RREADY;
+wire S_REG_WEN;
+wire S_REG_RDEN;
 wire [3:0] S_WSTRB;
 wire [7:0] S_ARADDR;
 wire [7:0] S_AWADDR;
 wire [31:0] S_WDATA;
-
-wire S_ARREADY;
 wire [31 : 0] S_RDATA;
-wire S_RVALID;
-wire [1 : 0] S_RRESP;
-wire S_WREADY;
-wire S_AWREADY;
 
 wire [3:0 ] S_SPI_CS_B;
-
-wire S_BREADY;
-wire S_BVALID;
 
 spi_master_model master
 (
@@ -58,19 +47,10 @@ spi_master_model master
     .S_AWADDR(S_AWADDR),
     .S_WDATA(S_WDATA),
     .S_WSTRB(S_WSTRB),
-    .S_WVALID(S_WVALID),
-    .S_AWVALID(S_AWVALID),
-    .S_WREADY(S_WREADY),
-    .S_AWREADY(S_AWREADY),
-    .S_ARVALID(S_ARVALID),
-    .S_ARREADY(S_ARREADY),
     .S_ARADDR(S_ARADDR),
-    .S_RDATA(S_RDATA),
-    .S_RVALID(S_RVALID),
-    .S_RREADY(S_RREADY),
-    .S_BREADY(S_BREADY),
-    .S_BVALID(S_BVALID),
-    .S_RRESP(S_RRESP)
+    .S_REG_WEN(S_REG_WEN),
+    .S_REG_RDEN(S_REG_RDEN),
+    .S_RDATA(S_RDATA)
 );
 
 // /*
@@ -82,19 +62,10 @@ spi_master
     .S_AWADDR(S_AWADDR),
     .S_WDATA(S_WDATA),
     .S_WSTRB(S_WSTRB),
-    .S_WVALID(S_WVALID),
-    .S_AWVALID(S_AWVALID),
-    .S_WREADY(S_WREADY),
-    .S_AWREADY(S_AWREADY),
-    .S_ARVALID(S_ARVALID),
-    .S_ARREADY(S_ARREADY),
+    .S_REG_WEN(S_REG_WEN),
     .S_ARADDR(S_ARADDR),
+    .S_REG_RDEN(S_REG_RDEN),
     .S_RDATA(S_RDATA),
-    .S_RVALID(S_RVALID),
-    .S_RREADY(S_RREADY),
-    .S_BREADY(S_BREADY),
-    .S_BVALID(S_BVALID),
-    .S_RRESP(S_RRESP),
     .S_INTERRUPT(irq),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),

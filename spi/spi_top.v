@@ -6,20 +6,10 @@ module spi_intface # (parameter NCS = 4)
     input  wire [7:0] S_AWADDR,
     input  wire [31: 0] S_WDATA,
     input  wire [3 : 0] S_WSTRB,
-    input  wire S_WVALID,
-    input  wire S_AWVALID,
-    output wire S_WREADY,
-    output wire S_AWREADY,
-    input  wire S_ARVALID,
-    output wire S_ARREADY,
+    input  wire S_REG_WEN,
     input  wire [7 : 0]  S_ARADDR,
     output wire [31 : 0] S_RDATA,
-    output wire S_RVALID,
-    input  wire S_RREADY,
-    input  wire S_BREADY,
-    output wire S_BVALID,
-    output wire [1 : 0] S_BRESP,
-    output wire [1 : 0] S_RRESP,
+    input  wire S_REG_RDEN,
     output wire S_INTERRUPT,
     output wire S_SPI_SCK,
     input  wire S_SPI_MISO,
@@ -71,21 +61,8 @@ reg [NBITS_TRANLEN-1:0]     cnt_trans;
 
 reg [NCS-1:0] spi_sel;
 
-reg wvalid_pos_edge;
-reg awvalid_pos_edge;
-reg wready;
-reg awready;
-reg rrvalid;
-reg arready;
-reg	aw_en;
-reg bvalid;
-reg rvalid;
-reg [1:0] rresp;
-reg [1 : 0] bresp;
 reg [31:0] rdata;
 reg [31:0] reg_data_out;
-reg [C_ADDR_WIDTH-1 : 0] awaddr;
-reg [7 : 0] araddr;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
@@ -208,9 +185,6 @@ wire spirf_updated_duledge;
 
 integer byte_index;
 
-wire slv_reg_rden;
-wire slv_reg_wren;
-
 wire i_spi_mosi;
 wire o_spi_mosi;
 reg  t_spi_mosi;
@@ -257,39 +231,6 @@ assign CSMODE_CSCG  = CSMODE[CSMODE_CSCG_HI : CSMODE_CSCG_LO];
 assign csmode_pm   = {{(NBITS_BRG_DIVIDER-NBITS_PM){1'b0}}, CSMODE_PM} + 1;
 assign brg_divider = CSMODE[CSMODE_DIV16] ? (csmode_pm << 4)-1 : csmode_pm-1;
 // assign brg_divider = {{(NBITS_BRG_DIVIDER-4){1'b0}}, 4'h3};
-
-assign S_AWREADY = awready;
-assign S_WREADY  = wready;
-assign S_BRESP   = bresp;
-assign S_BVALID  = bvalid;
-assign S_ARREADY = arready;
-assign S_RDATA   = rdata;
-assign S_RRESP   = rresp;
-assign S_RVALID  = rvalid;
-
-assign slv_reg_wren = wready && S_WVALID && awready && S_AWVALID & wvalid_pos_edge & awvalid_pos_edge;
-assign slv_reg_rden = arready & S_ARVALID & ~rvalid;
-
-always @(posedge S_WVALID or negedge S_RESETN)
-begin
-    if (!S_RESETN)
-    begin
-        wvalid_pos_edge <= 0;
-    end
-    else begin
-        wvalid_pos_edge <= 1;
-    end
-end
-always @(posedge S_AWVALID or negedge S_RESETN)
-begin
-    if (!S_RESETN)
-    begin
-        awvalid_pos_edge <= 0;
-    end
-    else begin
-        awvalid_pos_edge <= 1;
-    end
-end
 
 always @(posedge char_go_posedge)
 begin
@@ -740,8 +681,6 @@ always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
     begin
-        rrvalid <= 0;
-        rresp   <= 2'b00;
         reg_data_out <= 0;
         cs_idx <= 0;
         data_tx <= 17'h00000;
@@ -815,11 +754,9 @@ begin
             CSXMODE[cs_idx] <= csmodex;
             spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
         end
-        if (slv_reg_wren) begin
-            wvalid_pos_edge <= 0;
-            awvalid_pos_edge <= 0;
+        if (S_REG_WEN) begin
             if (S_WSTRB == {4{1'b1}}) begin /* only support 32bits write */
-                case (awaddr[7:2])
+                case (S_AWADDR[7:2])
                     ADDR_SPMODE : SPMODE[31:0] <= S_WDATA;
                 ADDR_SPIE[7:2]:
                 begin
@@ -858,7 +795,7 @@ begin
                 ADDR_SPIRF[7:2]: ; // read only for SPIRF
                 ADDR_CSMODE0[7:2], ADDR_CSMODE1[7:2], ADDR_CSMODE2[7:2], ADDR_CSMODE3[7:2]:
                 begin
-                    cs_idx <= awaddr[7:2] - ADDR_CSMODE0[7:2];
+                    cs_idx <= S_AWADDR[7:2] - ADDR_CSMODE0[7:2];
                     csmodex <= S_WDATA;
                     csmodex_updated <= 1;
                 end
@@ -870,142 +807,7 @@ begin
     end
 end
 
-always @( posedge S_SYSCLK )
-begin
-    if (S_RESETN == 1'b0 )
-    begin
-        awaddr <= 0;
-        aw_en  <= 1;
-    end
-    else begin
-        if (~awready && S_AWVALID && S_WVALID && aw_en)
-        begin
-            // Write Address latching
-            awaddr <= S_AWADDR;
-        end
-    end
-end
-
-always @( posedge S_SYSCLK)
-begin
-    if (S_RESETN == 1'b0 )
-    begin
-        wready <= 1'b1;
-    end
-    else begin
-        if (~wready && S_WVALID && S_AWVALID && aw_en)
-        begin
-            // slave is ready to accept write data when
-            // there is a valid write address and write data
-            // on the write address and data bus. This design
-            // expects no outstanding transactions.
-            wready <= 1'b1;
-        end
-        else begin
-            wready <= 1'b0;
-        end
-    end
-end
-
-always @( posedge S_SYSCLK )
-begin
-    if (S_RESETN == 1'b0 )
-    begin
-        awready <= 1'b0;
-        aw_en <= 1'b1;
-    end
-    else begin
-        if (~awready && S_AWVALID && S_WVALID && aw_en)
-        begin
-            // slave is ready to accept write address when
-            // there is a valid write address and write data
-            // on the write address and data bus. This design
-            // expects no outstanding transactions.
-            awready <= 1'b1;
-            aw_en <= 1'b0;
-        end
-        else if (S_BREADY && bvalid)
-        begin
-            aw_en <= 1'b1;
-            awready <= 1'b0;
-        end
-        else begin
-            awready <= 1'b0;
-        end
-    end
-end
-
-always @( posedge S_SYSCLK)
-begin
-    if (S_RESETN == 1'b0 )
-    begin
-        bvalid  <= 0;
-        bresp   <= 2'b0;
-    end
-    else
-    begin
-    if (awready && S_AWVALID && ~bvalid && wready && S_WVALID)
-    begin
-        // indicates a valid write response is available
-        bvalid <= 1'b1;
-        bresp  <= 2'b0; // 'OKAY' response
-    end                   // work error responses in future
-    else
-    begin
-        if (S_BREADY && bvalid)
-            //check if bready is asserted while bvalid is high)
-                //(there is a possibility that bready is always asserted high)
-            begin
-                bvalid <= 1'b0;
-            end
-        end
-    end
-end
-
-
-always @(posedge S_SYSCLK)
-begin
-    if ( S_RESETN == 1'b0 )
-    begin
-        arready <= 1'b0;
-        araddr  <= 32'b0;
-    end 
-    else
-    begin    
-    if (~arready && S_ARVALID)
-    begin
-        arready <= 1'b1;
-        araddr  <= S_ARADDR;
-    end
-    else
-    begin
-        arready <= 1'b0;
-    end
-end 
-end
-
-always @( posedge S_SYSCLK)
-begin
-    if (S_RESETN == 1'b0)
-    begin
-        rvalid <= 0;
-        rresp  <= 0;
-    end
-    else begin
-        if (arready && S_ARVALID && ~rvalid)
-        begin
-            // Valid read data is available at the read data bus
-            rvalid <= 1'b1;
-            rresp  <= 2'b0; // 'OKAY' response
-        end
-        else if (rvalid && S_RREADY)
-        begin
-            // Read data is accepted by the master
-            rvalid <= 1'b0;
-        end
-    end
-end
-
+assign S_RDATA = rdata;
 // Output register or memory read data
 always @( posedge S_SYSCLK )
 begin
@@ -1015,10 +817,7 @@ begin
     end
     else
     begin
-        // When there is a valid read address (S_ARVALID) with
-        // acceptance of read address by the slave (arready),
-        // output the read dada
-        if (slv_reg_rden)
+        if (S_REG_RDEN)
         begin
             case (S_ARADDR)
                 ADDR_SPMODE : rdata <= SPMODE;
