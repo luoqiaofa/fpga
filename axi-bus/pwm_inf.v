@@ -1,3 +1,4 @@
+`timescale 1 ns / 1 ps
 module pwm_inf
 #(
     parameter integer C_S_AXI_DATA_WIDTH = 32,
@@ -30,7 +31,6 @@ assign pwm_reg_data = reg_out;
 always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN)
 begin
     if (1'b0 == S_AXI_ARESETN) begin
-        reg_out <= 0;
         PWM_MODE       <= 0;
         // default 1 KHz
         PWM_DIVIDER    <= 32'h000186a0;
@@ -51,6 +51,7 @@ begin
 end
 
 always @(*)
+// always @(posedge pwm_reg_rden)
 begin
     if (S_AXI_ARADDR[11:8] == C_PWM_BASE) begin
         case (S_AXI_ARADDR[7:2])

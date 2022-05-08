@@ -1,3 +1,5 @@
+`timescale 1 ns / 1 ps
+
 module common_module
 #(
     parameter integer C_S_AXI_DATA_WIDTH = 32,
@@ -30,7 +32,6 @@ assign common_reg_data = reg_out;
 always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN)
 begin
     if (1'b0 == S_AXI_ARESETN) begin
-        reg_out <= 0;
         reg_test1 <= 0;
         reg_test2 <= 0;
     end
@@ -46,6 +47,7 @@ begin
 end
 
 always @(*)
+// always @(posedge common_reg_rden)
 begin
     if (S_AXI_ARADDR[11:8] == C_COMMON_BASE) begin
         case (S_AXI_ARADDR[7:2])
@@ -53,7 +55,7 @@ begin
             6'h01   : reg_out <= `COMPILE_TIME;
             6'h02   : reg_out <= reg_test1;
             6'h03   : reg_out <= ~reg_test2;
-            default : reg_out <= reg_out;
+            default : reg_out <= 0;
         endcase
     end
 end

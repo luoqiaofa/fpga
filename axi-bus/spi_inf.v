@@ -1,3 +1,5 @@
+`timescale 1 ns / 1 ps
+
 module spi_inf
 #(
     parameter integer C_S_AXI_DATA_WIDTH = 32,
@@ -35,7 +37,6 @@ assign spi_reg_data = reg_out;
 always @(posedge S_AXI_ACLK or negedge S_AXI_ARESETN)
 begin
     if (1'b0 == S_AXI_ARESETN) begin
-        reg_out <= 0;
         SPMODE  <= SPMODE_DEF;
         SPIE    <= SPIE_DEF;
         SPIM    <= SPIM_DEF;
@@ -58,6 +59,7 @@ begin
 end
 
 always @(*)
+// always @(posedge spi_reg_rden)
 begin
     if (S_AXI_ARADDR[11:8] == C_SPI_BASE)
     begin
