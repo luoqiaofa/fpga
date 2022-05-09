@@ -404,10 +404,11 @@ begin
 
     for (idx = 0; idx < NWORD_TXFIFO+2; idx = idx + 1) begin
         master.regread(ADDR_SPIE, SPIE, 0);
+        $display("[%t] idx=%02d,SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,idx,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
         while (~SPIE[SPIE_TNF]) begin
-            master.regwrite(ADDR_SPITF, txdata[idx%9], 2);
             master.regread(ADDR_SPIE, SPIE, 0);
         end
+        master.regwrite(ADDR_SPITF, txdata[idx%9], 2);
     end
     $display("[%t] wait rx fifo full", $time);
     master.regread(ADDR_SPIE, SPIE, 0);
@@ -427,24 +428,30 @@ begin
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 4) begin
         master.regread(ADDR_SPIRF,SPIRF, 0);
+        idx = idx + 1;
+        $display("[%t] idx=%02d,SPIRF: %h,RXCNT=%d",$time,idx,SPIRF,SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
         // clear SPIE flags
         master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 0);
 
         master.regread(ADDR_SPIE, SPIE, 0);
-        idx = idx + 1;
-        $display("[%t] idx=%02d,SPIRF: %h,RXCNT=%d",$time,idx,SPIRF,SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
     end
 
     // wait this frame to be done
     master.regread(ADDR_SPIE, SPIE, 0);
     while (1'b0 == SPIE[SPIE_DON]) begin
+        if (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 4) begin
+            master.regread(ADDR_SPIRF,SPIRF, 0);
+            idx = idx + 1;
+            $display("[%t] idx=%02d,SPIRF: %h,RXCNT=%d",$time,idx,SPIRF,SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
+        end
         master.regread(ADDR_SPIE, SPIE, 0);
         #100;
     end
     $display("[%t] SPIE: %h,DON=%d,RXCNT=%d",$time,SPIE,SPIE[SPIE_DON],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
     if (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] > 0) begin
         master.regread(ADDR_SPIRF,SPIRF, 0);
-        $display("[%t] SPIRF: %h", $time, SPIRF);
+        idx = idx + 1;
+        $display("[%t] idx=%02d,SPIRF: %h,RXCNT=%d",$time,idx,SPIRF,SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO]);
     end
 
     master.regread(ADDR_SPIE, SPIE, 0);
