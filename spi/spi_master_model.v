@@ -55,8 +55,8 @@ task regread;
         S_REG_RDEN = 1;
         @(posedge S_SYSCLK);
         S_REG_RDEN = 0;
+        @(posedge S_SYSCLK);
         value = S_RDATA;
-        repeat(2) @(posedge S_SYSCLK);
     end
 endtask
 

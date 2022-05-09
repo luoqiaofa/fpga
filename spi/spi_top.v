@@ -681,7 +681,6 @@ always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
     begin
-        reg_data_out <= 0;
         cs_idx <= 0;
         data_tx <= 17'h00000;
         data_rx <= 17'h00000;
@@ -819,21 +818,12 @@ begin
     begin
         if (S_REG_RDEN)
         begin
+            rdata <= reg_data_out;
             case (S_ARADDR)
-                ADDR_SPMODE : rdata <= SPMODE;
-                ADDR_SPIE   : rdata <= SPIE;     // register read data
-                ADDR_SPCOM  : rdata <= SPCOM;
-                ADDR_SPIM   : rdata <= SPIM;
-                ADDR_SPIM   : rdata <= SPIM;
-                ADDR_CSMODE0: rdata <= CSXMODE[0];
-                ADDR_CSMODE1: rdata <= NCS < 2? {32{1'b0}} : CSXMODE[1];
-                ADDR_CSMODE2: rdata <= NCS < 3? {32{1'b0}} : CSXMODE[2];
-                ADDR_CSMODE3: rdata <= NCS < 4? {32{1'b0}} : CSXMODE[3];
-                ADDR_SPITF  : rdata <= SPITF;
                 ADDR_SPIRF  :
                 begin
                     if (RNE) begin
-                        rdata <= SPI_RXFIFO[spirf_rd_idx];
+                        // rdata <= SPI_RXFIFO[spirf_rd_idx];
                         if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
                             spirf_rd_idx <= 0;
                             spirf_char_idx <= 0;
@@ -843,12 +833,12 @@ begin
                             spirf_rd_idx <= spirf_rd_idx + 1;
                             nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
                         end
+                    end
+                    else begin
+                        rdata <= 0;
+                    end
                 end
-                else begin
-                    rdata <= 0;
-                end
-                end
-                default: rdata <= 0;
+                default: ;
             endcase
         end
     end
@@ -920,6 +910,24 @@ Edge_Detect brg_clk_negedge_dual_det(
     .neg_edge(brg_negedge_negedge) ,
     .data_edge(brg_negedge_dualedge)
 );
+
+always @(*)
+begin
+    case (S_ARADDR)
+        ADDR_SPMODE : reg_data_out <= SPMODE;
+        ADDR_SPIE   : reg_data_out <= SPIE;     // register read data
+        ADDR_SPCOM  : reg_data_out <= SPCOM;
+        ADDR_SPIM   : reg_data_out <= SPIM;
+        ADDR_SPIM   : reg_data_out <= SPIM;
+        ADDR_CSMODE0: reg_data_out <= CSXMODE[0];
+        ADDR_CSMODE1: reg_data_out <= NCS < 2? {32{1'b0}} : CSXMODE[1];
+        ADDR_CSMODE2: reg_data_out <= NCS < 3? {32{1'b0}} : CSXMODE[2];
+        ADDR_CSMODE3: reg_data_out <= NCS < 4? {32{1'b0}} : CSXMODE[3];
+        ADDR_SPITF  : reg_data_out <= SPITF;
+        ADDR_SPIRF  : reg_data_out <= SPI_RXFIFO[spirf_rd_idx];
+        default     : ;
+    endcase
+end
 
 endmodule
 
