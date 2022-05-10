@@ -806,24 +806,21 @@ begin
     end
 end
 
-assign S_RDATA = rdata;
+assign S_RDATA = reg_data_out;
 // Output register or memory read data
 always @( posedge S_SYSCLK )
 begin
     if (S_RESETN == 1'b0 )
     begin
-        rdata  <= 0;
     end
     else
     begin
         if (S_REG_RDEN)
         begin
-            rdata <= reg_data_out;
             case (S_ARADDR)
                 ADDR_SPIRF  :
                 begin
                     if (RNE) begin
-                        // rdata <= SPI_RXFIFO[spirf_rd_idx];
                         if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
                             spirf_rd_idx <= 0;
                             spirf_char_idx <= 0;
@@ -833,9 +830,6 @@ begin
                             spirf_rd_idx <= spirf_rd_idx + 1;
                             nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
                         end
-                    end
-                    else begin
-                        rdata <= 0;
                     end
                 end
                 default: ;
