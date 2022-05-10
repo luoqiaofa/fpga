@@ -176,7 +176,7 @@ begin
     txdata[7] = 32'h01020304;
     txdata[8] = 32'h01050a0f;
     txdata[9] = 32'h102030f0;
-    #50000;
+    #35000;
     $stop;
 end
 
