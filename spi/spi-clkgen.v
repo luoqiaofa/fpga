@@ -10,7 +10,7 @@ module spi_clk_gen #
     input  go,              // start transmit
     input  CPOL,            // clock polarity
     input  last_clk,        // last clock 
-    input  [C_DIVIDER_WIDTH-1:0] divider_i, // divider;
+    input  [C_DIVIDER_WIDTH-1:0] divider_i, // divider_i;
     output reg clk_out,     // clock output
     output reg pos_edge,    // positive edge flag
     output reg neg_edge     // negtive edge flag
@@ -19,80 +19,46 @@ module spi_clk_gen #
 wire cnt_zero;
 wire cnt_one;
 reg [C_DIVIDER_WIDTH-1:0] cnt;
-reg  in_process;
-wire is_active;
-assign is_active = in_process;
 
 assign cnt_zero = (cnt == {C_DIVIDER_WIDTH{1'b0}});
 assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 
-always @(posedge go or negedge rst_n)
-begin
-    if (enable) begin
-        in_process <= 1;
-        cnt <= divider_i;
-        clk_out <= CPOL;
-    end
-end
 
+// Counter counts half period
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n) begin
-        in_process <= 0;
-        cnt   <= {C_DIVIDER_WIDTH{1'b1}};
-    end
-    else begin
-        if (!enable || cnt_zero || !is_active) begin
-            clk_out <= CPOL;
-            cnt   <= divider_i;
-        end
-        else begin
+    if(rst_n == 1'b0)
+        cnt <= {C_DIVIDER_WIDTH{1'b1}};
+    else
+    begin
+        if(!enable || cnt_zero)
+            cnt <= divider_i;
+        else
             cnt <= cnt - {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1};
-        end
     end
 end
 
-always @(negedge last_clk or negedge rst_n)
-begin
-    clk_out <= CPOL;
-end
-
-always @(posedge last_clk)
-begin
-    in_process <= 0;
-end
-
-// clock out
+// clk_out is asserted every other half period
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n) begin
-        clk_out <= 0;
-    end
-    else begin
-        if (!enable) begin
-            clk_out <= CPOL;
-        end
-        else begin
-            if (go) begin
-                clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
-            end
-            else begin
-                clk_out <= CPOL;
-            end
-        end
-    end
+    if(rst_n == 1'b0)
+        clk_out <= CPOL;
+    else
+        clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
 end
 
-// pos neg signals
+// Pos and neg edge signals
 always @(posedge sysclk or negedge rst_n)
 begin
-    if (!rst_n || !enable || !go) begin
-        pos_edge <= 1'b0;
-        neg_edge <= 1'b0;
+    if(rst_n == 1'b0)
+    begin
+        pos_edge  <= 1'b0;
+        neg_edge  <= 1'b0;
     end
-    else begin
-        pos_edge <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && is_active && !enable);
-        neg_edge <= (enable && clk_out && cnt_one) || (!(|divider_i) && !clk_out && enable);
+    else
+    begin
+        pos_edge  <= (enable && !clk_out && cnt_one) || (!(|divider_i) && clk_out) || (!(|divider_i) && go && !enable);
+        neg_edge  <= (enable && clk_out && cnt_one) || (!(|divider_i) && !clk_out && enable);
     end
 end
 
