@@ -66,6 +66,7 @@ reg [31:0] reg_data_out;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
+reg frame_go;
 reg frame_done;
 reg chr_go;
 wire chr_go_wire;
@@ -261,7 +262,7 @@ begin
 
         t_spi_mosi <= 0;
 
-        spi_brg_go <= 1;
+        spi_brg_go <= 0;
 
         chr_go       <= 0;
         chr_done     <= 0;
@@ -270,6 +271,7 @@ begin
         char_rx_idx <= 0;
         spirf_char_idx <= 0;
 
+        frame_go   <= 0;
         frame_done <= 0;
         frame_in_process <= 0;
         frame_state <= FRAME_SM_IDLE;
@@ -468,8 +470,12 @@ begin
                 end
             end
         end
+        if (frame_go) begin
+            frame_go <= 0;
+        end
         if (spcom_updated) begin
             if (SPMODE[SPMODE_EN]) begin
+                frame_go <= 1;
                 spi_brg_go <= 1;
                 frame_in_process <= 1;
                 char_trx_idx <= 0;
@@ -833,7 +839,7 @@ end
 spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .sysclk(S_SYSCLK),           // system clock input
     .rst_n(S_RESETN),            // module reset
-    .enable(SPMODE[SPMODE_EN]),  // module enable
+    .enable(spi_brg_go),  // module enable
     .go(spi_brg_go),                 // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(1'b0),     // last clock
