@@ -21,7 +21,7 @@ wire irq;
 // pullup pullup_spi_cs2 (SPI_CS[2]);
 // pullup pullup_spi_cs3 (SPI_CS[3]);
 
-/* pullup pullup_miso (SPI_MISO); */
+pullup pullup_miso (SPI_MISO);
 
 wire [NBITS_CHAR_LEN_MAX-1:0] data_rx;
 reg  [31: 0] data_tx[0:NWORD_TXFIFO];
