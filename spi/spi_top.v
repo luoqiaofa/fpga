@@ -259,13 +259,18 @@ begin
             spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
         end
 
+        if (spirf_updated) begin
+            if (0 == spirf_rd_idx) begin
+                spirf_char_idx <= 0; // need to another side to reset
+            end
+        end
+
         if (frame_go) begin
             frame_go <= 0;
 
             // 0: MOSI pin as output; 1: MOSI is input;
             t_spi_mosi <= 1'b0;
             char_trx_idx <= 0;
-            spirf_rd_idx <= 0;
             spirf_char_idx <= 0;
             spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
         end
@@ -702,7 +707,6 @@ begin
                         spirf_updated <= 1;
                         if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
                             spirf_rd_idx <= 0;
-                            // spirf_char_idx <= 0; // need to another side to reset
                             nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
                         end
                         else begin

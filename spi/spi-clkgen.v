@@ -25,7 +25,7 @@ assign cnt_one  = (cnt == {{C_DIVIDER_WIDTH-1{1'b0}}, 1'b1});
 
 
 // Counter counts half period
-always @(posedge sysclk or negedge rst_n)
+always @(posedge sysclk/* or negedge rst_n*/)
 begin
     if(rst_n == 1'b0)
         cnt <= {C_DIVIDER_WIDTH{1'b1}};
@@ -39,7 +39,7 @@ begin
 end
 
 // clk_out is asserted every other half period
-always @(posedge sysclk or negedge rst_n)
+always @(posedge sysclk/* or negedge rst_n */)
 begin
     if(rst_n == 1'b0)
         clk_out <= CPOL;
@@ -48,7 +48,7 @@ begin
 end
 
 // Pos and neg edge signals
-always @(posedge sysclk or negedge rst_n)
+always @(posedge sysclk /* or negedge rst_n */)
 begin
     if(rst_n == 1'b0)
     begin
