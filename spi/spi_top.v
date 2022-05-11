@@ -66,6 +66,7 @@ reg [31:0] reg_data_out;
 
 /* spi transactions flags or counters begin */
 reg frame_in_process;
+reg frame_next_start;
 reg frame_go;
 reg frame_done;
 reg chr_go;
@@ -246,6 +247,7 @@ begin
         frame_go   <= 0;
         frame_done <= 0;
         frame_in_process <= 0;
+        frame_next_start <= 0;
         frame_state <= FRAME_SM_IDLE;
         for (idx = 0; idx < NCS; idx = idx + 1) begin
             CSXMODE[idx] <= CSMODE_DEF;
@@ -270,6 +272,12 @@ begin
         if (chr_done) begin
             chr_done <= 0;
             if (1'b0 == SPCOM[SPCOM_TO]) begin
+                if (char_trx_idx > SPCOM_RSKIP) begin
+                    char_rx_idx = char_trx_idx - SPCOM_RSKIP;
+                end
+                else if (char_rx_idx > 0) begin
+                    char_rx_idx <= char_rx_idx + 1;
+                end
                 if (char_rx_idx > 0) begin
                     spirf_char_idx <= spirf_char_idx + 1;
                 end
@@ -280,14 +288,6 @@ begin
                     if ((SPCOM_RSKIP > 0) && (char_trx_idx == SPCOM_RSKIP)) begin
                         t_spi_mosi <= 1'b1; // change mosi pin as input
                     end
-                end
-            end
-            if (1'b0 == SPCOM[SPCOM_TO]) begin
-                if (char_trx_idx > SPCOM_RSKIP) begin
-                    char_rx_idx = char_trx_idx - SPCOM_RSKIP;
-                end
-                else if (char_rx_idx > 0) begin
-                    char_rx_idx <= char_rx_idx + 1;
                 end
             end
             if (frame_in_process) begin
@@ -325,44 +325,28 @@ begin
         end
         if (frame_go) begin
             frame_go <= 0;
+
+            // 0: MOSI pin as output; 1: MOSI is input;
+            t_spi_mosi <= 1'b0;
+            char_trx_idx <= 0;
+            spirf_rd_idx <= 0;
+            spirf_char_idx <= 0;
+            spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
         end
         if (spcom_updated) begin
-            if (SPMODE[SPMODE_EN]) begin
+            spi_brg_go <= 1;
+            if (FRAME_SM_IDLE == frame_state) begin
                 frame_go <= 1;
-                spi_brg_go <= 1;
                 frame_in_process <= 1;
-                if (|cnt_cscg) begin
-                    frame_state <= FRAME_SM_CG_WAIT;
-                end
-                else begin
-                    frame_state <= FRAME_SM_BEF_WAIT;
-                end
-   
-                // 0: MOSI pin as output; 1: MOSI is input;
-                t_spi_mosi <= 1'b0;
-   
-                char_trx_idx <= 0;
-                spirf_rd_idx <= 0;
-                spirf_char_idx <= 0;
-                spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
-                if (CSMODE_CSBEF > 0) begin
-                    cnt_csbef <= CSMODE_CSBEF - 1;
-                end
-                else begin
-                    cnt_csbef <= CSMODE_CSBEF;
-                end
-                cnt_csaft <= CSMODE_CSAFT;
-                if (&cnt_cscg) begin
-                    frame_state <= FRAME_SM_CG_WAIT;
-                end
-                else begin
-                    cnt_cscg  <= CSMODE_CSCG;
-                    frame_state <= FRAME_SM_BEF_WAIT;
-                end
+                frame_state <= FRAME_SM_BEF_WAIT;
+                cnt_cscg <= CSMODE_CSCG;
             end
             else begin
-                frame_state <= FRAME_SM_IDLE;
+                frame_next_start <= 1;
             end
+   
+            cnt_csbef <= CSMODE_CSBEF;
+            cnt_csaft <= CSMODE_CSAFT;
         end
         if (1'b1 == brg_out_second_edge) begin
             if (CSMODE[CSMODE_CPHA])
@@ -382,6 +366,7 @@ begin
                         end
                     end
                     else begin
+                        char_bit_cnt <= char_bit_cnt + 1;
                         if (CSMODE_LEN == char_bit_cnt) begin
                             chr_done <= 1;
                             char_trx_idx <= char_trx_idx + 1;
@@ -471,9 +456,12 @@ begin
                         cnt_cscg <= cnt_cscg - 1;
                     end
                     else begin
-                        cnt_cscg <= CSMODE_CSCG;
-                        if (frame_in_process) begin
+                        if (frame_next_start) begin
                             frame_state <= FRAME_SM_BEF_WAIT;
+                            frame_next_start <= 0;
+                            frame_go <= 1;
+                            frame_in_process <= 1;
+                            cnt_cscg <= CSMODE_CSCG;
                         end
                         else begin
                             frame_state <= FRAME_SM_IDLE;
@@ -483,65 +471,24 @@ begin
                 default:;
             endcase
         end
-        else begin
-            if (brg_out_first_edge) begin
+        if (brg_out_first_edge) begin
+            if (FRAME_SM_IN_TRANS == frame_state) begin
                 if (CSMODE[CSMODE_CPHA])
                 begin
+                    if (CSMODE[CSMODE_REV]) begin
+                        char_bit_cnt <= char_bit_cnt - 1;
+                    end
+                    else begin
+                        char_bit_cnt <= char_bit_cnt + 1;
+                    end
                 end
                 else begin
-                    if (FRAME_SM_IN_TRANS == frame_state) begin
-                        data_rx[char_bit_cnt] <= din;
-                    end
+                    data_rx[char_bit_cnt] <= din;
                 end
             end
         end
     end
 end
-
-// always @(posedge S_SYSCLK or negedge S_RESETN)
-// begin
-//     if (1'b1 == frame_in_process) begin
-//         spirf_rd_idx <= 0;
-//         spirf_char_idx <= 0;
-//         nbytes_read_from_spirf <= 0;
-// 
-//         // 0: MOSI pin as output; 1: MOSI is input;
-//         t_spi_mosi <= 1'b0;
-// 
-//         spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
-//         if (CSMODE_CSBEF > 0) begin
-//             cnt_csbef <= CSMODE_CSBEF - 1;
-//         end
-//         else begin
-//             cnt_csbef <= CSMODE_CSBEF;
-//         end
-//         cnt_csaft <= CSMODE_CSAFT;
-//         if (&cnt_cscg) begin
-//             frame_state <= FRAME_SM_CG_WAIT;
-//         end
-//         else begin
-//             cnt_cscg  <= CSMODE_CSCG;
-//             frame_state <= FRAME_SM_BEF_WAIT;
-//         end
-//     end
-// end
-
-// counter processing
-// always @(posedge S_SYSCLK or negedge S_RESETN)
-// begin
-//     if (!S_RESETN || (!SPMODE[SPMODE_EN])) begin
-//         cnt_rskip <= 0;
-//         cnt_txthr <= 0;
-//         cnt_rxthr <= 0;
-//         cnt_rxcnt <= 0;
-//         cnt_txcnt <= 0;
-//         cnt_trans <= 0;
-// 
-// 
-//     end
-//     else begin
-//     end
-// end
 
 always @(posedge char_done_wire)
 begin
@@ -669,7 +616,7 @@ end
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
-    if (!S_RESETN)
+    if (1'b0 == S_RESETN)
     begin
         data_tx <= 16'h0000;
     end
@@ -683,7 +630,7 @@ begin
             end
         end
         else begin
-            case (spitf_trx_char_off)
+            case (spitf_trx_char_off[1:0])
                 0: data_tx <= {8'h00, SPITF[7:0]};
                 1: data_tx <= {8'h00, SPITF[15:8]};
                 2: data_tx <= {8'h00, SPITF[23:16]};
@@ -795,41 +742,38 @@ begin
                     ADDR_SPIM[7:2]: SPIM <= S_WDATA;
                     ADDR_SPCOM[7:2]:
                     begin
-                        if (1'b0 == frame_in_process) begin
-                            SPCOM <= S_WDATA;
-                            spcom_updated <= 1;
-                            if (SPMODE[SPMODE_EN]) begin
-                            // if (SPCOM_CS != S_WDATA[SPCOM_CS_HI:SPCOM_CS_LO]) begin
-                            //     spi_brg_go <= 0;
-                            // end
+                        SPCOM <= S_WDATA;
+                        if ((FRAME_SM_IDLE == frame_state) || (FRAME_SM_CG_WAIT == frame_state)) begin
+                            if (1'b1 == SPMODE[SPMODE_EN]) begin
+                                spcom_updated <= 1; // new frame can start
+                            end
                         end
                     end
-                end
-                ADDR_SPITF[7:2]:
-                begin
-                    if (SPMODE[SPMODE_EN]) begin
-                        if (TNF)
-                        begin
-                            spitf_updated <= 1;
-                            SPI_TXFIFO[spitf_idx] <= S_WDATA;
-                            spitf_idx <= spitf_idx + 1;
-                            num_spitf_upd <= num_spitf_upd  + 1;
+                    ADDR_SPITF[7:2]:
+                    begin
+                        if (SPMODE[SPMODE_EN]) begin
+                            if (TNF)
+                            begin
+                                spitf_updated <= 1;
+                                SPI_TXFIFO[spitf_idx] <= S_WDATA;
+                                spitf_idx <= spitf_idx + 1;
+                                num_spitf_upd <= num_spitf_upd  + 1;
+                            end
                         end
                     end
-                end
-                ADDR_SPIRF[7:2]: ; // read only for SPIRF
-                ADDR_CSMODE0[7:2], ADDR_CSMODE1[7:2], ADDR_CSMODE2[7:2], ADDR_CSMODE3[7:2]:
-                begin
-                    cs_idx <= S_AWADDR[7:2] - ADDR_CSMODE0[7:2];
-                    csmodex <= S_WDATA;
-                    csmodex_updated <= 1;
-                end
-                default : begin
-                end
-            endcase
+                    ADDR_SPIRF[7:2]: ; // read only for SPIRF
+                    ADDR_CSMODE0[7:2], ADDR_CSMODE1[7:2], ADDR_CSMODE2[7:2], ADDR_CSMODE3[7:2]:
+                    begin
+                        cs_idx <= S_AWADDR[7:2] - ADDR_CSMODE0[7:2];
+                        csmodex <= S_WDATA;
+                        csmodex_updated <= 1;
+                    end
+                    default : begin
+                    end
+                endcase
+            end
         end
     end
-end
 end
 
 spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
