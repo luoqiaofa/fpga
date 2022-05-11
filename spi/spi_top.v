@@ -259,15 +259,19 @@ begin
             spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
         end
 
+        if (frame_go) begin
+            frame_go <= 0;
+
+            // 0: MOSI pin as output; 1: MOSI is input;
+            t_spi_mosi <= 1'b0;
+            char_trx_idx <= 0;
+            spirf_rd_idx <= 0;
+            spirf_char_idx <= 0;
+            spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
+        end
         if (1'b1 == frame_done) begin
             frame_done <= 0;
             char_trx_idx <= 0;
-        end
-        if (1'b1 == spitf_updated)
-        begin
-            if (1'b0 == frame_in_process) begin
-                char_trx_idx   <= 0;
-            end
         end
         if (chr_done) begin
             chr_done <= 0;
@@ -323,16 +327,6 @@ begin
                 end
             end
         end
-        if (frame_go) begin
-            frame_go <= 0;
-
-            // 0: MOSI pin as output; 1: MOSI is input;
-            t_spi_mosi <= 1'b0;
-            char_trx_idx <= 0;
-            spirf_rd_idx <= 0;
-            spirf_char_idx <= 0;
-            spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
-        end
         if (spcom_updated) begin
             spi_brg_go <= 1;
             if (FRAME_SM_IDLE == frame_state) begin
@@ -353,32 +347,6 @@ begin
             begin
                 if (FRAME_SM_IN_TRANS == frame_state) begin
                     data_rx[char_bit_cnt] <= din;
-                    if (CSMODE[CSMODE_REV]) begin
-                        if (0 == char_bit_cnt) begin
-                            chr_done <= 1;
-                            char_trx_idx <= char_trx_idx + 1;
-                            if (char_trx_idx == SPCOM_TRANLEN) begin
-                                frame_state <= FRAME_SM_AFT_WAIT;
-                            end
-                            else begin
-                                chr_go <= 1;
-                            end
-                        end
-                    end
-                    else begin
-                        char_bit_cnt <= char_bit_cnt + 1;
-                        if (CSMODE_LEN == char_bit_cnt) begin
-                            chr_done <= 1;
-                            char_trx_idx <= char_trx_idx + 1;
-                            if (char_trx_idx == SPCOM_TRANLEN) begin
-                                // char_trx_idx <= 0;
-                                frame_state <= FRAME_SM_AFT_WAIT;
-                            end
-                            else begin
-                                chr_go <= 1;
-                            end
-                        end
-                    end
                 end
             end
             else begin /* (!CSMODE[CSMODE_CPHA]) */
@@ -477,9 +445,31 @@ begin
                 begin
                     if (CSMODE[CSMODE_REV]) begin
                         char_bit_cnt <= char_bit_cnt - 1;
+                        if (0 == char_bit_cnt) begin
+                            chr_done <= 1;
+                            char_trx_idx <= char_trx_idx + 1;
+                            if (char_trx_idx == SPCOM_TRANLEN) begin
+                                // char_trx_idx <= 0;
+                                frame_state <= FRAME_SM_AFT_WAIT;
+                            end
+                            else begin
+                                chr_go <= 1;
+                            end
+                        end
                     end
                     else begin
                         char_bit_cnt <= char_bit_cnt + 1;
+                        if (CSMODE_LEN == char_bit_cnt) begin
+                            chr_done <= 1;
+                            char_trx_idx <= char_trx_idx + 1;
+                            if (char_trx_idx == SPCOM_TRANLEN) begin
+                                // char_trx_idx <= 0;
+                                frame_state <= FRAME_SM_AFT_WAIT;
+                            end
+                            else begin
+                                chr_go <= 1;
+                            end
+                        end
                     end
                 end
                 else begin
@@ -686,6 +676,7 @@ begin
         SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO] <= TXCNT[NBITS_TXCNT-1: 0];
         if (frame_done) begin
             SPIE[SPIE_DON] <= 1'b1;
+            num_spitf_upd <= 0;
         end
         if (frame_go) begin
             nbytes_read_from_spirf <= 0;
@@ -701,9 +692,6 @@ begin
         end
         if (csmodex_updated) begin
             csmodex_updated <= 0;
-        end
-        if (1'b1 == frame_done) begin
-            num_spitf_upd <= 0;
         end
         if (S_REG_RDEN)
         begin

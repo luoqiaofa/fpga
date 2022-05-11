@@ -176,7 +176,7 @@ begin
     txdata[7] = 32'h01020304;
     txdata[8] = 32'h01050a0f;
     txdata[9] = 32'h102030f0;
-    #35000;
+    #50000;
     $stop;
 end
 
@@ -333,21 +333,24 @@ begin
     end
 
     $display("[%t] case#3 select cs#1 and write 2byte than read 7 bytes", $time);
-    // wait pre frame done
-    master.regread(ADDR_SPIE, SPIE, 0);
-    while (~SPIE[SPIE_TXE]) begin
-        master.regread(ADDR_SPIE, SPIE, 0);
-    end
+    $display("[%t] wait pre frame done", $time);
+    // master.regread(ADDR_SPIE, SPIE, 0);
+    // while (1'b0 == SPIE[SPIE_TXE]) begin
+    //     master.regread(ADDR_SPIE, SPIE, 0);
+    // end
+    $display("[%t] wait 500 ps", $time);
     #500;
     // clear SPIE flags
     // master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
-    // clear SPIE flags
+    $display("[%t] clear SPIE flags", $time);
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
     // renable SPI
     // master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
+    $display("[%t] config CSMODE1 to %h", $time, CS1MODE_VAL);
     master.regwrite(ADDR_CSMODE1, CS1MODE_VAL, 2);
 
+    $display("[%t] config SPITF to %h", $time, 32'h78563412);
     master.regwrite(ADDR_SPITF, 32'h78563412, 2);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS1, 2);
