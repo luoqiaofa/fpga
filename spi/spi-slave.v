@@ -54,15 +54,7 @@ begin
     end
     else begin
         sck_dly  <= S_SPI_SCK;
-        if (done) begin
-            done <= 0;
-            if (S_REV) begin
-                bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-            end
-            else begin
-                bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
-            end
-        end
+        done <= 0;
         if (S_CHAR_LEN > 7) begin
         case (char_idx)
             0 : shift_tx <= S_WCHAR[15:0];
@@ -188,6 +180,16 @@ begin
                 bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
             end
         endcase
+    end
+end
+
+always @(posedge done)
+begin
+    if (S_REV) begin
+        bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+    end
+    else begin
+        bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
     end
 end
 
