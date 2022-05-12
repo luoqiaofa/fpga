@@ -103,7 +103,7 @@ localparam CS1POL       = (1 << CSMODE_POL);
 localparam CS1BEF       = (3 << CSMODE_CSBEF_LO);
 localparam CS1AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS1CG        = (4 << CSMODE_CSCG_LO);
-localparam CS1MODE_VAL  = (SPIMODE1|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
+localparam CS1MODE_VAL  = (SPIMODE0|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
 
 localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)/* | (1 << SPMODE_LOOP)*/;
 localparam SPIE_VAL     = SPIE_DEF;
@@ -166,7 +166,7 @@ spi_slv_dev1
 
 initial
 begin
-    txdata[0] = SPITF_VAL;
+    txdata[0] = 32'h44112233;
     txdata[1] = 32'h12345678;
     txdata[2] = 32'h78563412;
     txdata[3] = 32'h00000000;
@@ -241,7 +241,7 @@ begin
         $display("[%t] CSMODE0=%h test failed!", $time, CSMODE0);
     master.regread(ADDR_CSMODE1, CSMODE1, 0);
     if (CSMODE1 == CSMODE_DEF)
-        $display("[%t] CSMODE1=%h test ok", $time, CSMODE1);
+        $display("[%t] CSMODE1: %h test ok", $time, CSMODE1);
     else
         $display("[%t] CSMODE1=%h test failed!", $time, CSMODE1);
     master.regread(ADDR_CSMODE2, CSMODE2, 0);
@@ -263,7 +263,6 @@ begin
     SPIRF   <= SPIRF_VAL;
     CSMODE0 <= CS0MODE_VAL;
     CSMODE1 <= CS1MODE_VAL;
-
 
     $display("[%t] case#1 test the tx fifo is full or not", $time);
     // clear SPIE flags
@@ -288,20 +287,30 @@ begin
 
     // diable SPI to reset the txfifo
     master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
+    master.regread(ADDR_SPMODE, SPMODE, 0);
+    $display("[%t] SPMODE=%h", $time, SPMODE);
     // clear SPIE flags
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
+    $display("[%t] SPIE to FFFFFFFF", $time);
     // renable SPI
     master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
+    master.regread(ADDR_SPMODE, SPMODE, 0);
+    $display("[%t] SPMODE=%h", $time, SPMODE);
 
     master.regwrite(ADDR_CSMODE0, CS0MODE_VAL, 2);
+    master.regread(ADDR_CSMODE0, CSMODE0, 0);
+    $display("[%t] CSMODE0=%h", $time, CSMODE0);
 
     master.regwrite(ADDR_SPIM, SPIM_VAL, 2);
+    master.regread(ADDR_SPIM, SPIM, 0);
+    $display("[%t] SPIM=%h", $time, SPIM);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS0, 2);
     master.regread(ADDR_SPCOM, SPCOM, 0);
-    $display("[%t]: SPCOM: %h", $time, SPCOM);
+    $display("[%t] SPCOM=%h", $time, SPCOM);
 
     master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
+    $display("[%t] SPITF=%h", $time, SPITF_VAL);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (~SPIE[SPIE_TXE]) begin
@@ -347,8 +356,9 @@ begin
     // renable SPI
     // master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
 
-    $display("[%t] config CSMODE1 to %h", $time, CS1MODE_VAL);
     master.regwrite(ADDR_CSMODE1, CS1MODE_VAL, 2);
+    master.regread(ADDR_CSMODE1, CSMODE1, 0);
+    $display("[%t] config CSMODE1 to %h", $time, CSMODE1);
 
     $display("[%t] config SPITF to %h", $time, 32'h78563412);
     master.regwrite(ADDR_SPITF, 32'h78563412, 2);
