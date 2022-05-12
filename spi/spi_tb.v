@@ -80,10 +80,10 @@ wire         slv0_char_done;
 wire         slv1_char_done;
 reg  [31: 0] slv_data_tx[0:NWORD_TXFIFO];
 
-localparam SPIMODE0     = (0 << CSMODE_CPHA); /* CI = 0, CP=0 */
-localparam SPIMODE1     = (1 << CSMODE_CPHA); /* CI = 0, CP=1 */
-localparam SPIMODE2     = (2 << CSMODE_CPHA); /* CI = 1, CP=0 */
-localparam SPIMODE3     = (3 << CSMODE_CPHA); /* CI = 1, CP=1 */
+localparam SPIMODE0     = (0 << CSMODE_CP); /* CI = 0, CP=0 */
+localparam SPIMODE1     = (1 << CSMODE_CP); /* CI = 0, CP=1 */
+localparam SPIMODE2     = (2 << CSMODE_CP); /* CI = 1, CP=0 */
+localparam SPIMODE3     = (3 << CSMODE_CP); /* CI = 1, CP=1 */
 
 localparam DIV160       = (0 << CSMODE_DIV16);
 localparam PM0          = (2 << CSMODE_PM_LO);
@@ -130,8 +130,8 @@ spi_slv_dev0
     .S_SYSCLK(sysclk),           // platform clock
     .S_RESETN(rst_n),           // reset
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CSMODE0[CSMODE_CPOL]),  // clock polary
-    .S_CPHA(CSMODE0[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_CPOL(CSMODE0[CSMODE_CI]),  // clock polary
+    .S_CPHA(CSMODE0[CSMODE_CP]),  // clock phase, the first edge or second
     .S_CSPOL(CSMODE0[CSMODE_POL]),  // clock phase, the first edge or second
     .S_REV(CSMODE0[CSMODE_REV]),    // msb first or lsb first
     .S_CHAR_LEN(CSMODE0[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length
@@ -150,8 +150,8 @@ spi_slv_dev1
     .S_SYSCLK(sysclk),           // platform clock
     .S_RESETN(rst_n),           // reset
     .S_ENABLE(SPMODE[SPMODE_EN]),  // enable
-    .S_CPOL(CSMODE1[CSMODE_CPOL]),  // clock polary
-    .S_CPHA(CSMODE1[CSMODE_CPHA]),  // clock phase, the first edge or second
+    .S_CPOL(CSMODE1[CSMODE_CI]),  // clock polary
+    .S_CPHA(CSMODE1[CSMODE_CP]),  // clock phase, the first edge or second
     .S_CSPOL(CSMODE1[CSMODE_POL]),  // clock phase, the first edge or second
     .S_REV(CSMODE1[CSMODE_REV]),    // msb first or lsb first
     .S_CHAR_LEN(CSMODE1[CSMODE_LEN_HI:CSMODE_LEN_LO]),             // characters in bits length

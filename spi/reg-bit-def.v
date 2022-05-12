@@ -71,8 +71,8 @@ localparam SPCOM_TRANLEN_LO  = 0;
 // 6. SPIRF
 
 // 7. ESPI_SPMODE0 ~ ESPI_SPMODEx ;
-localparam CSMODE_CPOL      = 31; /* CI */
-localparam CSMODE_CPHA      = 30; /* CP */
+localparam CSMODE_CI        = 31; /* CI */
+localparam CSMODE_CP        = 30; /* CP */
 localparam CSMODE_REV       = 29;
 localparam CSMODE_DIV16     = 28;
 localparam CSMODE_PM_HI     = 27;
