@@ -44,7 +44,12 @@ begin
     if(rst_n == 1'b0)
         clk_out <= CPOL;
     else
-        clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
+        if (enable) begin
+            clk_out <= (enable && cnt_zero && (!last_clk || clk_out)) ? ~clk_out : clk_out;
+        end
+        else begin
+            clk_out <= CPOL;
+        end
 end
 
 // Pos and neg edge signals
