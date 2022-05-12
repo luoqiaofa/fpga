@@ -61,7 +61,6 @@ reg [NBITS_CSCG   :0]       cnt_cscg;
 
 reg [NCS-1:0] spi_sel;
 
-reg [31:0] rdata;
 reg [31:0] reg_data_out;
 
 /* spi transactions flags or counters begin */
@@ -274,6 +273,7 @@ begin
             char_trx_idx <= 0;
             spirf_char_idx <= 0;
             spi_sel[SPCOM_CS] <= CSMODE[CSMODE_POL] ? 1'b0 : 1'b1;
+            spi_brg_go <= 1;
         end
         if (1'b1 == frame_done) begin
             frame_done <= 0;
@@ -334,8 +334,8 @@ begin
             end
         end
         if (spcom_updated) begin
+            spi_brg_go <= 0;
             char_rx_idx <= 0;
-            spi_brg_go <= 1;
             if (FRAME_SM_IDLE == frame_state) begin
                 frame_go <= 1;
                 frame_in_process <= 1;
@@ -674,6 +674,8 @@ begin
         end
         else begin
             SPIRF <= 0;
+            spitf_idx <= 0;
+            num_spitf_upd <= 0;
         end
         SPIE[SPIE_TXE] <= TXE;
         SPIE[SPIE_TNF] <= TNF;
