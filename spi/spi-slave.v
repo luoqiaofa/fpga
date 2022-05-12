@@ -30,14 +30,15 @@ reg [NBITS_CHAR_LEN_MAX-1 : 0] shift_rx;
 wire [1:0] spi_mode;
 wire pos_edge; // positive edge flag
 wire neg_edge; // negtive edge flag
+reg sck_dly;
 
-assign pos_edge    = S_SPI_SCK;
-assign neg_edge    = S_SPI_SCK;
+assign pos_edge    = ~sck_dly & S_SPI_SCK;
+assign neg_edge    = sck_dly & ~S_SPI_SCK;
 assign S_RCHAR     = data_in;
 assign S_CHAR_DONE = slave_active ? done : 1'bz;
 assign spi_mode = {S_CPOL, S_CPHA};
 assign S_SPI_MISO   = slave_active ? shift_tx[bit_cnt] : 1'bz;
-assign slave_active = S_CSPOL ? (S_ENABLE && ~S_SPI_CS) : (S_ENABLE && S_SPI_CS);
+assign slave_active = S_CSPOL ? (S_ENABLE & (~S_SPI_CS)) : (S_ENABLE & S_SPI_CS);
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
@@ -49,9 +50,19 @@ begin
         bit_cnt  <= 0;
         shift_rx <= {CHAR_NBITS{1'b1}};
         shift_tx <= {CHAR_NBITS{1'b1}};
+        sck_dly  <= S_SPI_SCK;
     end
     else begin
-        done <= 0;
+        sck_dly  <= S_SPI_SCK;
+        if (done) begin
+            done <= 0;
+            if (S_REV) begin
+                bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+            end
+            else begin
+                bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+            end
+        end
         if (S_CHAR_LEN > 7) begin
         case (char_idx)
             0 : shift_tx <= S_WCHAR[15:0];
@@ -140,19 +151,7 @@ begin
     end
 end
 
-always @(negedge done)
-begin
-    if (slave_active) begin
-        if (S_REV) begin
-            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-        end
-        else begin
-            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
-        end
-    end
-end
-
-always @(negedge neg_edge)
+always @(posedge neg_edge)
 begin
     if (slave_active) begin
         case (spi_mode)
