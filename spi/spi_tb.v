@@ -103,9 +103,9 @@ localparam CS1POL       = (1 << CSMODE_POL);
 localparam CS1BEF       = (3 << CSMODE_CSBEF_LO);
 localparam CS1AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS1CG        = (4 << CSMODE_CSCG_LO);
-localparam CS1MODE_VAL  = (SPIMODE0|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
+localparam CS1MODE_VAL  = (SPIMODE2|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
 
-localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)/* | (1 << SPMODE_LOOP)*/;
+localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)| (1 << SPMODE_LOOP);
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_CS0    = ((0 << SPCOM_CS_LO)|(3<<SPCOM_RSKIP_LO)|(6<<SPCOM_TRANLEN_LO));
