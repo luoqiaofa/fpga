@@ -21,15 +21,15 @@ module spi_intface # (parameter NCS = 4)
 localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO-1);
 localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO-1);
 
-reg [31: 0] SPMODE;
-reg [31: 0] SPIE;
-reg [31: 0] SPIM;
-reg [31: 0] SPCOM;
+(* keep = "true" *) reg [31: 0] SPMODE;
+(* keep = "true" *) reg [31: 0] SPIE;
+(* keep = "true" *) reg [31: 0] SPIM;
+(* keep = "true" *) reg [31: 0] SPCOM;
 wire [31: 0] SPITF;
-reg [31: 0] SPIRF;
-reg [31: 0] CSXMODE[0:NCS-1];
-reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
-reg [31: 0] SPI_RXFIFO[0:NWORD_RXFIFO-1];
+(* keep = "true" *) reg [31: 0] SPIRF;
+(* keep = "true" *) reg [31: 0] CSXMODE[0:NCS-1];
+(* keep = "true" *) reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
+(* keep = "true" *) reg [31: 0] SPI_RXFIFO[0:NWORD_RXFIFO-1];
 
 integer idx;
 reg csmodex_updated;
@@ -692,6 +692,8 @@ begin
             num_spitf_upd <= 0;
         end
         if (frame_go) begin
+            spirf_rd_idx  <= 0;
+            spirf_updated <= 0;
             nbytes_read_from_spirf <= 0;
         end
         if (1'b1 == spcom_updated) begin
