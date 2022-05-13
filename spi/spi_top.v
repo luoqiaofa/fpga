@@ -25,7 +25,7 @@ reg [31: 0] SPMODE;
 reg [31: 0] SPIE;
 reg [31: 0] SPIM;
 reg [31: 0] SPCOM;
-reg [31: 0] SPITF;
+wire [31: 0] SPITF;
 reg [31: 0] SPIRF;
 reg [31: 0] CSXMODE[0:NCS-1];
 reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
@@ -119,7 +119,7 @@ wire [NBITS_WORD_TXFIFO-1:0] spitf_trx_char_off;
 wire [NBITS_TRANLEN-1:0] num_bytes_to_mosi;
 wire [NBITS_TRANLEN-1:0] nbytes_need_tx;
 wire [NBITS_TRANLEN-1:0] TXCNT;
-// assign SPITF = SPI_TXFIFO[spitf_trx_idx];
+assign SPITF = SPI_TXFIFO[spitf_trx_idx];
 assign spitf_trx_idx = CSMODE_LEN > 7 ?  char_trx_idx[NBITS_WORD_TXFIFO:1] : char_trx_idx[NBITS_WORD_TXFIFO+1:2];
 assign spitf_trx_char_off = CSMODE_LEN > 7 ? {{(NBITS_WORD_TXFIFO-1){1'b0}}, char_trx_idx[0]}:{{(NBITS_WORD_TXFIFO-2){1'b0}}, char_trx_idx[1:0]};
 // Tx FIFO is empty or not
@@ -155,8 +155,8 @@ assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
 assign RXF   = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? 1'b0 : 1'b1;
 assign RXT   = nbytes_valid_in_rxfifo > RXTHR ? 1'b1 : 1'b0;
 assign RXCNT = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? nbytes_valid_in_rxfifo : NBYTES_RXFIFO;
-reg   [31:0] SPIRF_WR;
-//assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
+wire   [31:0] SPIRF_WR;
+assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
 
 reg spcom_updated;
 reg spitf_updated;
@@ -173,8 +173,8 @@ wire i_spi_miso;
 wire din;
 reg  dout;
 
-pullup pullup_miso_i(i_spi_miso);
-pullup pullup_mosi_i(i_spi_mosi);
+// pullup pullup_miso_i(i_spi_miso);
+// pullup pullup_mosi_i(i_spi_mosi);
 
 // assign o_spi_mosi = data_tx[char_bit_cnt];
 assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CI];
@@ -250,10 +250,10 @@ begin
         for (idx = 0; idx < NCS; idx = idx + 1) begin
             CSXMODE[idx] <= CSMODE_DEF;
         end
-        SPIRF_WR <= 0;
+        // SPIRF_WR <= 0;
     end
     else begin
-        SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
+        // SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
         if (csmodex_updated) begin
             CSXMODE[cs_idx] <= csmodex;
             spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
@@ -283,7 +283,7 @@ begin
             chr_done <= 0;
             if (1'b0 == SPCOM[SPCOM_TO]) begin
                 if (char_trx_idx > SPCOM_RSKIP) begin
-                    char_rx_idx = char_trx_idx - SPCOM_RSKIP;
+                    char_rx_idx <= char_trx_idx - SPCOM_RSKIP;
                 end
                 else if (char_rx_idx > 0) begin
                     char_rx_idx <= char_rx_idx + 1;
@@ -666,7 +666,7 @@ begin
         begin
             SPI_TXFIFO[byte_index] <= 0;
         end
-        SPITF <= 0;
+        // SPITF <= 0;
     end
     else begin
         if (SPMODE[SPMODE_EN]) begin
@@ -676,6 +676,7 @@ begin
             SPIRF <= 0;
             spitf_idx <= 0;
             num_spitf_upd <= 0;
+            nbytes_read_from_spirf <= 0;
         end
         SPIE[SPIE_TXE] <= TXE;
         SPIE[SPIE_TNF] <= TNF;
@@ -706,7 +707,7 @@ begin
             csmodex_updated <= 0;
         end
 
-        SPITF = SPI_TXFIFO[spitf_trx_idx];
+        // SPITF = SPI_TXFIFO[spitf_trx_idx];
         if (S_REG_RDEN)
         begin
             case (S_ARADDR)
