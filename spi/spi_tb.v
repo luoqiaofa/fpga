@@ -110,8 +110,10 @@ localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_CS0    = ((0 << SPCOM_CS_LO)|(3<<SPCOM_RSKIP_LO)|(6<<SPCOM_TRANLEN_LO));
 localparam SPCOM_CS1    = ((1 << SPCOM_CS_LO)|(2<<SPCOM_RSKIP_LO)|(8<<SPCOM_TRANLEN_LO));
+localparam SPCOM_CS1_FULL=((1 << SPCOM_CS_LO)|(2<<SPCOM_RSKIP_LO)|((NBYTES_RXFIFO+3)<<SPCOM_TRANLEN_LO)); 
 localparam SPITF_VAL    = 32'h0403_0201;
 localparam SPIRF_VAL    = SPIRF_DEF;
+
 
 reg [REG_WIDTH-1: 0] SPMODE;
 reg [REG_WIDTH-1: 0] SPIE;
@@ -358,26 +360,29 @@ begin
 
     master.regwrite(ADDR_CSMODE1, CS1MODE_VAL, 2);
     master.regread(ADDR_CSMODE1, CSMODE1, 0);
-    $display("[%t] config CSMODE1 to %h", $time, CSMODE1);
+    $display("[%t] config CSMODE1=%h", $time, CSMODE1);
 
-    $display("[%t] config SPITF to %h", $time, 32'h78563412);
+    $display("[%t] config SPITF=%h", $time, 32'h78563412);
     master.regwrite(ADDR_SPITF, 32'h78563412, 2);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS1, 2);
+    $display("[%t] config SPCOM=%h", $time, SPCOM_CS1);
 
+    $display("[%t] config SPITF=%h", $time, 32'h11223344);
     master.regwrite(ADDR_SPITF, 32'h11223344, 2);
+    $display("[%t] config SPITF=%h", $time, 32'h12345678);
     master.regwrite(ADDR_SPITF, 32'h12345678, 2);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
         master.regread(ADDR_SPIE, SPIE, 0);
     end
-    master.regread(ADDR_SPIE, SPIE, 0);
+    // master.regread(ADDR_SPIE, SPIE, 0);
     $display("[%t] SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
     master.regread(ADDR_SPIRF, SPIRF, 0);
     $display("[%t] SPIRF: %h", $time, SPIRF);
-    master.regread(ADDR_SPIE, SPIE, 0);
-    $display("[%t] SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
+    // master.regread(ADDR_SPIE, SPIE, 0);
+    // $display("[%t] SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h03) begin
@@ -413,15 +418,17 @@ begin
     $display("[%t] SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
 
     #1000;
-    master.regwrite(ADDR_SPCOM, ((1 << SPCOM_CS_LO)|(2<<SPCOM_RSKIP_LO)|((NBYTES_RXFIFO+7)<<SPCOM_TRANLEN_LO)), 2);
+    master.regwrite(ADDR_SPCOM,  SPCOM_CS1_FULL, 2);
+    $display("[%t] config SPCOM=%h", $time, SPCOM_CS1_FULL);
 
-    for (idx = 0; idx < NWORD_TXFIFO+2; idx = idx + 1) begin
+    for (idx = 0; idx < NWORD_TXFIFO+1; idx = idx + 1) begin
         master.regread(ADDR_SPIE, SPIE, 0);
         $display("[%t] idx=%02d,SPIE: %h,TXCNT=%d,TNF=%d,TXE=%d,TXT=%d,RXCNT=%d,RXF=%d,RNE=%d,RXT=%d",$time,idx,SPIE,SPIE[SPIE_TXCNT_HI:SPIE_TXCNT_LO],SPIE[SPIE_TNF],SPIE[SPIE_TXE],SPIE[SPIE_TXT],SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO],SPIE[SPIE_RXF],SPIE[SPIE_RNE],SPIE[SPIE_RXT]);
         while (~SPIE[SPIE_TNF]) begin
             master.regread(ADDR_SPIE, SPIE, 0);
         end
         master.regwrite(ADDR_SPITF, txdata[idx%9], 2);
+        $display("[%t] config SPITF=%h", $time, txdata[idx%9]);
     end
     $display("[%t] wait rx fifo full", $time);
     master.regread(ADDR_SPIE, SPIE, 0);
