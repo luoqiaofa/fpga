@@ -520,12 +520,12 @@ begin
                     SPIRF_WR[31:16] <= data_rx;
                 end
                 else begin
-                    SPIRF_WR[15:0] <= data_rx;
+                    SPIRF_WR <= {{16{1'b0}}, data_rx};
                 end
             end
             else begin
                 case(spirf_char_idx[1:0])
-                    0 : SPIRF_WR[7:0]   <= data_rx[7:0];
+                    0 : SPIRF_WR        <= {{24{1'b0}}, data_rx};
                     1 : SPIRF_WR[15:8]  <= data_rx[7:0];
                     2 : SPIRF_WR[23:16] <= data_rx[7:0];
                     3 : SPIRF_WR[31:24] <= data_rx[7:0];
