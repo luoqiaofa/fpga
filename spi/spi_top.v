@@ -65,14 +65,12 @@ reg [31:0] reg_data_out;
 
 /* spi transactions flags or counters begin */
 (* mark_debug = "true" *) reg frame_in_process;
-(* mark_debug = "true" *) reg frame_next_start;
+(* mark_debug = "false" *) reg frame_next_start;
 (* mark_debug = "true" *) reg frame_go;
 (* mark_debug = "true" *) reg frame_done;
 (* mark_debug = "true" *) reg [2:0] frame_state; // frame machine state;
-reg  chr_go;
-wire chr_go_wire;
-reg  chr_done;
-wire char_done_wire;
+(* mark_debug = "true" *) reg  chr_go;
+(* mark_debug = "true" *) reg  chr_done;
 
 localparam FRAME_SM_IDLE      = 0;
 localparam FRAME_SM_BEF_WAIT  = 1;
@@ -85,11 +83,11 @@ localparam FRAME_SM_CG_WAIT   = 5;
 localparam MAX_BITNO_OF_CHAR = 4'hf;
 /* spi transactions flags or counters end */
 
-reg [15:0] data_rx;
-reg [15:0] data_tx;
+(* mark_debug = "true" *) reg [15:0] data_rx;
+(* mark_debug = "true" *) reg [15:0] data_tx;
 
 reg  spi_brg_go;
-wire brg_clk;
+(* mark_debug = "true" *) wire brg_clk;
 wire brg_pos_edge;
 wire brg_neg_edge;
 localparam NBITS_BRG_DIVIDER = NBITS_PM + 4 + 2;
@@ -164,24 +162,22 @@ reg spirf_updated;
 
 integer byte_index;
 
-wire i_spi_mosi;
-wire o_spi_mosi;
+(* mark_debug = "true" *) wire i_spi_mosi;
+(* mark_debug = "true" *) wire o_spi_mosi;
 reg  t_spi_mosi;
 
 wire i_spi_miso;
 
 wire din;
-reg  dout;
 
 // pullup pullup_miso_i(i_spi_miso);
 // pullup pullup_mosi_i(i_spi_mosi);
 
-// assign o_spi_mosi = data_tx[char_bit_cnt];
+assign o_spi_mosi = (FRAME_SM_IN_TRANS == frame_state) ? data_tx[char_bit_cnt] : 1'b0;
 assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CI];
 assign S_SPI_SEL  = spi_sel;
 
 assign i_spi_miso = CSMODE[CSMODE_IS3WIRE] ? i_spi_mosi : S_SPI_MISO;
-assign o_spi_mosi = dout;
 assign din = SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
 
 iobuf ioc_spi_mosi(
@@ -214,7 +210,6 @@ assign brg_divider = CSMODE[CSMODE_DIV16] ? (csmode_pm << 4)-1 : csmode_pm-1;
 // assign brg_divider = {{(NBITS_BRG_DIVIDER-4){1'b0}}, 4'h3};
 
 assign char_go_wire = chr_go;
-assign char_done_wire = chr_done;
 
 wire   brg_out_first_edge;
 assign brg_out_first_edge = CSMODE[CSMODE_CI] ? brg_neg_edge : brg_pos_edge;
@@ -467,7 +462,6 @@ begin
     end
 end
 
-// always @(posedge char_done_wire)
 always @(posedge S_SYSCLK /* or negedge S_RESETN */)
 begin
     if (1'b0 == S_RESETN) begin
@@ -612,13 +606,9 @@ always @(posedge S_SYSCLK /* or negedge S_RESETN */)
 begin
     if (1'b0 == S_RESETN)
     begin
-        dout <= 0;
         data_tx <= 16'h0000;
     end
     else begin
-        if (FRAME_SM_IN_TRANS == frame_state) begin
-            dout = data_tx[char_bit_cnt];
-        end
         if (CSMODE_LEN > 7) begin
             if (spitf_trx_char_off) begin
                 data_tx <= SPITF[31:16];
