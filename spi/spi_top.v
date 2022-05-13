@@ -64,13 +64,14 @@ reg [NCS-1:0] spi_sel;
 reg [31:0] reg_data_out;
 
 /* spi transactions flags or counters begin */
-reg frame_in_process;
-reg frame_next_start;
-reg frame_go;
-reg frame_done;
-reg chr_go;
+(* mark_debug = "true" *) reg frame_in_process;
+(* mark_debug = "true" *) reg frame_next_start;
+(* mark_debug = "true" *) reg frame_go;
+(* mark_debug = "true" *) reg frame_done;
+(* mark_debug = "true" *) reg [2:0] frame_state; // frame machine state;
+reg  chr_go;
 wire chr_go_wire;
-reg chr_done;
+reg  chr_done;
 wire char_done_wire;
 
 localparam FRAME_SM_IDLE      = 0;
@@ -79,9 +80,8 @@ localparam FRAME_SM_DATA_WAIT = 2;
 localparam FRAME_SM_IN_TRANS  = 3;
 localparam FRAME_SM_AFT_WAIT  = 4;
 localparam FRAME_SM_CG_WAIT   = 5;
-reg [2:0]  frame_state; // frame machine state;
 
-reg [3:0] char_bit_cnt;
+(* mark_debug = "true" *) reg [3:0] char_bit_cnt;
 localparam MAX_BITNO_OF_CHAR = 4'hf;
 /* spi transactions flags or counters end */
 
@@ -97,22 +97,22 @@ wire [NBITS_BRG_DIVIDER-1:0] csmode_pm;
 wire [NBITS_BRG_DIVIDER-1:0] brg_divider;
 
 wire [NBITS_TRANLEN-1:0] nbytes_to_spitf;
-reg  [NBITS_TRANLEN-1:0] char_trx_idx;
-reg  [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
+(* mark_debug = "true" *) reg  [NBITS_TRANLEN-1:0] char_trx_idx;
+(* mark_debug = "true" *) reg  [NBITS_TRANLEN-1:0] char_rx_idx; // count number of char from miso in master mode
 // one word is 32 bit. half word is 16 bit
-reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
+(* mark_debug = "true" *) reg  [NBITS_TRANLEN-1:0] num_spitf_upd;
 wire [NBITS_TRANLEN-1:0] num_spitf_trx;
 wire TXE; // Tx FIFO empty flag;
 wire TNF; // Tx FIFO full flag;
 wire TXT; // Tx FIFO has less than TXTHR bytes, that is, at most TXTHR - 1 bytes
 
 reg [1:0] cs_idx;
-reg [NBITS_WORD_TXFIFO-1:0]  spitf_idx;
+(* mark_debug = "true" *) reg [NBITS_WORD_TXFIFO-1:0]  spitf_idx;
 wire [NBITS_WORD_RXFIFO-1:0] spirf_wr_idx; // rx data to spirf(rx fifo)
-reg [NBITS_TRANLEN-1:0]  spirf_char_idx; // char offset from miso to spirf(rx fifo)
-reg [NBITS_WORD_RXFIFO-1:0]  spirf_rd_idx;
-// if CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
-// else (CSMODE_LEN <= 7) spitf_trx_idx >> 2
+(* mark_debug = "true" *) reg [NBITS_TRANLEN-1:0] spirf_char_idx; // char offset from miso to spirf(rx fifo)
+(* mark_debug = "true" *) reg [NBITS_WORD_RXFIFO-1:0] spirf_rd_idx;
+// CSMODE_LEN > 7 spitf_trx_idx = char_trx_idx >> 1
+// (CSMODE_LEN <= 7) spitf_trx_idx >> 2
 wire [NBITS_WORD_TXFIFO-1:0] spitf_trx_idx;
 //  char offset in spitf
 wire [NBITS_WORD_TXFIFO-1:0] spitf_trx_char_off;
@@ -158,7 +158,7 @@ assign RXCNT = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? nbytes_valid_in_rxfifo :
 wire   [31:0] SPIRF_WR;
 assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
 
-reg spcom_updated;
+(* mark_debug = "true" *) reg spcom_updated;
 reg spitf_updated;
 reg spirf_updated;
 
@@ -673,9 +673,12 @@ begin
             SPIRF <= SPI_RXFIFO[spirf_rd_idx];
         end
         else begin
-            SPIRF <= 0;
+            SPIRF <= SPIRF_DEF;
             spitf_idx <= 0;
             num_spitf_upd <= 0;
+
+            spirf_rd_idx  <= 0;
+            spirf_updated <= 0;
             nbytes_read_from_spirf <= 0;
         end
         SPIE[SPIE_TXE] <= TXE;
