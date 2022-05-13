@@ -106,7 +106,7 @@ localparam NBITS_CSCG       = CSMODE_CSCG_HI - CSMODE_CSCG_LO + 1;
 
 // defaut register value
 localparam SPMODE_DEF       = (16 << SPMODE_TXTHR_LO)|(15 << SPMODE_RXTHR_LO);
-localparam SPIE_DEF         = 32 << SPIE_TXCNT_LO;
+localparam SPIE_DEF         = 32 << SPIE_TXCNT_LO|(1<<SPIE_TNF)|(1<<SPIE_TXT)|(1<<SPIE_TXE);
 localparam SPIM_DEF         = 32'h0000_0000;
 localparam SPCOM_DEF        = 32'h0000_0000;
 localparam SPITF_DEF        = 32'h0000_0000;
