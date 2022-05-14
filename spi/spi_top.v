@@ -526,25 +526,25 @@ begin
                                 if (spirf_char_idx[0]) begin
                                     case (CSMODE_LEN)
                                          8: SPIRF_WR[31:16] <= {{7{1'b0}}, din, data_rx[7:0]};
-                                         9: SPIRF_WR[31:16] <= {{6{1'b0}}, din, data_rx[7:0]};
-                                        10: SPIRF_WR[31:16] <= {{5{1'b0}}, din, data_rx[7:0]};
-                                        11: SPIRF_WR[31:16] <= {{4{1'b0}}, din, data_rx[7:0]};
-                                        12: SPIRF_WR[31:16] <= {{3{1'b0}}, din, data_rx[7:0]};
-                                        13: SPIRF_WR[31:16] <= {{2{1'b0}}, din, data_rx[7:0]};
-                                        14: SPIRF_WR[31:16] <= {{1{1'b0}}, din, data_rx[7:0]};
-                                        15: SPIRF_WR[31:16] <= {           din, data_rx[7:0]};
+                                         9: SPIRF_WR[31:16] <= {{6{1'b0}}, din, data_rx[8:0]};
+                                        10: SPIRF_WR[31:16] <= {{5{1'b0}}, din, data_rx[9:0]};
+                                        11: SPIRF_WR[31:16] <= {{4{1'b0}}, din, data_rx[10:0]};
+                                        12: SPIRF_WR[31:16] <= {{3{1'b0}}, din, data_rx[11:0]};
+                                        13: SPIRF_WR[31:16] <= {{2{1'b0}}, din, data_rx[12:0]};
+                                        14: SPIRF_WR[31:16] <= {{1{1'b0}}, din, data_rx[13:0]};
+                                        15: SPIRF_WR[31:16] <= {           din, data_rx[14:0]};
                                     endcase
                                 end
                                 else begin
                                     case (CSMODE_LEN)
                                          8: SPIRF_WR <= {{23{1'b0}}, din, data_rx[7:0]};
-                                         9: SPIRF_WR <= {{22{1'b0}}, din, data_rx[7:0]};
-                                        10: SPIRF_WR <= {{21{1'b0}}, din, data_rx[7:0]};
-                                        11: SPIRF_WR <= {{20{1'b0}}, din, data_rx[7:0]};
-                                        12: SPIRF_WR <= {{19{1'b0}}, din, data_rx[7:0]};
-                                        13: SPIRF_WR <= {{18{1'b0}}, din, data_rx[7:0]};
-                                        14: SPIRF_WR <= {{17{1'b0}}, din, data_rx[7:0]};
-                                        15: SPIRF_WR <= {{16{1'b0}}, din, data_rx[7:0]};
+                                         9: SPIRF_WR <= {{22{1'b0}}, din, data_rx[8:0]};
+                                        10: SPIRF_WR <= {{21{1'b0}}, din, data_rx[9:0]};
+                                        11: SPIRF_WR <= {{20{1'b0}}, din, data_rx[10:0]};
+                                        12: SPIRF_WR <= {{19{1'b0}}, din, data_rx[11:0]};
+                                        13: SPIRF_WR <= {{18{1'b0}}, din, data_rx[11:0]};
+                                        14: SPIRF_WR <= {{17{1'b0}}, din, data_rx[13:0]};
+                                        15: SPIRF_WR <= {{16{1'b0}}, din, data_rx[14:0]};
                                     endcase
                                 end
                             end
