@@ -153,8 +153,7 @@ assign RNE   = nbytes_valid_in_rxfifo > 0 ? 1'b1 : 1'b0;
 assign RXF   = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? 1'b0 : 1'b1;
 assign RXT   = nbytes_valid_in_rxfifo > RXTHR ? 1'b1 : 1'b0;
 assign RXCNT = nbytes_valid_in_rxfifo < NBYTES_RXFIFO ? nbytes_valid_in_rxfifo : NBYTES_RXFIFO;
-reg   [31:0] SPIRF_WR;
-// assign SPIRF_WR = SPI_RXFIFO[spirf_wr_idx];
+// assign SPIRF = SPI_RXFIFO[spirf_wr_idx];
 
 (* mark_debug = "true" *) reg spcom_updated;
 reg spitf_updated;
@@ -310,6 +309,7 @@ begin
         end
         if (spcom_updated) begin
             spi_brg_go <= 0;
+            char_trx_idx <= 0;
             if (FRAME_SM_IDLE == frame_state) begin
                 frame_go <= 1;
                 frame_in_process <= 1;
@@ -443,31 +443,41 @@ end
 
 always @(posedge S_SYSCLK /* or negedge S_RESETN */)
 begin
-    if (1'b0 == S_RESETN) begin
+    if (1'b0 == S_RESETN || (1'b0 == SPMODE[SPMODE_EN])) begin
         for (byte_index = 0; byte_index < NWORD_TXFIFO; byte_index = byte_index + 1)
         begin
             SPI_RXFIFO[byte_index] <= 0;
         end
-        SPIRF_WR <= 0;
+        SPIRF <= SPIRF_DEF;
         char_rx_idx <= 0;
         spirf_char_idx <= 0;
         spirf_wr_updated <= 0;
+        spirf_rd_idx <= 0;
+        nbytes_read_from_spirf <= 0;
     end
     else begin
         if (spcom_updated) begin
             char_rx_idx <= 0;
-        end
-        if (frame_go) begin
-            char_rx_idx <= 0;
+            spirf_rd_idx <= 0;
             spirf_char_idx <= 0;
+            nbytes_read_from_spirf <= 0;
         end
+
         if (spirf_updated) begin
-            if (0 == spirf_rd_idx) begin
-                spirf_char_idx <= 0; // need to another side to reset
+            if (RNE) begin
+                if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
+                    spirf_rd_idx <= 0;
+                    spirf_char_idx <= 0; // need to another side to reset
+                    nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
+                end
+                else begin
+                    spirf_rd_idx <= spirf_rd_idx + 1;
+                    nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
+                end
             end
         end
         if (chr_done) begin /* (1'b1 == chr_done) */
-            SPI_RXFIFO[spirf_wr_idx] <= SPIRF_WR;
+            SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
             if (char_rx_idx > 0) begin
                 spirf_char_idx <= spirf_char_idx + 1;
             end
@@ -493,18 +503,18 @@ begin
                             end
                             if (CSMODE_LEN > 7) begin
                                 if (spirf_char_idx[0]) begin
-                                    SPIRF_WR[31:16] <= {data_rx[15:1], din};
+                                    SPIRF[31:16] <= {data_rx[15:1], din};
                                 end
                                 else begin
-                                    SPIRF_WR <= {{16{1'b0}}, data_rx[15:1], din};
+                                    SPIRF <= {{16{1'b0}}, data_rx[15:1], din};
                                 end
                             end
                             else begin
                                 case(spirf_char_idx[1:0])
-                                    0 : SPIRF_WR        <= {{24{1'b0}}, data_rx[7:1], din};
-                                    1 : SPIRF_WR[15:8]  <= {data_rx[7:1], din};
-                                    2 : SPIRF_WR[23:16] <= {data_rx[7:1], din};
-                                    3 : SPIRF_WR[31:24] <= {data_rx[7:1], din};
+                                    0 : SPIRF        <= {{24{1'b0}}, data_rx[7:1], din};
+                                    1 : SPIRF[15:8]  <= {data_rx[7:1], din};
+                                    2 : SPIRF[23:16] <= {data_rx[7:1], din};
+                                    3 : SPIRF[31:24] <= {data_rx[7:1], din};
                                 endcase
                             end
                         end
@@ -525,76 +535,76 @@ begin
                             if (CSMODE_LEN > 7) begin
                                 if (spirf_char_idx[0]) begin
                                     case (CSMODE_LEN)
-                                         8: SPIRF_WR[31:16] <= {{7{1'b0}}, din, data_rx[7:0]};
-                                         9: SPIRF_WR[31:16] <= {{6{1'b0}}, din, data_rx[8:0]};
-                                        10: SPIRF_WR[31:16] <= {{5{1'b0}}, din, data_rx[9:0]};
-                                        11: SPIRF_WR[31:16] <= {{4{1'b0}}, din, data_rx[10:0]};
-                                        12: SPIRF_WR[31:16] <= {{3{1'b0}}, din, data_rx[11:0]};
-                                        13: SPIRF_WR[31:16] <= {{2{1'b0}}, din, data_rx[12:0]};
-                                        14: SPIRF_WR[31:16] <= {{1{1'b0}}, din, data_rx[13:0]};
-                                        15: SPIRF_WR[31:16] <= {           din, data_rx[14:0]};
+                                         8: SPIRF[31:16] <= {{7{1'b0}}, din, data_rx[7:0]};
+                                         9: SPIRF[31:16] <= {{6{1'b0}}, din, data_rx[8:0]};
+                                        10: SPIRF[31:16] <= {{5{1'b0}}, din, data_rx[9:0]};
+                                        11: SPIRF[31:16] <= {{4{1'b0}}, din, data_rx[10:0]};
+                                        12: SPIRF[31:16] <= {{3{1'b0}}, din, data_rx[11:0]};
+                                        13: SPIRF[31:16] <= {{2{1'b0}}, din, data_rx[12:0]};
+                                        14: SPIRF[31:16] <= {{1{1'b0}}, din, data_rx[13:0]};
+                                        15: SPIRF[31:16] <= {           din, data_rx[14:0]};
                                     endcase
                                 end
                                 else begin
                                     case (CSMODE_LEN)
-                                         8: SPIRF_WR <= {{23{1'b0}}, din, data_rx[7:0]};
-                                         9: SPIRF_WR <= {{22{1'b0}}, din, data_rx[8:0]};
-                                        10: SPIRF_WR <= {{21{1'b0}}, din, data_rx[9:0]};
-                                        11: SPIRF_WR <= {{20{1'b0}}, din, data_rx[10:0]};
-                                        12: SPIRF_WR <= {{19{1'b0}}, din, data_rx[11:0]};
-                                        13: SPIRF_WR <= {{18{1'b0}}, din, data_rx[11:0]};
-                                        14: SPIRF_WR <= {{17{1'b0}}, din, data_rx[13:0]};
-                                        15: SPIRF_WR <= {{16{1'b0}}, din, data_rx[14:0]};
+                                         8: SPIRF <= {{23{1'b0}}, din, data_rx[7:0]};
+                                         9: SPIRF <= {{22{1'b0}}, din, data_rx[8:0]};
+                                        10: SPIRF <= {{21{1'b0}}, din, data_rx[9:0]};
+                                        11: SPIRF <= {{20{1'b0}}, din, data_rx[10:0]};
+                                        12: SPIRF <= {{19{1'b0}}, din, data_rx[11:0]};
+                                        13: SPIRF <= {{18{1'b0}}, din, data_rx[11:0]};
+                                        14: SPIRF <= {{17{1'b0}}, din, data_rx[13:0]};
+                                        15: SPIRF <= {{16{1'b0}}, din, data_rx[14:0]};
                                     endcase
                                 end
                             end
                             else begin
                                 if (0 == spirf_char_idx[1:0]) begin
                                     case (CSMODE_LEN)
-                                        0: SPIRF_WR <= {{31{1'b0}}, din               };
-                                        1: SPIRF_WR <= {{30{1'b0}}, din, data_rx[0]};
-                                        2: SPIRF_WR <= {{29{1'b0}}, din, data_rx[1:0]};
-                                        3: SPIRF_WR <= {{28{1'b0}}, din, data_rx[2:0]};
-                                        4: SPIRF_WR <= {{27{1'b0}}, din, data_rx[3:0]};
-                                        5: SPIRF_WR <= {{26{1'b0}}, din, data_rx[4:0]};
-                                        6: SPIRF_WR <= {{25{1'b0}}, din, data_rx[5:0]};
-                                        7: SPIRF_WR <= {{24{1'b0}}, din, data_rx[6:0]};
+                                        0: SPIRF <= {{31{1'b0}}, din               };
+                                        1: SPIRF <= {{30{1'b0}}, din, data_rx[0]};
+                                        2: SPIRF <= {{29{1'b0}}, din, data_rx[1:0]};
+                                        3: SPIRF <= {{28{1'b0}}, din, data_rx[2:0]};
+                                        4: SPIRF <= {{27{1'b0}}, din, data_rx[3:0]};
+                                        5: SPIRF <= {{26{1'b0}}, din, data_rx[4:0]};
+                                        6: SPIRF <= {{25{1'b0}}, din, data_rx[5:0]};
+                                        7: SPIRF <= {{24{1'b0}}, din, data_rx[6:0]};
                                     endcase
                                 end
                                 if (1 == spirf_char_idx[1:0]) begin
                                     case (CSMODE_LEN)
-                                        0: SPIRF_WR[15:8] <= {{7{1'b0}}, din               };
-                                        1: SPIRF_WR[15:8] <= {{6{1'b0}}, din, data_rx[  0]};
-                                        2: SPIRF_WR[15:8] <= {{5{1'b0}}, din, data_rx[1:0]};
-                                        3: SPIRF_WR[15:8] <= {{4{1'b0}}, din, data_rx[2:0]};
-                                        4: SPIRF_WR[15:8] <= {{3{1'b0}}, din, data_rx[3:0]};
-                                        5: SPIRF_WR[15:8] <= {{2{1'b0}}, din, data_rx[4:0]};
-                                        6: SPIRF_WR[15:8] <= {{1{1'b0}}, din, data_rx[5:0]};
-                                        7: SPIRF_WR[15:8] <= {           din, data_rx[6:0]};
+                                        0: SPIRF[15:8] <= {{7{1'b0}}, din               };
+                                        1: SPIRF[15:8] <= {{6{1'b0}}, din, data_rx[  0]};
+                                        2: SPIRF[15:8] <= {{5{1'b0}}, din, data_rx[1:0]};
+                                        3: SPIRF[15:8] <= {{4{1'b0}}, din, data_rx[2:0]};
+                                        4: SPIRF[15:8] <= {{3{1'b0}}, din, data_rx[3:0]};
+                                        5: SPIRF[15:8] <= {{2{1'b0}}, din, data_rx[4:0]};
+                                        6: SPIRF[15:8] <= {{1{1'b0}}, din, data_rx[5:0]};
+                                        7: SPIRF[15:8] <= {           din, data_rx[6:0]};
                                     endcase
                                 end
                                 if (2 == spirf_char_idx[1:0]) begin
                                     case (CSMODE_LEN)
-                                        0: SPIRF_WR[23:16] <= {{7{1'b0}}, din               };
-                                        1: SPIRF_WR[23:16] <= {{6{1'b0}}, din, data_rx[  0]};
-                                        2: SPIRF_WR[23:16] <= {{5{1'b0}}, din, data_rx[1:0]};
-                                        3: SPIRF_WR[23:16] <= {{4{1'b0}}, din, data_rx[2:0]};
-                                        4: SPIRF_WR[23:16] <= {{3{1'b0}}, din, data_rx[3:0]};
-                                        5: SPIRF_WR[23:16] <= {{2{1'b0}}, din, data_rx[4:0]};
-                                        6: SPIRF_WR[23:16] <= {{1{1'b0}}, din, data_rx[5:0]};
-                                        7: SPIRF_WR[23:16] <= {           din, data_rx[6:0]};
+                                        0: SPIRF[23:16] <= {{7{1'b0}}, din               };
+                                        1: SPIRF[23:16] <= {{6{1'b0}}, din, data_rx[  0]};
+                                        2: SPIRF[23:16] <= {{5{1'b0}}, din, data_rx[1:0]};
+                                        3: SPIRF[23:16] <= {{4{1'b0}}, din, data_rx[2:0]};
+                                        4: SPIRF[23:16] <= {{3{1'b0}}, din, data_rx[3:0]};
+                                        5: SPIRF[23:16] <= {{2{1'b0}}, din, data_rx[4:0]};
+                                        6: SPIRF[23:16] <= {{1{1'b0}}, din, data_rx[5:0]};
+                                        7: SPIRF[23:16] <= {           din, data_rx[6:0]};
                                     endcase
                                 end
                                 if (3 == spirf_char_idx[1:0]) begin
                                     case (CSMODE_LEN)
-                                        0: SPIRF_WR[31:24] <= {{7{1'b0}}, din               };
-                                        1: SPIRF_WR[31:24] <= {{6{1'b0}}, din, data_rx[  0]};
-                                        2: SPIRF_WR[31:24] <= {{5{1'b0}}, din, data_rx[1:0]};
-                                        3: SPIRF_WR[31:24] <= {{4{1'b0}}, din, data_rx[2:0]};
-                                        4: SPIRF_WR[31:24] <= {{3{1'b0}}, din, data_rx[3:0]};
-                                        5: SPIRF_WR[31:24] <= {{2{1'b0}}, din, data_rx[4:0]};
-                                        6: SPIRF_WR[31:24] <= {{1{1'b0}}, din, data_rx[5:0]};
-                                        7: SPIRF_WR[31:24] <= {           din, data_rx[6:0]};
+                                        0: SPIRF[31:24] <= {{7{1'b0}}, din               };
+                                        1: SPIRF[31:24] <= {{6{1'b0}}, din, data_rx[  0]};
+                                        2: SPIRF[31:24] <= {{5{1'b0}}, din, data_rx[1:0]};
+                                        3: SPIRF[31:24] <= {{4{1'b0}}, din, data_rx[2:0]};
+                                        4: SPIRF[31:24] <= {{3{1'b0}}, din, data_rx[3:0]};
+                                        5: SPIRF[31:24] <= {{2{1'b0}}, din, data_rx[4:0]};
+                                        6: SPIRF[31:24] <= {{1{1'b0}}, din, data_rx[5:0]};
+                                        7: SPIRF[31:24] <= {           din, data_rx[6:0]};
                                     endcase
                                 end
                             end
@@ -616,18 +626,18 @@ begin
                         end
                         if (CSMODE_LEN > 7) begin
                             if (spirf_char_idx[0]) begin
-                                SPIRF_WR[31:16] <= data_rx;
+                                SPIRF[31:16] <= data_rx;
                             end
                             else begin
-                                SPIRF_WR <= {{16{1'b0}}, data_rx};
+                                SPIRF <= {{16{1'b0}}, data_rx};
                             end
                         end
                         else begin
                             case(spirf_char_idx[1:0])
-                                0 : SPIRF_WR        <= {{24{1'b0}}, data_rx};
-                                1 : SPIRF_WR[15:8]  <= data_rx[7:0];
-                                2 : SPIRF_WR[23:16] <= data_rx[7:0];
-                                3 : SPIRF_WR[31:24] <= data_rx[7:0];
+                                0 : SPIRF        <= {{24{1'b0}}, data_rx};
+                                1 : SPIRF[15:8]  <= data_rx[7:0];
+                                2 : SPIRF[23:16] <= data_rx[7:0];
+                                3 : SPIRF[31:24] <= data_rx[7:0];
                             endcase
                         end
                     end
@@ -673,7 +683,6 @@ begin
         SPIE    <= SPIE_DEF;
         SPIM    <= SPIM_DEF;
         SPCOM   <= SPCOM_DEF;
-        SPIRF   <= SPIRF_DEF;
         cs_idx <= 0;
         csmodex <= CSMODE_DEF;
         csmodex_updated <= 0;
@@ -682,12 +691,9 @@ begin
         spitf_updated <= 0;
         spirf_updated <= 0;
 
-        spirf_rd_idx <= 0;
-
         spitf_idx <= 0;
         num_spitf_upd <= 0;
 
-        nbytes_read_from_spirf <= 0;
         for (byte_index = 0; byte_index < NWORD_TXFIFO; byte_index = byte_index + 1)
         begin
             SPI_TXFIFO[byte_index] <= 0;
@@ -695,17 +701,10 @@ begin
         // SPITF <= 0;
     end
     else begin
-        if (SPMODE[SPMODE_EN]) begin
-            SPIRF <= SPI_RXFIFO[spirf_rd_idx];
-        end
-        else begin
-            SPIRF <= SPIRF_DEF;
+        if (1'b0 == SPMODE[SPMODE_EN]) begin
             spitf_idx <= 0;
             num_spitf_upd <= 0;
-
-            spirf_rd_idx  <= 0;
             spirf_updated <= 0;
-            nbytes_read_from_spirf <= 0;
         end
         SPIE[SPIE_TXE] <= TXE;
         SPIE[SPIE_TNF] <= TNF;
@@ -721,9 +720,7 @@ begin
             num_spitf_upd <= 0;
         end
         if (frame_go) begin
-            spirf_rd_idx  <= 0;
             spirf_updated <= 0;
-            nbytes_read_from_spirf <= 0;
         end
         if (1'b1 == spcom_updated) begin
             spcom_updated <= 0;
@@ -744,17 +741,7 @@ begin
             case (S_ARADDR)
                 ADDR_SPIRF  :
                 begin
-                    if (RNE) begin
-                        spirf_updated <= 1;
-                        if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
-                            spirf_rd_idx <= 0;
-                            nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
-                        end
-                        else begin
-                            spirf_rd_idx <= spirf_rd_idx + 1;
-                            nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
-                        end
-                    end
+                    spirf_updated <= 1;
                 end
                 default: ;
             endcase
@@ -775,8 +762,8 @@ begin
                     ADDR_SPIM[7:2]: SPIM <= S_WDATA;
                     ADDR_SPCOM[7:2]:
                     begin
-                        SPCOM <= S_WDATA;
                         if ((FRAME_SM_IDLE == frame_state) || (FRAME_SM_CG_WAIT == frame_state)) begin
+                            SPCOM <= S_WDATA;
                             if (1'b1 == SPMODE[SPMODE_EN]) begin
                                 spcom_updated <= 1; // new frame can start
                             end
@@ -835,7 +822,7 @@ begin
         ADDR_CSMODE2: reg_data_out <= NCS < 3? {32{1'b0}} : CSXMODE[2];
         ADDR_CSMODE3: reg_data_out <= NCS < 4? {32{1'b0}} : CSXMODE[3];
         ADDR_SPITF  : reg_data_out <= SPITF;
-        ADDR_SPIRF  : reg_data_out <= SPIRF;
+        ADDR_SPIRF  : reg_data_out <= RNE ? SPI_RXFIFO[spirf_rd_idx] : 0;
         default     : reg_data_out <= 0;
     endcase
 end
