@@ -168,16 +168,16 @@ spi_slv_dev1
 
 initial
 begin
-    txdata[0] = 32'h44332211;
-    txdata[1] = 32'h12345678;
-    txdata[2] = 32'h78563412;
-    txdata[3] = 32'haa55aa55;
-    txdata[4] = 32'h11223344;
-    txdata[5] = 32'h55aa55aa;
-    txdata[6] = 32'hf0f0f0f0;
-    txdata[7] = 32'h01020304;
-    txdata[8] = 32'h0f0f0f0f;
-    txdata[9] = 32'h10204080;
+    txdata[0]=32'h01020304;
+    txdata[1]=32'h05060708;
+    txdata[2]=32'h090a0b0c;
+    txdata[3]=32'h0d0e0f10;
+    txdata[4]=32'h11121314;
+    txdata[5]=32'h15161718;
+    txdata[6]=32'h191a1b1c;
+    txdata[7]=32'h1d1e1f20;
+    txdata[8]=32'h21222324;
+    txdata[9]=32'h25262728;
     #50000;
     $stop;
 end
@@ -311,8 +311,8 @@ begin
     master.regread(ADDR_SPCOM, SPCOM, 0);
     $display("[%t] SPCOM=%h", $time, SPCOM);
 
-    master.regwrite(ADDR_SPITF, SPITF_VAL, 2);
-    $display("[%t] SPITF=%h", $time, SPITF_VAL);
+    master.regwrite(ADDR_SPITF, txdata[0], 2);
+    $display("[%t] SPITF=%h", $time, txdata[0]);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (~SPIE[SPIE_TXE]) begin
@@ -320,7 +320,8 @@ begin
     end
     #500;
 
-    master.regwrite(ADDR_SPITF, 32'h12345678, 2);
+    master.regwrite(ADDR_SPITF, txdata[1], 2);
+    $display("[%t] SPITF=%h", $time, txdata[1]);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
@@ -362,16 +363,16 @@ begin
     master.regread(ADDR_CSMODE1, CSMODE1, 0);
     $display("[%t] config CSMODE1=%h", $time, CSMODE1);
 
-    $display("[%t] config SPITF=%h", $time, 32'h78563412);
-    master.regwrite(ADDR_SPITF, 32'h78563412, 2);
+    $display("[%t] config SPITF=%h", $time, txdata[0]);
+    master.regwrite(ADDR_SPITF, txdata[0], 2);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS1, 2);
     $display("[%t] config SPCOM=%h", $time, SPCOM_CS1);
 
-    $display("[%t] config SPITF=%h", $time, 32'h11223344);
-    master.regwrite(ADDR_SPITF, 32'h11223344, 2);
-    $display("[%t] config SPITF=%h", $time, 32'h12345678);
-    master.regwrite(ADDR_SPITF, 32'h12345678, 2);
+    $display("[%t] config SPITF=%h", $time, txdata[1]);
+    master.regwrite(ADDR_SPITF, txdata[1], 2);
+    $display("[%t] config SPITF=%h", $time, txdata[2]);
+    master.regwrite(ADDR_SPITF, txdata[2], 2);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
