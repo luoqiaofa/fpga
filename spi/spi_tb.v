@@ -168,16 +168,16 @@ spi_slv_dev1
 
 initial
 begin
-    txdata[0]=32'h01020304;
-    txdata[1]=32'h05060708;
-    txdata[2]=32'h090a0b0c;
-    txdata[3]=32'h0d0e0f10;
-    txdata[4]=32'h11121314;
-    txdata[5]=32'h15161718;
-    txdata[6]=32'h191a1b1c;
-    txdata[7]=32'h1d1e1f20;
-    txdata[8]=32'h21222324;
-    txdata[9]=32'h25262728;
+    txdata[0]=32'h04030201;
+    txdata[1]=32'h08070605;
+    txdata[2]=32'h0c0b0a09;
+    txdata[3]=32'h100f0e0d;
+    txdata[4]=32'h14131211;
+    txdata[5]=32'h18171615;
+    txdata[6]=32'h1c1b1a19;
+    txdata[7]=32'h201f1e1d;
+    txdata[8]=32'h24232221;
+    txdata[9]=32'h28272625;
     #50000;
     $stop;
 end
