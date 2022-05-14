@@ -31,7 +31,6 @@ wire [31: 0] SPITF;
 (* keep = "true" *) reg [31: 0] SPI_TXFIFO[0:NWORD_TXFIFO-1];
 (* keep = "true" *) reg [31: 0] SPI_RXFIFO[0:NWORD_RXFIFO-1];
 
-integer idx;
 reg csmodex_updated;
 reg [31: 0]  csmodex;
 wire [31: 0] CSMODE;
@@ -162,6 +161,7 @@ reg   [31:0] SPIRF_WR;
 reg spitf_updated;
 reg spirf_updated;
 
+integer idx;
 integer byte_index;
 
 (* mark_debug = "true" *) wire i_spi_mosi;
@@ -222,7 +222,6 @@ assign brg_out_second_edge = CSMODE[CSMODE_CI] ? brg_pos_edge : brg_neg_edge;
 always @(posedge S_SYSCLK /* or negedge S_RESETN */)
 begin
     if (1'b0 == S_RESETN) begin
-        data_rx <= 16'h0000;
         shift_rx <= 0;
         spi_sel <= {NCS{1'b1}};
 
@@ -314,6 +313,7 @@ begin
         end
         if (chr_go) begin
             chr_go <= 0;
+            shift_rx <= 0;
         end
         if (char_go_wire) begin
             if (CSMODE[CSMODE_CP]) begin
@@ -365,12 +365,6 @@ begin
                 if (CSMODE[CSMODE_REV]) begin
                     if (0 == char_bit_cnt) begin
                         chr_done <= 1;
-                        if (1'b0 == CSMODE[CSMODE_CP]) begin
-                            data_rx <= shift_rx;
-                        end
-                        else begin
-                            data_rx <= {shift_rx[15:1], din};
-                        end
                         char_trx_idx <= char_trx_idx + 1;
                         if (char_trx_idx == SPCOM_TRANLEN) begin
                             char_trx_idx <= 0;
@@ -384,30 +378,6 @@ begin
                 else begin
                     if (CSMODE_LEN == char_bit_cnt) begin
                         chr_done <= 1;
-                        data_rx <= shift_rx;
-                        if (1'b0 == CSMODE[CSMODE_CP]) begin
-                            data_rx <= shift_rx;
-                        end
-                        else begin
-                            case (CSMODE_LEN)
-                                0 : data_rx[0]    <= din;
-                                1 : data_rx[1:0]  <= {din, shift_rx[0]};
-                                2 : data_rx[2:0]  <= {din, shift_rx[1:0]};
-                                3 : data_rx[3:0]  <= {din, shift_rx[2:0]};
-                                4 : data_rx[4:0]  <= {din, shift_rx[3:0]};
-                                5 : data_rx[5:0]  <= {din, shift_rx[4:0]};
-                                6 : data_rx[6:0]  <= {din, shift_rx[5:0]};
-                                7 : data_rx[7:0]  <= {din, shift_rx[6:0]};
-                                8 : data_rx[8:0]  <= {din, shift_rx[7:0]};
-                                9 : data_rx[9:0]  <= {din, shift_rx[8:0]};
-                                10: data_rx[10:0] <= {din, shift_rx[9:0]};
-                                11: data_rx[11:0] <= {din, shift_rx[10:0]};
-                                12: data_rx[12:0] <= {din, shift_rx[11:0]};
-                                13: data_rx[13:0] <= {din, shift_rx[12:0]};
-                                14: data_rx[14:0] <= {din, shift_rx[13:0]};
-                                15: data_rx[15:0] <= {din, shift_rx[14:0]};
-                            endcase
-                        end
                         char_trx_idx <= char_trx_idx + 1;
                         if (char_trx_idx == SPCOM_TRANLEN) begin
                             char_trx_idx <= 0;
@@ -505,9 +475,56 @@ begin
             SPI_RXFIFO[byte_index] <= 0;
         end
         SPIRF_WR <= 0;
+        data_rx <= 16'h0000;
         spirf_wr_updated <= 0;
     end
     else begin
+        if (1'b1 == brg_out_second_edge) begin
+            if (FRAME_SM_IN_TRANS == frame_state) begin
+                if (CSMODE[CSMODE_CP]) begin
+                    if (CSMODE[CSMODE_REV]) begin
+                        if (0 == char_bit_cnt) begin
+                            data_rx <= {shift_rx[15:1], din};
+                        end
+                    end /* (1'b1 == CSMODE[CSMODE_REV]) */
+                    else begin /* (1'b0 == CSMODE[CSMODE_REV]) */
+                        if (CSMODE_LEN == char_bit_cnt) begin
+                            data_rx[char_bit_cnt] <= din;
+                            case (CSMODE_LEN)
+                                1 : data_rx[0]  <= shift_rx[0];
+                                2 : data_rx[1:0]  <= shift_rx[1:0];
+                                3 : data_rx[2:0]  <= shift_rx[2:0];
+                                4 : data_rx[3:0]  <= shift_rx[3:0];
+                                5 : data_rx[4:0]  <= shift_rx[4:0];
+                                6 : data_rx[5:0]  <= shift_rx[5:0];
+                                7 : data_rx[6:0]  <= shift_rx[6:0];
+                                8 : data_rx[7:0]  <= shift_rx[7:0];
+                                9 : data_rx[8:0]  <= shift_rx[8:0];
+                                10: data_rx[ 9:0] <= shift_rx[9:0];
+                                11: data_rx[10:0] <= shift_rx[10:0];
+                                12: data_rx[11:0] <= shift_rx[11:0];
+                                13: data_rx[12:0] <= shift_rx[12:0];
+                                14: data_rx[13:0] <= shift_rx[13:0];
+                                15: data_rx[14:0] <= shift_rx[14:0];
+                                default : ;
+                            endcase
+                        end
+                    end /* (1'b0 == CSMODE[CSMODE_REV]) */
+                end /* (1'b1 == CSMODE[CSMODE_CP]) */
+                else begin
+                    if (CSMODE[CSMODE_REV]) begin
+                        if (0 == char_bit_cnt) begin
+                            data_rx <= shift_rx;
+                        end
+                    end
+                    else begin
+                        if (CSMODE_LEN == char_bit_cnt) begin
+                            data_rx <= shift_rx;
+                        end
+                    end
+                end /* (1'b0 == CSMODE[CSMODE_CP]) */
+            end /* (FRAME_SM_IN_TRANS == frame_state) */
+        end /* (1'b1 == brg_out_second_edge) */
         if (1'b1 == spirf_wr_updated) begin
             spirf_wr_updated <= 0;
             SPI_RXFIFO[spirf_wr_idx] <= SPIRF_WR;

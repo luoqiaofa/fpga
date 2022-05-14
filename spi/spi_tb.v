@@ -93,7 +93,7 @@ localparam CS0POL       = (1 << CSMODE_POL);
 localparam CS0BEF       = (3 << CSMODE_CSBEF_LO);
 localparam CS0AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS0CG        = (4 << CSMODE_CSCG_LO);
-localparam CS0MODE_VAL  = (SPIMODE1|REV0|DIV160|PM0|LEN0|CS0BEF|CS0AFT|CS0CG|CS0POL);
+localparam CS0MODE_VAL  = (SPIMODE3/*|REV0*/|DIV160|PM0|LEN0|CS0BEF|CS0AFT|CS0CG|CS0POL);
 
 localparam DIV161       = (0 << CSMODE_DIV16);
 localparam PM1          = (2 << CSMODE_PM_LO);
