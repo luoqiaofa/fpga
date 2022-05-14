@@ -3,8 +3,8 @@ localparam NBITS_PER_WORD      = 32;
 localparam NBITS_PER_BYTE      = 8;
 localparam NBYTES_PER_WORD   = (NBITS_PER_WORD / NBITS_PER_BYTE);
 localparam NBITS_CHAR_LEN_MAX  = 16;
-parameter integer C_ADDR_WIDTH = 8;
-parameter integer C_DATA_WIDTH = 32;
+localparam C_ADDR_WIDTH = 8;
+localparam C_DATA_WIDTH = 32;
 
 // ESPI regist addr
 localparam ADDR_SPMODE       = 8'h00;
