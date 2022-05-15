@@ -250,7 +250,6 @@ begin
             spi_sel[cs_idx] <= csmodex[CSMODE_POL] ? 1'b1 : 1'b0;
         end
 
-
         if (frame_go) begin
             frame_go <= 0;
 
@@ -821,7 +820,7 @@ begin
         ADDR_CSMODE1: reg_data_out <= NCS < 2? {32{1'b0}} : CSXMODE[1];
         ADDR_CSMODE2: reg_data_out <= NCS < 3? {32{1'b0}} : CSXMODE[2];
         ADDR_CSMODE3: reg_data_out <= NCS < 4? {32{1'b0}} : CSXMODE[3];
-        ADDR_SPITF  : reg_data_out <= SPITF;
+        ADDR_SPITF  : reg_data_out <= (|spitf_idx) ? SPI_TXFIFO[spitf_idx-1] : 0;
         ADDR_SPIRF  : reg_data_out <= RNE ? SPI_RXFIFO[spirf_rd_idx] : 0;
         default     : reg_data_out <= 0;
     endcase
