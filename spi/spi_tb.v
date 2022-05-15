@@ -290,29 +290,29 @@ begin
     // diable SPI to reset the txfifo
     master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
     master.regread(ADDR_SPMODE, SPMODE, 0);
-    $display("[%t] SPMODE=%h", $time, SPMODE);
+    $display("[%t] config SPMODE(%h)=%h", $time, ADDR_SPMODE, SPMODE);
     // clear SPIE flags
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
-    $display("[%t] SPIE to FFFFFFFF", $time);
+    $display("[%t] config SPIE(%h)=FFFFFFFF", $time, ADDR_SPIE);
     // renable SPI
     master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
     master.regread(ADDR_SPMODE, SPMODE, 0);
-    $display("[%t] SPMODE=%h", $time, SPMODE);
+    $display("[%t] config SPMODE(%h)=%h", $time, ADDR_SPMODE, SPMODE);
 
     master.regwrite(ADDR_CSMODE0, CS0MODE_VAL, 2);
     master.regread(ADDR_CSMODE0, CSMODE0, 0);
-    $display("[%t] CSMODE0=%h", $time, CSMODE0);
+    $display("[%t] config CSMODE0(%h)=%h", $time, ADDR_CSMODE0, CSMODE0);
 
     master.regwrite(ADDR_SPIM, SPIM_VAL, 2);
     master.regread(ADDR_SPIM, SPIM, 0);
-    $display("[%t] SPIM=%h", $time, SPIM);
+    $display("[%t] config SPIM(%h)=%h", $time, ADDR_SPIM, SPIM);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS0, 2);
     master.regread(ADDR_SPCOM, SPCOM, 0);
-    $display("[%t] SPCOM=%h", $time, SPCOM);
+    $display("[%t] config SPCOM(%h)=%h", $time, ADDR_SPCOM, SPCOM);
 
     master.regwrite(ADDR_SPITF, txdata[0], 2);
-    $display("[%t] SPITF=%h", $time, txdata[0]);
+    $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[0]);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (~SPIE[SPIE_TXE]) begin
@@ -321,7 +321,7 @@ begin
     #500;
 
     master.regwrite(ADDR_SPITF, txdata[1], 2);
-    $display("[%t] SPITF=%h", $time, txdata[1]);
+    $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[1]);
 
     master.regread(ADDR_SPIE, SPIE, 0);
     while (SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] < 6'h04) begin
@@ -356,22 +356,25 @@ begin
     // master.regwrite(ADDR_SPMODE, SPMODE_DEF, 2);
     $display("[%t] clear SPIE flags", $time);
     master.regwrite(ADDR_SPIE, 32'hFFFF_FFFF, 2);
+    $display("[%t] config SPIE(%h)=FFFFFFFF", $time, ADDR_SPIE);
     // renable SPI
-    // master.regwrite(ADDR_SPMODE, SPMODE_VAL, 2);
+    master.regwrite(ADDR_SPMODE, SPMODE_VAL, 0);
+    master.regread(ADDR_SPMODE, SPMODE, 0);
+    $display("[%t] config SPMODE(%h)=%h", $time, ADDR_SPMODE, SPMODE);
 
     master.regwrite(ADDR_CSMODE1, CS1MODE_VAL, 2);
     master.regread(ADDR_CSMODE1, CSMODE1, 0);
-    $display("[%t] config CSMODE1=%h", $time, CSMODE1);
+    $display("[%t] config CSMODE1(%h)=%h", $time, ADDR_CSMODE1, CSMODE1);
 
-    $display("[%t] config SPITF=%h", $time, txdata[0]);
+    $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[0]);
     master.regwrite(ADDR_SPITF, txdata[0], 2);
 
     master.regwrite(ADDR_SPCOM, SPCOM_CS1, 2);
-    $display("[%t] config SPCOM=%h", $time, SPCOM_CS1);
+    $display("[%t] config SPCOM(%h)=%h", $time, ADDR_SPCOM, SPCOM_CS1);
 
-    $display("[%t] config SPITF=%h", $time, txdata[1]);
+    $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[1]);
     master.regwrite(ADDR_SPITF, txdata[1], 2);
-    $display("[%t] config SPITF=%h", $time, txdata[2]);
+    $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[2]);
     master.regwrite(ADDR_SPITF, txdata[2], 2);
 
     master.regread(ADDR_SPIE, SPIE, 0);
@@ -420,7 +423,7 @@ begin
 
     #1000;
     master.regwrite(ADDR_SPCOM,  SPCOM_CS1_FULL, 2);
-    $display("[%t] config SPCOM=%h", $time, SPCOM_CS1_FULL);
+    $display("[%t] config SPCOM(%h)=%h", $time, ADDR_SPCOM, SPCOM_CS1_FULL);
 
     for (idx = 0; idx < NWORD_TXFIFO+1; idx = idx + 1) begin
         master.regread(ADDR_SPIE, SPIE, 0);
@@ -429,7 +432,7 @@ begin
             master.regread(ADDR_SPIE, SPIE, 0);
         end
         master.regwrite(ADDR_SPITF, txdata[idx%9], 2);
-        $display("[%t] config SPITF=%h", $time, txdata[idx%9]);
+        $display("[%t] config SPITF(%h)=%h", $time, ADDR_SPITF, txdata[idx%9]);
     end
     $display("[%t] wait rx fifo full", $time);
     master.regread(ADDR_SPIE, SPIE, 0);
