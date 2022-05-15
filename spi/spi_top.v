@@ -136,7 +136,7 @@ assign TXE = (num_spitf_trx == num_spitf_upd) ? 1'b1: 1'b0;
 assign TXCNT = num_spitf_upd > 0 ? NBYTES_TXFIFO - nbytes_need_tx : NBYTES_TXFIFO;
 // assign TNF = TXCNT > 0 ? 1'b1: 1'b0;
 assign TNF = TXCNT > (NBYTES_PER_WORD - 1) ? 1'b1 : 1'b0;
-assign TXT = nbytes_need_tx < TXTHR ? 1'b1 : 1'b0;
+assign TXT = TXCNT < TXTHR ? 1'b1 : 1'b0;
 
 // assign char_rx_idx = char_trx_idx < SPCOM_RSKIP ? 0 : char_trx_idx - SPCOM_RSKIP;
 wire   [NBITS_TRANLEN-1:0] nbytes_rx_from_miso;
