@@ -32,6 +32,7 @@ wire pos_edge; // positive edge flag
 wire neg_edge; // negtive edge flag
 reg sck_dly;
 
+reg [7:0] pos_cnt;
 assign pos_edge    = ~sck_dly & S_SPI_SCK;
 assign neg_edge    = sck_dly & ~S_SPI_SCK;
 assign S_RCHAR     = data_in;
@@ -39,22 +40,31 @@ assign S_CHAR_DONE = slave_active ? done : 1'bz;
 assign spi_mode = {S_CPOL, S_CPHA};
 assign S_SPI_MISO   = slave_active ? shift_tx[bit_cnt] : 1'bz;
 assign slave_active = S_CSPOL ? (S_ENABLE & (~S_SPI_CS)) : (S_ENABLE & S_SPI_CS);
+wire sck_first_edge;
+wire sck_second_edge;
+assign sck_first_edge = S_CPOL ? neg_edge : pos_edge;
+assign sck_second_edge = S_CPOL ? pos_edge : neg_edge;
 
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (!S_RESETN)
     begin
-        done     <= 0;
         char_idx <= 0;
         data_in  <= {CHAR_NBITS{1'b1}};
-        bit_cnt  <= 0;
+        pos_cnt  <= 0;
         shift_rx <= {CHAR_NBITS{1'b1}};
         shift_tx <= {CHAR_NBITS{1'b1}};
         sck_dly  <= S_SPI_SCK;
     end
     else begin
         sck_dly  <= S_SPI_SCK;
-        done <= 0;
+        if (slave_active) begin
+            if (pos_edge)
+                pos_cnt <= pos_cnt + 1;
+        end
+        // else begin
+        //     pos_cnt  <= 0;
+        // end
         if (S_CHAR_LEN > 7) begin
         case (char_idx)
             0 : shift_tx <= S_WCHAR[15:0];
@@ -75,53 +85,52 @@ begin
         end
         else begin
             shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
-            if (S_REV) begin
-                bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-            end
-            else begin
-                bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
-            end
         end
     end
 end
 
-always @(posedge pos_edge)
+always @(posedge S_SYSCLK/* or negedge S_RESETN */)
 begin
+    if (1'b1 == done)
+    begin
+        done <= 0;
+        if (S_REV) begin
+            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+        end
+        else begin
+            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+        end
+    end
     if (slave_active) begin
-        case (spi_mode)
-            2'h0 : begin // CI=0 CP=0
-                shift_rx[bit_cnt] <= S_SPI_MOSI;
-            end
-            2'h1: begin // CI=0 CP=1
+        if (sck_first_edge) begin
+            if (S_CPHA) begin
                 bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
             end
-            2'h2: begin // CI=1 CP=0
+        end
+        if (sck_second_edge) begin
+            if (!S_CPHA) begin
                 bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
-                if (S_REV) begin
-                    if (0 == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-                else begin
-                    if (S_CHAR_LEN == bit_cnt) begin
-                        done <= 1;
-                    end
+            end
+            if (S_REV) begin
+                if (0 == bit_cnt) begin
+                    done <= 1;
                 end
             end
-            2'h3: begin // CI=1 CP=1
-                shift_rx[bit_cnt] <= S_SPI_MOSI;
-                if (S_REV) begin
-                    if (0 == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-                else begin
-                    if (S_CHAR_LEN == bit_cnt) begin
-                        done <= 1;
-                    end
+            else begin
+                if (S_CHAR_LEN == bit_cnt) begin
+                    done <= 1;
                 end
             end
-        endcase
+        end
+    end
+    else begin
+        done <= 0;
+        if (S_REV) begin
+            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+        end
+        else begin
+            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+        end
     end
 end
 
@@ -140,56 +149,6 @@ begin
             2 : data_in[23:16] <= shift_rx;
             3 : data_in[31:24] <= shift_rx;
         endcase
-    end
-end
-
-always @(posedge neg_edge)
-begin
-    if (slave_active) begin
-        case (spi_mode)
-            2'h0: begin // CI=0 CP=0
-                bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
-                if (S_REV) begin
-                    if (0 == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-                else begin
-                    if (S_CHAR_LEN == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-            end
-            2'h1: begin // CI=0 CP=1
-                shift_rx[bit_cnt] <= S_SPI_MOSI;
-                if (S_REV) begin
-                    if (0 == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-                else begin
-                    if (S_CHAR_LEN == bit_cnt) begin
-                        done <= 1;
-                    end
-                end
-            end
-            2'h2: begin // CI=1 CP=0
-                shift_rx[bit_cnt] <= S_SPI_MOSI;
-            end
-            2'h3: begin // CI=1 CP=1
-                bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
-            end
-        endcase
-    end
-end
-
-always @(posedge done)
-begin
-    if (S_REV) begin
-        bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-    end
-    else begin
-        bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
     end
 end
 
