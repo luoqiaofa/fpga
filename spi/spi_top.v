@@ -307,10 +307,10 @@ begin
             end
         end
         if (spcom_updated) begin
-            spi_brg_go <= 0;
             char_trx_idx <= 0;
             if (FRAME_SM_IDLE == frame_state) begin
                 frame_go <= 1;
+                spi_brg_go <= 0;
                 frame_in_process <= 1;
                 frame_state <= FRAME_SM_BEF_WAIT;
                 cnt_cscg <= CSMODE_CSCG;
@@ -409,6 +409,7 @@ begin
                         if (frame_next_start) begin
                             frame_state <= FRAME_SM_BEF_WAIT;
                             frame_next_start <= 0;
+                            spi_brg_go <= 0;
                             frame_go <= 1;
                             frame_in_process <= 1;
                             cnt_cscg <= CSMODE_CSCG;
