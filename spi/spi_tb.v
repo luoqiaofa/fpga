@@ -105,7 +105,7 @@ localparam CS1AFT       = (5 << CSMODE_CSAFT_LO);
 localparam CS1CG        = (4 << CSMODE_CSCG_LO);
 localparam CS1MODE_VAL  = (SPIMODE2|DIV161|PM1|REV1|LEN1|CS1BEF|CS1AFT|CS1CG|CS1POL);
 
-localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)| (1 << SPMODE_LOOP);
+localparam SPMODE_VAL   = SPMODE_DEF | (1 << SPMODE_EN)/*|(1 << SPMODE_LOOP)*/;
 localparam SPIE_VAL     = SPIE_DEF;
 localparam SPIM_VAL     = (1 << SPIM_RNE);
 localparam SPCOM_CS0    = ((0 << SPCOM_CS_LO)|(3<<SPCOM_RSKIP_LO)|(6<<SPCOM_TRANLEN_LO));
@@ -126,7 +126,7 @@ reg [REG_WIDTH-1: 0] CSMODE1;
 reg [REG_WIDTH-1: 0] CSMODE2;
 reg [REG_WIDTH-1: 0] CSMODE3;
 
-spi_slave_trx_char #(.CHAR_NBITS(32))
+spi_slave_model #(.CHAR_NBITS(16))
 spi_slv_dev0
 (
     .S_SYSCLK(sysclk),           // platform clock
@@ -140,13 +140,10 @@ spi_slv_dev0
     .S_SPI_CS(SPI_CS_B[0]),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
-    .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_DONE(slv0_char_done),
-    .S_WCHAR(32'h11223344),        // output character
-    .S_RCHAR(slv0_data_rx)          // input character
+    .S_SPI_MOSI(SPI_MOSI)
 );
 
-spi_slave_trx_char #(.CHAR_NBITS(32))
+spi_slave_model #(.CHAR_NBITS(16))
 spi_slv_dev1
 (
     .S_SYSCLK(sysclk),           // platform clock
@@ -160,10 +157,7 @@ spi_slv_dev1
     .S_SPI_CS(SPI_CS_B[1]),
     .S_SPI_SCK(SPI_SCK),
     .S_SPI_MISO(SPI_MISO),
-    .S_SPI_MOSI(SPI_MOSI),
-    .S_CHAR_DONE(slv1_char_done),
-    .S_WCHAR(32'h78563412),        // output character
-    .S_RCHAR(slv1_data_rx)          // input character
+    .S_SPI_MOSI(SPI_MOSI)
 );
 
 initial

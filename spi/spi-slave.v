@@ -25,14 +25,15 @@ wire slave_active;
 reg [31: 0] data_in;
 reg [3:0] bit_cnt;
 reg [1:0] char_idx;
+reg [1:0] char_rx_idx;
 reg [NBITS_CHAR_LEN_MAX-1 : 0] shift_tx;
 reg [NBITS_CHAR_LEN_MAX-1 : 0] shift_rx;
+reg [NBITS_CHAR_LEN_MAX-1 : 0] data_rx;
 wire [1:0] spi_mode;
 wire pos_edge; // positive edge flag
 wire neg_edge; // negtive edge flag
 reg sck_dly;
 
-reg [7:0] pos_cnt;
 assign pos_edge    = ~sck_dly & S_SPI_SCK;
 assign neg_edge    = sck_dly & ~S_SPI_SCK;
 assign S_RCHAR     = data_in;
@@ -50,41 +51,30 @@ begin
     if (!S_RESETN)
     begin
         char_idx <= 0;
-        data_in  <= {CHAR_NBITS{1'b1}};
-        pos_cnt  <= 0;
-        shift_rx <= {CHAR_NBITS{1'b1}};
+        data_rx <= 0;
         shift_tx <= {CHAR_NBITS{1'b1}};
         sck_dly  <= S_SPI_SCK;
     end
     else begin
         sck_dly  <= S_SPI_SCK;
-        if (slave_active) begin
-            if (pos_edge)
-                pos_cnt <= pos_cnt + 1;
-        end
-        // else begin
-        //     pos_cnt  <= 0;
-        // end
         if (S_CHAR_LEN > 7) begin
         case (char_idx)
             0 : shift_tx <= S_WCHAR[15:0];
             1 : shift_tx <= S_WCHAR[31:16];
+            2 : shift_tx <= S_WCHAR[15:0];
+            3 : shift_tx <= S_WCHAR[31:16];
         endcase
         end
         else begin
             case (char_idx)
-                0 :shift_tx[7:0] <= S_WCHAR[7:0];
+                0 :shift_tx[7:0] <= {S_WCHAR[7:0]};
                 1 :shift_tx[7:0] <= S_WCHAR[15:8];
                 2 :shift_tx[7:0] <= S_WCHAR[23:16];
                 3 :shift_tx[7:0] <= S_WCHAR[31:24];
             endcase
         end
-        if (slave_active) begin
-            data_in  <= data_in;
-            shift_rx <= shift_rx;
-        end
-        else begin
-            shift_rx <= {1'b1, {CHAR_NBITS{1'b1}}};
+        if (1'b0 == slave_active) begin
+            char_idx <= 0;
         end
     end
 end
@@ -94,37 +84,71 @@ begin
     if (1'b1 == done)
     begin
         done <= 0;
-        if (S_REV) begin
-            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
-        end
-        else begin
-            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
-        end
+        shift_rx <= {CHAR_NBITS{1'b0}};
     end
     if (slave_active) begin
         if (sck_first_edge) begin
             if (S_CPHA) begin
                 bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
             end
+            else begin
+                shift_rx[bit_cnt] = S_SPI_MOSI;
+            end
         end
         if (sck_second_edge) begin
             if (!S_CPHA) begin
                 bit_cnt <= (S_REV ? bit_cnt - 1 : bit_cnt + 1);
+                if (S_REV) begin
+                    if (0 == bit_cnt)
+                        bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+                end
+                else begin
+                    if (S_CHAR_LEN == bit_cnt)
+                        bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+                end
+            end
+            else begin
+                shift_rx[bit_cnt] = S_SPI_MOSI;
             end
             if (S_REV) begin
                 if (0 == bit_cnt) begin
                     done <= 1;
+                    char_idx <= char_idx + 1;
+                    if (S_CPHA) begin
+                        case (S_CHAR_LEN)
+                            3: data_rx[3:0]  <= {shift_rx[3:1], S_SPI_MOSI};
+                            7: data_rx[7:0]  <= {shift_rx[7:1], S_SPI_MOSI};
+                           11: data_rx[11:0] <= {shift_rx[11:1], S_SPI_MOSI};
+                           15: data_rx[15:0] <= {shift_rx[15:1], S_SPI_MOSI};
+                        endcase
+                    end
+                    else begin
+                        data_rx <= shift_rx;
+                    end
                 end
             end
             else begin
                 if (S_CHAR_LEN == bit_cnt) begin
                     done <= 1;
+                    char_idx <= char_idx + 1;
+                    if (S_CPHA) begin
+                        case (S_CHAR_LEN)
+                            3: data_rx[3:0]  <= {S_SPI_MOSI, shift_rx[2:0]};
+                            7: data_rx[7:0]  <= {S_SPI_MOSI, shift_rx[7:0]};
+                           11: data_rx[11:0] <= {S_SPI_MOSI, shift_rx[11:0]};
+                           15: data_rx[15:0] <= {S_SPI_MOSI, shift_rx[14:0]};
+                        endcase
+                    end
+                    else begin
+                        data_rx <= shift_rx;
+                    end
                 end
             end
         end
     end
     else begin
         done <= 0;
+        shift_rx <= {CHAR_NBITS{1'b0}};
         if (S_REV) begin
             bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
         end
@@ -134,30 +158,31 @@ begin
     end
 end
 
-always @(posedge done)
+always @(posedge S_SYSCLK/* or negedge S_RESETN*/)
 begin
-    if (S_CHAR_LEN > 7) begin
-        case (char_idx[0])
-            0 : data_in[15:0]  <= shift_rx;
-            1 : data_in[31:16] <= shift_rx;
-        endcase
+    if (1'b0 == S_RESETN) begin
+        char_rx_idx <= 0;
+        data_in  <= {CHAR_NBITS{1'b0}};
     end
-    else begin
-        case (char_idx[0])
-            0 : data_in[7:0]   <= shift_rx;
-            1 : data_in[15:8]  <= shift_rx;
-            2 : data_in[23:16] <= shift_rx;
-            3 : data_in[31:24] <= shift_rx;
-        endcase
+    if (1'b0 == slave_active) begin
+        char_rx_idx <= 0;
+        data_in  <= {CHAR_NBITS{1'b0}};
     end
-end
-
-always @(posedge done)
-begin
-    char_idx <= char_idx + 1;
-    if (S_CHAR_LEN > 7) begin
-        if (1 == char_idx) begin
-            char_idx <= 0;
+    if (1'b1 == done) begin
+        char_rx_idx <= char_rx_idx + 1;
+        if (S_CHAR_LEN > 7) begin
+            case (char_rx_idx[0])
+                0 : data_in  <= {{16{1'b0}}, data_rx};
+                1 : data_in[31:16] <= data_rx;
+            endcase
+        end
+        else begin
+            case (char_rx_idx[1:0])
+                0 : data_in        <= {{24{1'b0}}, data_rx[7:0]};
+                1 : data_in[15:8]  <= data_rx[7:0];
+                2 : data_in[23:16] <= data_rx[7:0];
+                3 : data_in[31:24] <= data_rx[7:0];
+            endcase
         end
     end
 end
