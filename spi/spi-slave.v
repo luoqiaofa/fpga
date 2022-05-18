@@ -85,6 +85,12 @@ begin
     begin
         done <= 0;
         shift_rx <= {CHAR_NBITS{1'b0}};
+        if (S_REV) begin
+            bit_cnt  <= (S_CPHA ? S_CHAR_LEN + 1 : S_CHAR_LEN);
+        end
+        else begin
+            bit_cnt  <= (S_CPHA ? MAX_BITNO_OF_CHAR : 0);
+        end
     end
     if (slave_active) begin
         if (sck_first_edge) begin
