@@ -329,7 +329,7 @@ ESPI_CSMODE field descriptions
 |       |NOTE: System clock as used here is defined to be platform clock divided by 2                                |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 23    | MISO and MISO use one pin in half-duplex, that is SDIO pin, for some slave device                          |
-|IS3WIRE| Note: At this mode, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                             |
+|IS3WIRE| Note: If received transactions, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                 |
 +-------+------------------------------------------------------------------------------------------------------------+
 | 22-21 |This field is reserved.                                                                                     |
 |       |Reserved                                                                                                    |

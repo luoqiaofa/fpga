@@ -464,28 +464,32 @@ begin
         end
 
         if (spirf_updated) begin
-            if (RNE) begin
-                if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
-                    spirf_rd_idx <= 0;
-                    spirf_char_idx <= 0; // need to another side to reset
-                    nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
-                end
-                else begin
-                    spirf_rd_idx <= spirf_rd_idx + 1;
-                    nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
+            if (1'b0 == SPCOM[SPCOM_TO]) begin
+                if (RNE) begin
+                    if (nbytes_valid_in_rxfifo < NBYTES_PER_WORD) begin
+                        spirf_rd_idx <= 0;
+                        spirf_char_idx <= 0; // need to another side to reset
+                        nbytes_read_from_spirf <= nbytes_read_from_spirf + nbytes_valid_in_rxfifo;
+                    end
+                    else begin
+                        spirf_rd_idx <= spirf_rd_idx + 1;
+                        nbytes_read_from_spirf <= nbytes_read_from_spirf + NBYTES_PER_WORD;
+                    end
                 end
             end
         end
         if (chr_done) begin /* (1'b1 == chr_done) */
-            SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
-            if (char_rx_idx > 0) begin
-                spirf_char_idx <= spirf_char_idx + 1;
-            end
-            else begin
-                spirf_char_idx <= 0;
+            if (1'b0 == SPCOM[SPCOM_TO]) begin
+                SPI_RXFIFO[spirf_wr_idx] <= SPIRF;
+                if (char_rx_idx > 0) begin
+                    spirf_char_idx <= spirf_char_idx + 1;
+                end
+                else begin
+                    spirf_char_idx <= 0;
+                end
             end
         end /* if (1'b0 == CSMODE[CSMODE_CP]) */
-        if (1'b1 == brg_out_second_edge) begin
+        if (1'b1 == brg_out_second_edge && (1'b0 == SPCOM[SPCOM_TO])) begin
             if (FRAME_SM_IN_TRANS == frame_state) begin
                 if (CSMODE[CSMODE_CP]) begin
                     if (CSMODE[CSMODE_REV]) begin
