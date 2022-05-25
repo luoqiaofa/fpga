@@ -174,7 +174,7 @@ wire din;
 // pullup pullup_mosi_i(i_spi_mosi);
 
 assign o_spi_mosi = (FRAME_SM_IN_TRANS == frame_state) ? data_tx[char_bit_cnt] : 1'b0;
-assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CI];
+assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
 assign S_SPI_SEL  = spi_sel;
 
 assign i_spi_miso = CSMODE[CSMODE_IS3WIRE] ? i_spi_mosi : S_SPI_MISO;
@@ -212,9 +212,9 @@ assign brg_divider = CSMODE[CSMODE_DIV16] ? (csmode_pm << 4)-1 : csmode_pm-1;
 assign char_go_wire = chr_go;
 
 wire   brg_out_first_edge;
-assign brg_out_first_edge = CSMODE[CSMODE_CI] ? brg_neg_edge : brg_pos_edge;
+assign brg_out_first_edge = CSMODE[CSMODE_CPOL] ? brg_neg_edge : brg_pos_edge;
 wire   brg_out_second_edge;
-assign brg_out_second_edge = CSMODE[CSMODE_CI] ? brg_pos_edge : brg_neg_edge;
+assign brg_out_second_edge = CSMODE[CSMODE_CPOL] ? brg_pos_edge : brg_neg_edge;
 
 // always @(posedge brg_out_second_edge)
 always @(posedge S_SYSCLK /* or negedge S_RESETN */)
@@ -289,7 +289,7 @@ begin
             data_rx <= 0;
         end
         if (char_go_wire) begin
-            if (CSMODE[CSMODE_CP]) begin
+            if (CSMODE[CSMODE_CPHA]) begin
                 if (CSMODE[CSMODE_REV]) begin
                     char_bit_cnt <= CSMODE_LEN + 1;
                 end
@@ -324,10 +324,10 @@ begin
         end
         if (1'b1 == brg_out_second_edge) begin
             if (FRAME_SM_IN_TRANS == frame_state) begin
-                if (1'b1 == CSMODE[CSMODE_CP]) begin
+                if (1'b1 == CSMODE[CSMODE_CPHA]) begin
                     data_rx[char_bit_cnt] <= din;
-                end /* (1'b1 = CSMODE[CSMODE_CP]) */
-                else begin /* (1'b0 = CSMODE[CSMODE_CP]) */
+                end /* (1'b1 = CSMODE[CSMODE_CPHA]) */
+                else begin /* (1'b0 = CSMODE[CSMODE_CPHA]) */
                     if (CSMODE[CSMODE_REV]) begin
                         char_bit_cnt <= char_bit_cnt - 1;
                     end
@@ -424,7 +424,7 @@ begin
         end /* (1'b1 == brg_out_second_edge) */
         if (brg_out_first_edge) begin
             if (FRAME_SM_IN_TRANS == frame_state) begin
-                if (1'b1 == CSMODE[CSMODE_CP])
+                if (1'b1 == CSMODE[CSMODE_CPHA])
                 begin
                     if (CSMODE[CSMODE_REV]) begin
                         char_bit_cnt <= char_bit_cnt - 1;
@@ -432,7 +432,7 @@ begin
                     else begin
                         char_bit_cnt <= char_bit_cnt + 1;
                     end
-                end /* CSMODE_CP=1'b1 */
+                end /* CSMODE_CPHA=1'b1 */
                 else begin
                     data_rx[char_bit_cnt] <= din;
                 end
@@ -488,10 +488,10 @@ begin
                     spirf_char_idx <= 0;
                 end
             end
-        end /* if (1'b0 == CSMODE[CSMODE_CP]) */
+        end /* if (1'b0 == CSMODE[CSMODE_CPHA]) */
         if (1'b1 == brg_out_second_edge && (1'b0 == SPCOM[SPCOM_TO])) begin
             if (FRAME_SM_IN_TRANS == frame_state) begin
-                if (CSMODE[CSMODE_CP]) begin
+                if (CSMODE[CSMODE_CPHA]) begin
                     if (CSMODE[CSMODE_REV]) begin
                         if (0 == char_bit_cnt) begin
                             if (~(|SPCOM_RSKIP)) begin
@@ -614,7 +614,7 @@ begin
                             end
                         end
                     end /* (1'b0 == CSMODE[CSMODE_REV]) */
-                end /* (1'b1 == CSMODE[CSMODE_CP]) */
+                end /* (1'b1 == CSMODE[CSMODE_CPHA]) */
                 else begin
                     if ((CSMODE[CSMODE_REV] && ~(|char_bit_cnt)) || (!CSMODE[CSMODE_REV] && (CSMODE_LEN == char_bit_cnt))) begin
                         if (~(|SPCOM_RSKIP)) begin
@@ -645,7 +645,7 @@ begin
                             endcase
                         end
                     end
-                end /* (1'b0 == CSMODE[CSMODE_CP]) */
+                end /* (1'b0 == CSMODE[CSMODE_CPHA]) */
             end /* (FRAME_SM_IN_TRANS == frame_state) */
         end /* (1'b1 == brg_out_second_edge) */
         /* CP=0 full char received from din */
@@ -805,7 +805,7 @@ spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .rst_n(S_RESETN),            // module reset
     .enable(spi_brg_go),  // module enable
     .go(spi_brg_go),                 // start transmit
-    .CPOL(CSMODE[CSMODE_CI]),           // clock polarity
+    .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(1'b0),     // last clock
     .divider_i(brg_divider),     // divider;
     .clk_out(brg_clk),           // clock output
