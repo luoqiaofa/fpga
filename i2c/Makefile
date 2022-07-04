@@ -1,6 +1,7 @@
 srcs := \
     i2c-master-byte-ctl.v \
     i2c-bit-ctl.v \
+    i2c-reg-module.v \
     ../divn/divn.v
 tb    := tb-i2c.v
 tb_mbyte := tb-mbyte.v

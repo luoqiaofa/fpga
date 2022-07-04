@@ -46,8 +46,13 @@ module tb_i2c;
 
 initial
 begin
-       $dumpfile("wave.vcd");    //生成的vcd文件名称
-       $dumpvars(0);   //tb模块名称
+    $dumpfile("wave.vcd");    //生成的vcd文件名称
+    $dumpvars(0);   //tb模块名称
+    #60000
+    i_reset_n <= 0;
+    #1000
+    $stop;
+    $finish;
 end
 
 initial
@@ -89,7 +94,7 @@ begin
     /* start i2c start condition */
     i2cbus.regwrite(ADDR_CR, (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX), 0);
     /* Write target address byte - this time with the read flag set */
-    i2cbus.regwrite(ADDR_DR, 8'ha0, 0); /* slave addr 0x50 */
+    i2cbus.regwrite(ADDR_DR, 8'ha1, 0); /* slave addr 0x50, read op */
     /* i2c_wait CSR_MIF to be set */
     i2cbus.regread(ADDR_SR, i2csr, 0);
     while (1'b0 == i2csr[CSR_MIF]) begin
@@ -123,9 +128,6 @@ begin
     end
     /* case#1 */
 
-    #600000
-    $stop;
-    $finish;
 end
 
 always #5 i_sysclk = ~i_sysclk;
