@@ -1,10 +1,10 @@
 // i2c registers address define
-localparam ADDR_ADR    = 3'd0;
-localparam ADDR_FDR    = 3'd1;
-localparam ADDR_CR     = 3'd2;
-localparam ADDR_SR     = 3'd3;
-localparam ADDR_DR     = 3'd4;
-localparam ADDR_DFSRR  = 3'd5;
+localparam ADDR_ADR    = 6'h00;
+localparam ADDR_FDR    = 6'h04;
+localparam ADDR_CR     = 6'h08;
+localparam ADDR_SR     = 6'h0c;
+localparam ADDR_DR     = 6'h10;
+localparam ADDR_DFSRR  = 6'h14;
 
 // I2CADR
 localparam BIT_ADDR_HI = 7;
