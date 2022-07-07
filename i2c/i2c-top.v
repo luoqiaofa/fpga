@@ -88,28 +88,22 @@ begin
         s_cmd_go <= 0;
         s_cmd <= CMD_IDLE;
         i2c_state <= SM_IDLE;
+        s_start_done  <= 0;
+        s_dr_updated <= 0;
+        s_need_rd_seq <= 0;
     end
     else begin
+        if (1'b1 == s_cmd_go) begin
+            s_cmd_go <= 0;
+        end
+        I2CSR[CSR_MAL] <=  s_i2c_al;
+        I2CSR[CSR_MBB] <=  s_i2c_busy;
         if (1'b1 == i_rd_ena) begin
             case (i_rd_addr)
-                ADDR_DR    : 
-                begin
-                    if (!s_need_rd_seq) begin
-                        if (s_start_done) begin
-                            if (I2CSR[CSR_MIF] & (!I2CCR[CCR_MTX])) begin
-                                I2CSR[CSR_MIF] <= 1'b0;
-                                I2CSR[CSR_MCF] <= 1'b0;
-                                s_cmd        <= CMD_READ;
-                                s_cmd_go     <= 1;
-                                i2c_state    <= SM_READ;
-                            end
-                        end
-                        else begin
-                            if ((SM_RESTART == i2c_state) || (SM_START == i2c_state)) begin
-                                s_need_rd_seq  <= 1;
-                                I2CSR[CSR_MIF] <= 1'b0;
-                                I2CSR[CSR_MCF] <= 1'b0;
-                            end
+                ADDR_DR    : begin
+                    if (I2CSR[CSR_MBB] && !I2CCR[CCR_MTX]) begin
+                        if (!s_need_rd_seq) begin
+                            s_need_rd_seq <= 1;
                         end
                     end
                 end
@@ -127,74 +121,131 @@ begin
                 end
                 ADDR_CR    : begin
                     I2CCR <= i_wr_data;
+                    if (I2CCR[CCR_MSTA] && !i_wr_data[CCR_MSTA]) begin
+                        if (i2c_state == SM_IDLE) begin
+                            s_cmd <= CMD_STOP;
+                            s_cmd_go <= 1;
+                        end
+                    end
+                    if (1'b1 == I2CCR[CCR_MEN]) begin
+                        if (1'b0 == I2CSR[CSR_MBB]) begin
+                            if (1'b0 == I2CCR[CCR_RSTA] && i_wr_data[CCR_RSTA]) begin
+                                if (i2c_state != SM_IDLE) begin
+                                    s_cmd <= CMD_RESTART;
+                                    i2c_state <= SM_RESTART;
+                                    s_cmd_go <= 1;
+                                end
+                            end
+                            else if (1'b0 == I2CCR[CCR_MSTA] && i_wr_data[CCR_MSTA]) begin
+                                if (i2c_state == SM_IDLE) begin
+                                    s_cmd <= CMD_START;
+                                    i2c_state <= SM_START;
+                                    s_cmd_go <= 1;
+                                end
+                            end
+                        end
+                    end
+                    else begin
+                        s_cmd_go <= 0;
+                        s_cmd <= CMD_IDLE;
+                        i2c_state <= SM_IDLE;
+                    end
                 end
                 ADDR_SR    : begin
-                    if (I2CSR[CSR_MAL]) begin
-                        I2CSR[CSR_MAL] <= i_wr_data[CSR_MAL];
+                    if (1'b0 == i_wr_data[CSR_MAL]) begin
+                        I2CSR[CSR_MAL] <= 1'b0;
                     end
-                    if (I2CSR[CSR_MIF]) begin
-                        I2CSR[CSR_MIF] <= i_wr_data[CSR_MIF];
+                    if (1'b0 == i_wr_data[CSR_MIF]) begin
+                        I2CSR[CSR_MIF] <= 1'b0;
                     end
                 end
                 ADDR_DR    : begin
-                    I2CDR  <= i_wr_data;
+                    if (1'b0 == s_dr_updated) begin
+                        I2CDR  <= i_wr_data;
+                        s_dr_updated <= 1;
+                    end
                 end
                 ADDR_DFSRR : I2CDFSRR <= i_wr_data;
                 default    : I2CSR    <= I2CSR;
             endcase
         end
     end
+    case (i2c_state) 
+        SM_RD_ACK: begin
+            if (1'b0 == s_i2c_ack) begin
+                if (I2CCR[CCR_MTX] && s_dr_updated) begin
+                    s_cmd <= CMD_WRITE;
+                    i2c_state <= SM_WRITE;
+                    s_cmd_go <= 1;
+                end
+                else begin
+                    if (!I2CCR[CCR_MTX] && s_need_rd_seq) begin
+                        s_cmd <= CMD_READ;
+                        i2c_state <= SM_READ;
+                        s_cmd_go <= 1;
+                    end
+                end
+            end
+        end
+        SM_WR_ACK: begin
+        end
+        SM_WR_NAK: begin
+        end
+        SM_IDLE     : begin
+        end
+        default : ;
+    endcase
     if (s_cmd_ack) begin
         case (i2c_state)
             SM_IDLE     : begin
                 s_start_done  <= 0;
             end
             SM_START    : begin
-                if (s_i2c_busy & ~s_i2c_al) begin
-                    s_start_done   <= 1;
+                s_start_done  <= 1;
+                if (1'b1 == I2CCR[CCR_MTX] && 1'b1 == s_dr_updated) begin
+                    s_cmd <= CMD_WRITE;
+                    i2c_state <= SM_WRITE;
+                    s_cmd_go <= 1;
                 end
             end
             SM_STOP     : begin
-                s_cmd     <= CMD_IDLE;
-                s_cmd_go  <= 1;
-                i2c_state <= SM_IDLE;
-                I2CSR[CSR_RXAK] <= 1;
-                I2CSR[CSR_MIF] <= 0;
-                s_start_done   <= 0;
             end
             SM_WRITE    : begin
-                I2CSR[CSR_MCF] <= 1'b1;
-                s_cmd     <= CMD_RD_ACK;
-                s_cmd_go  <= 1;
+                s_dr_updated <= 0;
+                s_cmd <= CMD_RD_ACK;
                 i2c_state <= SM_RD_ACK;
+                s_cmd_go <= 1;
             end
             SM_READ     : begin
-                I2CSR[CSR_MCF] <= 1'b1;
+                s_need_rd_seq <= 0;
                 I2CDR <= s_rddata;
-                s_cmd_go  <= 1;
-                if (I2CCR[CCR_TXAK]) begin
-                    s_cmd     <= CMD_WR_NAK;
+                if (1'b1 == I2CCR[CCR_TXAK]) begin
+                    s_cmd <= CMD_WR_NAK;
                     i2c_state <= SM_WR_NAK;
+                    s_cmd_go <= 1;
                 end
                 else begin
-                    s_cmd     <= CMD_WR_ACK;
+                    s_cmd <= CMD_WR_ACK;
                     i2c_state <= SM_WR_ACK;
+                    s_cmd_go <= 1;
                 end
             end
             SM_WR_ACK   : begin
-                I2CSR[CSR_MIF] <= 1;
+                I2CSR[CSR_MIF] <= 1'b1;
+                if (1'b0 == I2CCR[CCR_MTX] && 1'b1 == s_need_rd_seq) begin
+                    s_cmd <= CMD_READ;
+                    i2c_state <= SM_READ;
+                    s_cmd_go <= 1;
+                end
             end
             SM_WR_NAK   : begin
-                I2CSR[CSR_MIF] <= 1;
+                I2CSR[CSR_MIF] <= 1'b1;
+                i2c_state <= SM_IDLE;
             end
             SM_RD_ACK   : begin
-                I2CSR[CSR_MIF] <= 1;
-                I2CSR[CSR_RXAK] <= s_i2c_ack;
+                I2CSR[CSR_MIF] <= 1'b1;
             end
             SM_RESTART  : begin
-                if (s_i2c_busy & ~s_i2c_al) begin
-                    s_start_done  <= 1;
-                end
             end
             default     : ;
         endcase
@@ -242,72 +293,77 @@ reg  [15:0] divisor;
 
 always @(posedge i_sysclk)
 begin
-    case (I2CFDR[5:0])
-        8'h00 : s_prescale = 384;
-        8'h01 : s_prescale = 416;
-        8'h02 : s_prescale = 480;
-        8'h03 : s_prescale = 576;
-        8'h04 : s_prescale = 640;
-        8'h05 : s_prescale = 704;
-        8'h06 : s_prescale = 832;
-        8'h07 : s_prescale = 1024;
-        8'h08 : s_prescale = 1152;
-        8'h09 : s_prescale = 1280;
-        8'h0A : s_prescale = 1536;
-        8'h0B : s_prescale = 1920;
-        8'h0C : s_prescale = 2304;
-        8'h0D : s_prescale = 2560;
-        8'h0E : s_prescale = 3072;
-        8'h0F : s_prescale = 3840;
-        8'h10 : s_prescale = 4608;
-        8'h11 : s_prescale = 5120;
-        8'h12 : s_prescale = 6144;
-        8'h13 : s_prescale = 7680;
-        8'h14 : s_prescale = 9216;
-        8'h15 : s_prescale = 10240;
-        8'h16 : s_prescale = 12288;
-        8'h17 : s_prescale = 15360;
-        8'h18 : s_prescale = 18432;
-        8'h19 : s_prescale = 20480;
-        8'h1A : s_prescale = 24576;
-        8'h1B : s_prescale = 30720;
-        8'h1C : s_prescale = 36864;
-        8'h1D : s_prescale = 40960;
-        8'h1E : s_prescale = 49152;
-        8'h1F : s_prescale = 61440;
-        8'h20 : s_prescale = 256;
-        8'h21 : s_prescale = 288;
-        8'h22 : s_prescale = 320;
-        8'h23 : s_prescale = 352;
-        8'h24 : s_prescale = 384;
-        8'h25 : s_prescale = 448;
-        8'h26 : s_prescale = 512;
-        8'h27 : s_prescale = 576;
-        8'h28 : s_prescale = 640;
-        8'h29 : s_prescale = 768;
-        8'h2A : s_prescale = 896;
-        8'h2B : s_prescale = 1024;
-        8'h2C : s_prescale = 1280;
-        8'h2D : s_prescale = 1536;
-        8'h2E : s_prescale = 1792;
-        8'h2F : s_prescale = 2048;
-        8'h30 : s_prescale = 2560;
-        8'h31 : s_prescale = 3072;
-        8'h32 : s_prescale = 3584;
-        8'h33 : s_prescale = 4096;
-        8'h34 : s_prescale = 5120;
-        8'h35 : s_prescale = 6144;
-        8'h36 : s_prescale = 7168;
-        8'h37 : s_prescale = 8192;
-        8'h38 : s_prescale = 10240;
-        8'h39 : s_prescale = 12288;
-        8'h3A : s_prescale = 14336;
-        8'h3B : s_prescale = 16384;
-        8'h3C : s_prescale = 20480;
-        8'h3D : s_prescale = 24576;
-        8'h3E : s_prescale = 28672;
-        8'h3F : s_prescale = 32768;
-    endcase
+    if (1'b0 == i_reset_n) begin
+        s_prescale = 384;
+    end
+    else begin
+        case (I2CFDR[5:0])
+            8'h00 : s_prescale = 384;
+            8'h01 : s_prescale = 416;
+            8'h02 : s_prescale = 480;
+            8'h03 : s_prescale = 576;
+            8'h04 : s_prescale = 640;
+            8'h05 : s_prescale = 704;
+            8'h06 : s_prescale = 832;
+            8'h07 : s_prescale = 1024;
+            8'h08 : s_prescale = 1152;
+            8'h09 : s_prescale = 1280;
+            8'h0A : s_prescale = 1536;
+            8'h0B : s_prescale = 1920;
+            8'h0C : s_prescale = 2304;
+            8'h0D : s_prescale = 2560;
+            8'h0E : s_prescale = 3072;
+            8'h0F : s_prescale = 3840;
+            8'h10 : s_prescale = 4608;
+            8'h11 : s_prescale = 5120;
+            8'h12 : s_prescale = 6144;
+            8'h13 : s_prescale = 7680;
+            8'h14 : s_prescale = 9216;
+            8'h15 : s_prescale = 10240;
+            8'h16 : s_prescale = 12288;
+            8'h17 : s_prescale = 15360;
+            8'h18 : s_prescale = 18432;
+            8'h19 : s_prescale = 20480;
+            8'h1A : s_prescale = 24576;
+            8'h1B : s_prescale = 30720;
+            8'h1C : s_prescale = 36864;
+            8'h1D : s_prescale = 40960;
+            8'h1E : s_prescale = 49152;
+            8'h1F : s_prescale = 61440;
+            8'h20 : s_prescale = 256;
+            8'h21 : s_prescale = 288;
+            8'h22 : s_prescale = 320;
+            8'h23 : s_prescale = 352;
+            8'h24 : s_prescale = 384;
+            8'h25 : s_prescale = 448;
+            8'h26 : s_prescale = 512;
+            8'h27 : s_prescale = 576;
+            8'h28 : s_prescale = 640;
+            8'h29 : s_prescale = 768;
+            8'h2A : s_prescale = 896;
+            8'h2B : s_prescale = 1024;
+            8'h2C : s_prescale = 1280;
+            8'h2D : s_prescale = 1536;
+            8'h2E : s_prescale = 1792;
+            8'h2F : s_prescale = 2048;
+            8'h30 : s_prescale = 2560;
+            8'h31 : s_prescale = 3072;
+            8'h32 : s_prescale = 3584;
+            8'h33 : s_prescale = 4096;
+            8'h34 : s_prescale = 5120;
+            8'h35 : s_prescale = 6144;
+            8'h36 : s_prescale = 7168;
+            8'h37 : s_prescale = 8192;
+            8'h38 : s_prescale = 10240;
+            8'h39 : s_prescale = 12288;
+            8'h3A : s_prescale = 14336;
+            8'h3B : s_prescale = 16384;
+            8'h3C : s_prescale = 20480;
+            8'h3D : s_prescale = 24576;
+            8'h3E : s_prescale = 28672;
+            8'h3F : s_prescale = 32768;
+        endcase
+    end
 end
 
 endmodule

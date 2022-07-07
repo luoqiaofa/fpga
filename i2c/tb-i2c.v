@@ -44,16 +44,26 @@ module tb_i2c;
        .sda_pin(s_sda_pin)      // sda pad pin
    );
 
+i2c_slv_module slv_dev(
+    .i_sysclk(i_sysclk),   // system clock input
+    .i_reset_n(i_reset_n), // module reset input
+    .scl_pin(s_scl_pin),     // scl pad pin
+    .sda_pin(s_sda_pin)      // sda pad pin
+);
+
 initial
 begin
     $dumpfile("wave.vcd");    //生成的vcd文件名称
     $dumpvars(0);   //tb模块名称
-    #60000
+    #600000
     i_reset_n <= 0;
     #1000
     $stop;
     $finish;
 end
+
+localparam CCR_VAL_WR       = (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX);
+localparam CCR_VAL_RD_1BYTE = (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_TXAK);
 
 initial
 begin
@@ -77,50 +87,68 @@ begin
     i2cbus.regread(ADDR_DFSRR, i2cdfsrr, 0);
     i2cbus.regwrite(ADDR_FDR, 8'h07, 0);
     i2cbus.regread(ADDR_FDR, i2cfdr, 0);
-    #1024
+    #100
     /* case#1 */
+    $display("[%t]case#1 addres then read one byte", $time);
     /* mpc_i2c_start */
+    $display("[%t] mpc_i2c_start... ", $time);
     /* Clear arbitration */
     i2cbus.regwrite(ADDR_SR, 8'h00, 0);
     /* Start with MEN */
     i2cbus.regwrite(ADDR_CR, 8'h80, 0);
     /* mpc_i2c_start */
+    $display("[%t] mpc_i2c_start done. ", $time);
     /* wait i2c bus is not idle */
     i2cbus.regread(ADDR_SR, i2csr, 0);
+    $display("[%t] check i2c bus is busy or not, CSR_MBB=%d", $time, i2csr[CSR_MBB]);
     while (1'b1 == i2csr[CSR_MBB]) begin
         #100
         i2cbus.regread(ADDR_SR, i2csr, 0);
     end
     /* start i2c start condition */
-    i2cbus.regwrite(ADDR_CR, (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX), 0);
+    i2cbus.regwrite(ADDR_SR, 0, 0);
+    $display("[%t] init ccr=0x%02h", $time, CCR_VAL_WR);
+    i2cbus.regwrite(ADDR_CR, CCR_VAL_WR, 0);
     /* Write target address byte - this time with the read flag set */
     i2cbus.regwrite(ADDR_DR, 8'ha1, 0); /* slave addr 0x50, read op */
     /* i2c_wait CSR_MIF to be set */
     i2cbus.regread(ADDR_SR, i2csr, 0);
+    $display("[%t] i2c_wait CSR_MIF=%d", $time, i2csr[CSR_MIF]);
     while (1'b0 == i2csr[CSR_MIF]) begin
         #100
         i2cbus.regread(ADDR_SR, i2csr, 0);
     end
+    i2cbus.regwrite(ADDR_SR, 0, 0);
+    $display("[%t] i2c_wait done. CSR_MIF=%d", $time, i2csr[CSR_MIF]);
     /* read only one bytes */
-    i2cbus.regwrite(ADDR_CR, (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_TXAK), 0);
+    $display("[%t] init ccr=0x%02h, read one byte, and na-ack", $time, CCR_VAL_RD_1BYTE);
+    i2cbus.regwrite(ADDR_CR, CCR_VAL_RD_1BYTE, 0);
     /* Dummy read to trigger i2c read circle */
+    $display("[%t] Dummy read I2CDR to trigg i2c read operaion", $time);
     i2cbus.regread(ADDR_DR, i2cdr, 0);
     /* i2c_wait CSR_MIF to be set */
     i2cbus.regread(ADDR_SR, i2csr, 0);
+    $display("[%t] CSR_MIF=%d i2c_wait ... ", $time, i2csr[CSR_MIF]);
     while (1'b0 == i2csr[CSR_MIF]) begin
         #100
         i2cbus.regread(ADDR_SR, i2csr, 0);
     end
+    i2cbus.regwrite(ADDR_SR, 0, 0);
+    $display("[%t] CSR_MIF=%d i2c_wait done.", $time, i2csr[CSR_MIF]);
     /* Do not generate stop on last byte */
-    i2cbus.regwrite(ADDR_CR, (1 << CCR_MIEN) | (1 << CCR_MEN) | (1 << CCR_MSTA) | (1 << CCR_MTX), 0);
+    $display("[%t] init ccr=0x%02h", $time, CCR_VAL_WR);
+    i2cbus.regwrite(ADDR_CR, CCR_VAL_WR, 0);
 
     /* read i2c data */
     i2cbus.regread(ADDR_DR, i2cdr, 0);
 
     /* mpc_i2c_stop---Initiate STOP */
+    $display("[%t] mpc_i2c_stop. init ccr=0x80", $time);
     i2cbus.regwrite(ADDR_CR, 8'h80, 0);
+    $display("[%t] mpc_i2c_stop done", $time);
     /* mpc_i2c_stop */
     /* Wait until STOP is seen, allow up to 1 s */
+    i2cbus.regwrite(ADDR_SR, 0, 0);
     i2cbus.regread(ADDR_SR, i2csr, 0);
     while (1'b1 == i2csr[CSR_MBB]) begin
         #100
