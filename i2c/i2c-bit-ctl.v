@@ -63,7 +63,7 @@ begin
     end
 end
 
-always @(posedge i_sysclk or negedge i_nReset)
+always @(posedge i_sysclk)
 begin
     if (!i_nReset) begin
         s_dSCL   <= 1'b1;
@@ -110,8 +110,7 @@ begin
     end
 end
 
-
-always @(posedge i_sysclk or negedge i_nReset)
+always @(posedge i_sysclk)
 begin
     if (!i_nReset) begin
         o_scl_oen <= 1'b1;

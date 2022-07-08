@@ -141,6 +141,7 @@ begin
 
     /* read i2c data */
     i2cbus.regread(ADDR_DR, i2cdr, 0);
+    $display("[%t] read data i2cdr=0x%02h", $time, i2cdr);
 
     /* mpc_i2c_stop---Initiate STOP */
     $display("[%t] mpc_i2c_stop. init ccr=0x80", $time);

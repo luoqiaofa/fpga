@@ -57,7 +57,7 @@ begin
         edge_sda <= {i_sda, i_sda};
         edge_scl <= {i_scl, i_scl};
         rdata <= 8'hff;
-        wdata <= 8'h12;
+        wdata <= 8'h7e;
         slv_addr <= 8'h00;
         i2c_cmd  <= CMD_IDLE;
     end

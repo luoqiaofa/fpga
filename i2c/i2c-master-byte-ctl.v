@@ -45,105 +45,7 @@ assign o_cmd_ack = s_cmd_done;
 assign o_i2c_ack = s_bit_ack;
 assign o_data    = s_data_read;
 
-always @(posedge i_cmd_trig)
-begin
-    s_c_state <= i_cmd;
-    case (i_cmd)
-        CMD_IDLE: begin
-            s_bit_cmd <= i_cmd;
-        end
-        CMD_START: begin
-            s_bit_cmd <= i_cmd;
-        end
-        CMD_WRITE: begin
-            s_shift_r <= i_data;
-            s_bit_cmd <= i_cmd;
-        end
-        CMD_READ: begin
-            s_bit_cmd <= i_cmd;
-        end
-        CMD_RD_ACK: begin
-            s_bit_cnt <= 3'h7;
-            s_shift_r <= i_data;
-            s_bit_cmd <= CMD_READ;
-        end
-        CMD_WR_ACK: begin
-            s_i_bit   <= 0;
-            s_bit_cmd <= CMD_WRITE;
-        end
-        CMD_WR_NAK: begin
-            s_i_bit   <= 1;
-            s_bit_cmd <= CMD_WRITE;
-        end
-        CMD_RESTART: begin
-            s_bit_cmd <= CMD_RESTART;
-        end
-        CMD_STOP: begin
-            s_bit_cmd <= CMD_STOP;
-        end
-        default :;
-    endcase
-end
-
-always @(posedge s_bit_done)
-begin
-    s_bit_cmd   <= CMD_IDLE;
-    case (s_c_state)
-        CMD_START: begin
-            s_cmd_done <= 1'b1;
-            s_shift_r  <= i_data;
-            s_bit_cnt  <= 3'h7;
-        end
-        CMD_WRITE: begin
-            s_bit_cmd <= s_c_state;
-            s_bit_cnt <= s_bit_cnt - 1;
-            if (s_bit_cnt == 1'b0) begin
-                s_cmd_done <= 1'b1;
-                s_bit_cnt  <= 3'h7;
-                s_shift_r  <= i_data;
-            end
-            s_i_bit    <= s_shift_r[s_bit_cnt];
-        end
-        CMD_READ: begin
-            s_shift_r[s_bit_cnt] <= s_o_bit;
-            s_bit_cmd <= s_c_state;
-            s_bit_cnt <= s_bit_cnt - 1;
-            if (s_bit_cnt == 1'b0) begin
-                s_cmd_done  <= 1'b1;
-                s_bit_cnt   <= 3'h7;
-                s_data_read <= s_shift_r;
-            end
-        end
-        CMD_WR_ACK: begin
-            s_cmd_done <= 1'b1;
-            s_bit_cnt  <= 3'h7;
-            s_shift_r  <= i_data;
-        end
-        CMD_WR_NAK: begin
-            s_cmd_done <= 1'b1;
-            s_bit_cnt  <= 3'h7;
-            // s_c_state  <= CMD_STOP;
-        end
-        CMD_RD_ACK: begin
-            s_bit_ack  <= s_o_bit;
-            s_cmd_done <= 1'b1;
-            s_bit_cnt  <= 3'h7;
-            s_shift_r  <= i_data;
-        end
-        CMD_RESTART: begin
-            s_c_state  <= CMD_IDLE;
-            s_cmd_done <= 1'b1;
-        end
-        CMD_STOP: begin
-            s_cmd_done  <= 1'b1;
-            s_c_state   <= CMD_IDLE;
-            s_data_read <= 8'hff;
-        end
-        default : ;
-    endcase
-end
-
-always @(posedge i_sysclk or negedge i_nReset)
+always @(posedge i_sysclk)
 begin
     if (!i_nReset) begin
         s_bit_ack   <= 0;
@@ -165,10 +67,106 @@ begin
         s_i_bit     <= s_shift_r[7];
     end
     else begin
-        s_bit_cmd  <= CMD_IDLE;
-        s_cmd_done <= 1'b0;
+        if (i_cmd_trig) begin
+            s_c_state <= i_cmd;
+            case (i_cmd)
+                CMD_IDLE: begin
+                    s_bit_cmd <= i_cmd;
+                end
+                CMD_START: begin
+                    s_bit_cmd <= i_cmd;
+                end
+                CMD_WRITE: begin
+                    s_shift_r <= i_data;
+                    s_bit_cmd <= i_cmd;
+                end
+                CMD_READ: begin
+                    s_bit_cmd <= i_cmd;
+                end
+                CMD_RD_ACK: begin
+                    s_bit_cnt <= 3'h7;
+                    s_shift_r <= i_data;
+                    s_bit_cmd <= CMD_READ;
+                end
+                CMD_WR_ACK: begin
+                    s_i_bit   <= 0;
+                    s_bit_cmd <= CMD_WRITE;
+                end
+                CMD_WR_NAK: begin
+                    s_i_bit   <= 1;
+                    s_bit_cmd <= CMD_WRITE;
+                end
+                CMD_RESTART: begin
+                    s_bit_cmd <= CMD_RESTART;
+                end
+                CMD_STOP: begin
+                    s_bit_cmd <= CMD_STOP;
+                end
+                default :;
+            endcase
+        end
+        if (s_cmd_done) begin
+            s_cmd_done <= 1'b0;
+        end
         if ((CMD_WR_ACK != s_c_state) && (CMD_WR_NAK != s_c_state)) begin
             s_i_bit    <= s_shift_r[s_bit_cnt];
+        end
+        if (s_bit_done)
+        begin
+            s_bit_cmd   <= CMD_IDLE;
+            case (s_c_state)
+                CMD_START: begin
+                    s_cmd_done <= 1'b1;
+                    s_shift_r  <= i_data;
+                    s_bit_cnt  <= 3'h7;
+                end
+                CMD_WRITE: begin
+                    s_bit_cmd <= s_c_state;
+                    s_bit_cnt <= s_bit_cnt - 1;
+                    if (0 == s_bit_cnt) begin
+                        s_cmd_done <= 1'b1;
+                        s_bit_cnt  <= 3'h7;
+                        s_shift_r  <= i_data;
+                    end
+                    s_i_bit    <= s_shift_r[s_bit_cnt];
+                end
+                CMD_READ: begin
+                    s_shift_r[s_bit_cnt] <= s_o_bit;
+                    s_bit_cmd <= s_c_state;
+                    s_bit_cnt <= s_bit_cnt - 1;
+                    if (s_bit_cnt == 1'b0) begin
+                        s_cmd_done  <= 1'b1;
+                        s_bit_cnt   <= 3'h7;
+                        s_data_read <= {s_shift_r[7:1], s_o_bit};
+                    end
+                end
+                CMD_WR_ACK: begin
+                    s_cmd_done <= 1'b1;
+                    s_bit_cnt  <= 3'h7;
+                    s_shift_r  <= i_data;
+                end
+                CMD_WR_NAK: begin
+                    s_cmd_done <= 1'b1;
+                    s_bit_cnt  <= 3'h7;
+                    // s_c_state  <= CMD_STOP;
+                end
+                CMD_RD_ACK: begin
+                    s_bit_ack  <= s_o_bit;
+                    s_cmd_done <= 1'b1;
+                    s_bit_cnt  <= 3'h7;
+                    s_shift_r  <= i_data;
+                end
+                CMD_RESTART: begin
+                    s_c_state  <= CMD_IDLE;
+                    s_cmd_done <= 1'b1;
+                end
+                CMD_STOP: begin
+                    s_cmd_done  <= 1'b1;
+                    s_c_state   <= CMD_IDLE;
+                    s_data_read <= 8'hff;
+                end
+                default : ;
+            endcase
         end
     end
 end
