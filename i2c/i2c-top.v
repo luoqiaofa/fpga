@@ -121,22 +121,19 @@ begin
                 end
                 ADDR_CR    : begin
                     I2CCR <= i_wr_data;
-                    if (I2CCR[CCR_MSTA] && !i_wr_data[CCR_MSTA]) begin
-                        if (i2c_state == SM_IDLE) begin
+                    if (1'b1 == I2CCR[CCR_MEN]) begin
+                        if (I2CCR[CCR_MSTA] && !i_wr_data[CCR_MSTA]) begin
                             s_cmd <= CMD_STOP;
                             s_cmd_go <= 1;
+                            s_cmd <= SM_STOP;
                         end
-                    end
-                    if (1'b1 == I2CCR[CCR_MEN]) begin
+                        if (i_wr_data[CCR_RSTA]) begin
+                            s_cmd <= CMD_RESTART;
+                            i2c_state <= SM_RESTART;
+                            s_cmd_go <= 1;
+                        end
                         if (1'b0 == I2CSR[CSR_MBB]) begin
-                            if (1'b0 == I2CCR[CCR_RSTA] && i_wr_data[CCR_RSTA]) begin
-                                if (i2c_state != SM_IDLE) begin
-                                    s_cmd <= CMD_RESTART;
-                                    i2c_state <= SM_RESTART;
-                                    s_cmd_go <= 1;
-                                end
-                            end
-                            else if (1'b0 == I2CCR[CCR_MSTA] && i_wr_data[CCR_MSTA]) begin
+                            if (1'b0 == I2CCR[CCR_MSTA] && i_wr_data[CCR_MSTA]) begin
                                 if (i2c_state == SM_IDLE) begin
                                     s_cmd <= CMD_START;
                                     i2c_state <= SM_START;
@@ -172,7 +169,7 @@ begin
     end
     case (i2c_state) 
         SM_RD_ACK: begin
-            if (1'b0 == s_i2c_ack) begin
+            if (1'b0 == I2CSR[CSR_RXAK]) begin
                 if (I2CCR[CCR_MTX] && s_dr_updated) begin
                     s_cmd <= CMD_WRITE;
                     i2c_state <= SM_WRITE;
@@ -209,6 +206,7 @@ begin
                 end
             end
             SM_STOP     : begin
+                i2c_state <= SM_IDLE;
             end
             SM_WRITE    : begin
                 s_dr_updated <= 0;
@@ -243,9 +241,15 @@ begin
                 i2c_state <= SM_IDLE;
             end
             SM_RD_ACK   : begin
+                I2CSR[CSR_RXAK] <= s_i2c_ack;
                 I2CSR[CSR_MIF] <= 1'b1;
             end
             SM_RESTART  : begin
+                if (1'b1 == I2CCR[CCR_MTX] && 1'b1 == s_dr_updated) begin
+                    s_cmd <= CMD_WRITE;
+                    i2c_state <= SM_WRITE;
+                    s_cmd_go <= 1;
+                end
             end
             default     : ;
         endcase
@@ -365,5 +369,5 @@ begin
         endcase
     end
 end
-
 endmodule
+

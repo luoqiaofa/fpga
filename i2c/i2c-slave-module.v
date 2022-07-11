@@ -25,6 +25,7 @@ reg [7:0] rdata;
 reg [7:0] wdata;
 reg [7:0] slv_addr;
 reg [3:0] i2c_cmd;
+reg s_rx_ack;
 
 pullup scl_pu(scl_pin);
 pullup sda_pu(sda_pin);
@@ -60,10 +61,14 @@ begin
         wdata <= 8'h7e;
         slv_addr <= 8'h00;
         i2c_cmd  <= CMD_IDLE;
+        s_rx_ack   <= 0;
     end
     else begin
         edge_sda <= {edge_sda[0], i_sda};
         edge_scl <= {edge_scl[0], i_scl};
+        if (2'b11 == edge_scl && 2'b01 == edge_sda) begin
+            i2c_state <= SM_STOP;
+        end
         case(i2c_state)
             SM_IDLE: begin
                 first_byte <= 1;
@@ -84,6 +89,8 @@ begin
                 if (2'b10 == edge_scl) begin
                     bit_cnt <= bit_cnt - 1;
                     if (0 == bit_cnt) begin
+                        bit_cnt   <= 7;
+                        i2c_state <= SM_WR_ACK;
                         if (first_byte) begin 
                             first_byte <= 0;
                             slv_addr <= {1'b0, rdata[7:1]};
@@ -93,20 +100,28 @@ begin
                             else begin
                                 i2c_cmd <= CMD_READ;
                             end
-                            bit_cnt   <= 7;
-                            s_sda_oen <= 0;
-                            i2c_state <= SM_WR_ACK;
                         end
                     end
                 end
+                if (2'b11 == edge_scl && 2'b10 == edge_sda) begin
+                    first_byte <= 1;
+                    bit_cnt   <= 7;
+                    i2c_state <= SM_RESTART;
+                end
             end
             SM_WR_ACK : begin
-                if (2'b01 == edge_scl) begin
+                if (2'b00 == edge_scl) begin
                     s_sda_oen <= 0;
                 end
                 if (2'b10 == edge_scl) begin
+                    s_sda_oen <= 1;
                     bit_cnt   <= 7;
-                    i2c_state <= SM_WRITE;
+                    if (CMD_WRITE == i2c_cmd) begin
+                        i2c_state <= SM_WRITE;
+                    end
+                    else begin
+                        i2c_state <= SM_READ;
+                    end
                 end
             end
             SM_WRITE : begin
@@ -125,8 +140,37 @@ begin
                         i2c_state <= SM_RD_ACK;
                     end
                 end
+                if (2'b11 == edge_scl && 2'b10 == edge_sda) begin
+                    i2c_state <= SM_RESTART;
+                end
             end
             SM_RD_ACK : begin
+                if (2'b01 == edge_scl) begin
+                    s_rx_ack <= i_sda;
+                end
+                if (2'b10 == edge_scl) begin
+                    bit_cnt   <= 7;
+                    if (s_rx_ack) begin
+                        s_sda_oen <= 1;
+                        i2c_state <= SM_IDLE;
+                    end
+                    else begin
+                        i2c_state <= SM_WRITE;
+                    end
+                end
+            end
+            SM_RESTART : begin
+                if (2'b10 == edge_scl && 2'b00 == edge_sda) begin
+                    first_byte <= 1;
+                    bit_cnt   <= 7;
+                    i2c_state <= SM_READ;
+                end
+            end
+            SM_STOP   : begin
+                if (2'b11 == edge_scl && 2'b11 == edge_sda) begin
+                    i2c_state <= SM_IDLE;
+                    first_byte <= 1;
+                end
             end
             default : ;
         endcase

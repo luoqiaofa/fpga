@@ -67,6 +67,9 @@ begin
         s_i_bit     <= s_shift_r[7];
     end
     else begin
+        if (CMD_IDLE != s_bit_cmd) begin
+            s_bit_cmd   <= CMD_IDLE;
+        end
         if (i_cmd_trig) begin
             s_c_state <= i_cmd;
             case (i_cmd)
@@ -113,7 +116,7 @@ begin
         end
         if (s_bit_done)
         begin
-            s_bit_cmd   <= CMD_IDLE;
+            s_bit_cmd <= CMD_IDLE;
             case (s_c_state)
                 CMD_START: begin
                     s_cmd_done <= 1'b1;
