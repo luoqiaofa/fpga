@@ -29,7 +29,6 @@ reg go_write;
 reg s_start_done;
 reg s_dr_updated;
 reg s_need_rd_seq;
-wire s_interrupt;
 
 reg [3:0] i2c_state;
 
@@ -40,8 +39,7 @@ wire s_scl;
 wire o_scl;
 wire s_scl_oen;
 
-assign s_interrupt = I2CSR[CSR_MIF] | I2CSR[CSR_MAL];
-assign o_interrupt = I2CCR[CCR_MIEN] ? s_interrupt : 0;
+assign o_interrupt = I2CCR[CCR_MIEN] & I2CSR[CSR_MIF];
 assign o_rd_data = s_data_out;
 
 pullup scl_pu(scl_pin);

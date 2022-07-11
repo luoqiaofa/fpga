@@ -83,6 +83,9 @@ begin
                 end
             end
             SM_READ : begin
+                if (2'b00 == edge_scl) begin
+                    s_sda_oen <= 1;
+                end
                 if (2'b01 == edge_scl) begin
                     rdata[bit_cnt] <= i_sda;
                 end
@@ -114,7 +117,7 @@ begin
                     s_sda_oen <= 0;
                 end
                 if (2'b10 == edge_scl) begin
-                    s_sda_oen <= 1;
+                    // s_sda_oen <= 1;
                     bit_cnt   <= 7;
                     if (CMD_WRITE == i2c_cmd) begin
                         i2c_state <= SM_WRITE;
