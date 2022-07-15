@@ -20,10 +20,9 @@ reg             s_clk_n;// 下降沿时钟
 //其中N==1是判断不分频，N[0]是判断是奇数还是偶数，若为1则是奇数分频，若是偶数则是偶数分频。
 assign o_clk = (i_divn == 1) ? i_clk : (i_divn[0]) ? (s_clk_p | s_clk_n) : (s_clk_p);
 
-always @(posedge i_clk or negedge i_resetn) begin
+always @(posedge i_clk) begin
     if (!i_resetn) begin
         s_cnt_p <= 0;
-        s_cnt_n <= 0;
     end
     else if (s_cnt_p == (i_divn-1)) begin
         s_cnt_p <= 0;
@@ -33,7 +32,7 @@ always @(posedge i_clk or negedge i_resetn) begin
     end
 end
 
-always @(posedge i_clk or negedge i_resetn)
+always @(posedge i_clk)
 begin
     if (!i_resetn) begin
         //此处设置为0也是可以的，这个没有硬性的要求，不管是取0还是取1结果都是正确的。
@@ -48,7 +47,7 @@ begin
    end
 end
 
-always @(negedge i_clk or negedge i_resetn)
+always @(negedge i_clk)
 begin
     if (!i_resetn) begin
         s_cnt_n <= 0;
@@ -61,7 +60,7 @@ begin
     end
 end
 
-always @(negedge i_clk or negedge i_resetn) begin
+always @(negedge i_clk) begin
     if (!i_resetn) begin
         s_clk_n <= 0;
     end

@@ -10,15 +10,20 @@ localparam CMD_STOP    = 4'h7;
 localparam CMD_WR_NAK  = 4'h8;
 
 // iic byte state machine
-localparam SM_IDLE     = 4'h0;
-localparam SM_START    = 4'h1;
-localparam SM_WRITE    = 4'h2;
-localparam SM_RD_ACK   = 4'h3;
-localparam SM_RESTART  = 4'h4;
-localparam SM_READ     = 4'h5;
-localparam SM_WR_ACK   = 4'h6;
-localparam SM_STOP     = 4'h7;
-localparam SM_WR_NAK   = 4'h8;
+localparam SM_IDLE          = 4'h0;
+localparam SM_START         = 4'h1;
+localparam SM_WRITE         = 4'h2;
+localparam SM_RD_ACK        = 4'h3;
+localparam SM_RESTART       = 4'h4;
+localparam SM_READ          = 4'h5;
+localparam SM_WR_ACK        = 4'h6;
+localparam SM_STOP          = 4'h7;
+localparam SM_WR_NAK        = 4'h8;
+localparam SM_START_DONE    = 4'h9;
+localparam SM_RD_ACK_DONE   = 4'ha;
+localparam SM_WR_ACK_DONE   = 4'hb;
+localparam SM_WR_NAK_DONE   = 4'hc;
+localparam SM_RSTA_DONE     = 4'hd;
 
 // iic bit control state machine
 localparam B_IDLE      = 5'h00;

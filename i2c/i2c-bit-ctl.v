@@ -25,10 +25,10 @@ module i2c_bit_ctl(
 );
 `include "i2c-def.v"
 
-reg [3:0]  s_bit_cmd;
-reg [4:0]  s_c_state;
-reg [15:0] s_cnt;
-reg s_clk_en;
+(* keep = "true" *) reg [3:0] s_bit_cmd;
+(* keep = "true" *) reg [4:0] s_c_state;
+(* keep = "true" *) reg [4:0] s_c_state_pre;
+(* keep = "true" *) reg s_clk_en;
 reg s_sda_chk;
 reg s_dSCL;
 reg s_dSDA;
@@ -39,12 +39,12 @@ reg s_sta_sto_scl_al;
 reg [1:0] s_cSCL, s_cSDA;
 reg [2:0] s_fSCL, s_fSDA;      // SCL and SDA filter inputs
 
-wire s_clk_div4;
+(* keep = "true" *) wire s_clk_div4;
 reg [1:0] div4_clk_edge;
 clk_divn #(.CLK_DIVN_WIDTH(16))
 clk_divn_inst2 (
     .i_clk(i_sysclk),
-    .i_resetn(i_nReset),
+    .i_resetn(i_nReset & i_enable),
     .i_divn({2'b0, i_prescale[15:2]}),
     .o_clk(s_clk_div4)
 );
@@ -70,6 +70,8 @@ end
 always @(posedge i_sysclk)
 begin
     if (!i_nReset) begin
+        o_busy    <= 1'b0;
+        o_arblost <= 1'b0;
         s_dSCL   <= 1'b1;
         s_dSDA   <= 1'b1;
 
@@ -132,9 +134,8 @@ begin
         o_sda_oen <= 1'b1;
         s_sda_chk <= 1'b0;
         o_cmd_ack <= 1'b0;
-        o_busy    <= 1'b0;
-        o_arblost <= 1'b0;
         s_c_state <= B_IDLE;
+        s_c_state_pre <= B_IDLE;
         s_bit_cmd <= CMD_IDLE;
     end
     else if (!i_enable) begin
@@ -142,14 +143,14 @@ begin
         o_sda_oen <= 1'b1;
         s_sda_chk <= 1'b0;
         o_cmd_ack <= 1'b0;
-        o_busy    <= 1'b0;
-        o_arblost <= 1'b0;
         s_c_state <= B_IDLE;
+        s_c_state_pre <= B_IDLE;
         s_bit_cmd <= CMD_IDLE;
     end
     else begin
         o_cmd_ack <= 1'b0;
-        if (B_IDLE == s_c_state) begin
+        s_c_state_pre <= s_c_state;
+        if (B_IDLE == s_c_state_pre) begin
             s_bit_cmd <= i_cmd;
             case (i_cmd)
                 CMD_IDLE   :s_c_state <= B_IDLE;

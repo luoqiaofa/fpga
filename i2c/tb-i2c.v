@@ -254,6 +254,7 @@ begin
         i2cbus.regread(ADDR_SR, i2csr, 0);
     end
     $display("[%t] i2c bus is idle.", $time);
+    i2cbus.regwrite(ADDR_CR, 8'h00, 0);
 end
 
 always #5 i_sysclk = ~i_sysclk;
