@@ -192,7 +192,7 @@ begin
                     s_cmd_done  <= 1'b1;
                     s_data_read <= 8'hff;
                     s_bit_cmd  <= CMD_IDLE;
-                    s_c_state   <= SM_IDLE;
+                    s_c_state  <= SM_IDLE;
                 end
                 default : begin
                     s_bit_cnt  <= 3'h7;

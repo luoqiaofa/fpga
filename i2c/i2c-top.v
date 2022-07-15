@@ -37,6 +37,8 @@ reg s_start_done;
 (* keep = "true" *) wire o_scl;
 (* keep = "true" *) wire s_scl_oen;
 
+(* keep = "true" *) reg s_i2c_master_en;
+
 assign o_interrupt = I2CCR[CCR_MIEN] & I2CSR[CSR_MIF];
 assign o_rd_data = s_data_out;
 
@@ -87,6 +89,7 @@ begin
         s_start_done  <= 0;
         s_dr_updated <= 0;
         s_need_rd_seq <= 0;
+        s_i2c_master_en <= 0;
     end
     else begin
         if (1'b1 == s_cmd_go) begin
@@ -117,11 +120,14 @@ begin
                 end
                 ADDR_CR    : begin
                     I2CCR <= i_wr_data;
+                    if (i_wr_data[CCR_MEN]) begin
+                        s_i2c_master_en <= 1;
+                    end
                     if (1'b1 == I2CCR[CCR_MEN]) begin
                         if (I2CCR[CCR_MSTA] && !i_wr_data[CCR_MSTA]) begin
                             s_cmd <= CMD_STOP;
                             s_cmd_go <= 1;
-                            s_cmd <= SM_STOP;
+                            i2c_state <= SM_STOP;
                         end
                         if (i_wr_data[CCR_RSTA]) begin
                             s_cmd <= CMD_RESTART;
@@ -142,6 +148,7 @@ begin
                         s_cmd_go <= 0;
                         s_cmd <= CMD_IDLE;
                         i2c_state <= SM_IDLE;
+                        s_i2c_master_en <= 0;
                     end
                 end
                 ADDR_SR    : begin
@@ -222,6 +229,7 @@ begin
                 s_cmd <= CMD_IDLE;
                 s_cmd_go <= 0;
                 i2c_state <= SM_IDLE;
+                s_i2c_master_en <= 0;
             end
             SM_WRITE    : begin
                 s_dr_updated <= 0;
@@ -284,7 +292,7 @@ end
 i2c_master_byte_ctl u1_byte_ctl(
     .i_sysclk   (i_sysclk),
     .i_nReset   (i_reset_n),        // sync reset
-    .i_enable   (I2CCR[CCR_MEN]),   // iic enable
+    .i_enable   (s_i2c_master_en),   // iic enable
     .i_prescale (s_prescale),       // clock prescale cnt
     .i_dfsr     (I2CDFSRR[5:0]),    // Digital Filter Sampling Rate cnt
     .i_cmd_trig (s_cmd_trig),
