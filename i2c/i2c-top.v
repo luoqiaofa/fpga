@@ -120,9 +120,6 @@ begin
                 end
                 ADDR_CR    : begin
                     I2CCR <= i_wr_data;
-                    if (i_wr_data[CCR_MEN]) begin
-                        s_i2c_master_en <= 1;
-                    end
                     if (1'b1 == I2CCR[CCR_MEN]) begin
                         if (I2CCR[CCR_MSTA] && !i_wr_data[CCR_MSTA]) begin
                             s_cmd <= CMD_STOP;
@@ -140,6 +137,7 @@ begin
                                     s_cmd <= CMD_START;
                                     i2c_state <= SM_START;
                                     s_cmd_go <= 1;
+                                    s_i2c_master_en <= 1;
                                 end
                             end
                         end
