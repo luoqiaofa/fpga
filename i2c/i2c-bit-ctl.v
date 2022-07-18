@@ -64,6 +64,14 @@ begin
             s_fSCL <= {s_fSCL[1:0],  i_scl};
             s_fSDA <= {s_fSDA[1:0],  i_sda};
         end
+        else begin
+            if (!i_enable) begin
+                s_cSCL   <= {s_cSCL[0], i_scl};
+                s_cSDA   <= {s_cSDA[0], i_sda};
+                s_fSCL <= {s_fSCL[1:0],  i_scl};
+                s_fSDA <= {s_fSDA[1:0],  i_sda};
+            end
+        end
     end
 end
 
@@ -114,7 +122,7 @@ begin
     else begin
         div4_clk_edge <= {div4_clk_edge[0], s_clk_div4};
         if (i_enable) begin
-            if (2'b01 == div4_clk_edge) begin
+            if (2'b10 == div4_clk_edge) begin
                 s_clk_en <= 1;
             end
         end
