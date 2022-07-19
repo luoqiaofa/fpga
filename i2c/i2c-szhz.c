@@ -534,7 +534,7 @@ static int szhz_i2c_probe(struct platform_device *op)
         result = -ENOMEM;
         goto fail_map;
     }
-    i2c->base += 0x400;
+    // i2c->base += 0x400;
     dbg_print("i2c base=%p", i2c->base);
 
     gpio = of_get_named_gpio(op->dev.of_node, "irq-gpio", 0);
