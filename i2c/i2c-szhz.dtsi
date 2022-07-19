@@ -1,0 +1,19 @@
+szhz-i2c@80000000 {
+    reg = <0x0 0x80000000 0x0 0x100>;
+    #address-cells = <0x1>;
+    #size-cells = <0x0>;
+
+    compatible = "szhz,szhz-i2c";
+    szhz,timeout = <100000>; /* 100 ms */
+    clock-frequency  = <400000>; /* 400 KHz */
+    system-frequency = <100000000>; /* 100 MHz */
+    // irq-gpio = <&gpio 23 0>;
+    24c02@50{
+        reg = <0x50>;
+        compatible = "24c02";
+    };
+    24c02@51{
+        reg = <0x51>;
+        compatible = "24c02";
+    };
+};

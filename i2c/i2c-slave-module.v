@@ -93,6 +93,7 @@ begin
                     bit_cnt <= bit_cnt - 1;
                     if (0 == bit_cnt) begin
                         bit_cnt   <= 7;
+                        s_sda_oen <= 0;
                         i2c_state <= SM_WR_ACK;
                         if (first_byte) begin 
                             first_byte <= 0;
@@ -117,7 +118,7 @@ begin
                     s_sda_oen <= 0;
                 end
                 if (2'b10 == edge_scl) begin
-                    // s_sda_oen <= 1;
+                    s_sda_oen <= 0;
                     bit_cnt   <= 7;
                     if (CMD_WRITE == i2c_cmd) begin
                         i2c_state <= SM_WRITE;

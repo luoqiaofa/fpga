@@ -87,6 +87,7 @@ begin
                     s_i_bit   <= i_data[7];
                 end
                 SM_READ: begin
+                    s_i_bit   <= 0;
                     s_bit_cnt <= 3'h7;
                     s_bit_cmd <= i_cmd;
                     s_c_state <= SM_READ;
@@ -141,6 +142,7 @@ begin
                     s_bit_cmd <= s_c_state;
                     s_bit_cnt <= s_bit_cnt - 1;
                     if (0 == s_bit_cnt) begin
+                        s_i_bit   <= 0;
                         s_cmd_done <= 1'b1;
                         s_bit_cnt  <= 3'h7;
                         s_shift_r  <= i_data;
