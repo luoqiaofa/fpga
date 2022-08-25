@@ -176,11 +176,15 @@ begin
         TNF <= 1'b1;
     end
     else begin
+        if (!TNF) begin
+            if (FRAME_SM_DATA_WAIT == frame_state) begin
+                if (brg_out_second_edge) begin
+                    frame_state <= FRAME_SM_IN_TRANS;
+                end
+            end
+        end
         if (1'b1 == spitd_updated) begin
             TNF <= 1'b0;
-            if (FRAME_SM_DATA_WAIT == frame_state) begin
-                frame_state <= FRAME_SM_IN_TRANS;
-            end
         end
         else begin
             if (1'b1 == chr_done) begin
