@@ -660,7 +660,7 @@ begin
     end
     else begin
         if (CSMODE_LEN > 7) begin
-            if (spitf_trx_char_off) begin
+            if (spitf_trx_char_off[0]) begin
                 data_tx <= SPITF[31:16];
             end
             else begin
