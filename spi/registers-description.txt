@@ -1,0 +1,423 @@
+Note: The registers definition come from Freescale(NXP) powerpc arch eSPI controller
+      I want to be compitable with it.
+eSPI register list
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  Offset   |                                                 | Width     |        |                |
+|  address  |             Register name                       | (in bits) | Access |    Reset value |
+|  (hex)    |                                                 |           |        |                |
++-----------+-------------------------------------------------+-----------+--------+----------------|
+|  0000     |  eSPI mode register (ESPI_SPMODE)               |  32       | R/W    |    0000_100Fh  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0004     |  eSPI event register (ESPI_SPIE)                |  32       | R/W    |    0020_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0008     |  eSPI mask register (ESPI_SPIM)                 |  32       | R/W    |    0000_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  000C     |  eSPI command register (ESPI_SPCOM)             |  32       | W      |    0000_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0010     |  eSPI transmit FIFO access register (ESPI_SPITF)|  32       | W      |    0000_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0014     |  eSPI receive FIFO access register (ESPI_SPIRF) |  32       | R      |    0000_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0020     |  eSPI CS0 mode register (ESPI_CSMODE0)          |  32       | R/W    |    0010_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0024     |  eSPI CS1 mode register (ESPI_CSMODE1)          |  32       | R/W    |    0010_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  0028     |  eSPI CS2 mode register (ESPI_CSMODE2)          |  32       | R/W    |    0010_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+|  002C     |  eSPI CS3 mode register (ESPI_CSMODE3)          |  32       | R/W    |    0010_0000h  |
++-----------+-------------------------------------------------+-----------+--------+----------------+
+                                                                                         
+1. The eSPI mode register (SPMODE) controls eSPI general operation mode.                                             
+ESPI_SPMODE field descriptions                                                                                       
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31    |Enable eSPI. Any bits in SPMODE must not change when EN is set.                                             |
+| EN    |0 The eSPI is disabled. The eSPI is in a idle state and consumes minimal power. The eSPI BRG is not         |
+|       |  functioning and the input clock is disabled.                                                              |
+|       |1 The eSPI is enabled.                                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 30    |Loop mode. Enables local loopback operation.                                                                |
+| LOOP  |0    Normal operation.                                                                                      |
+|       |1    Loopback mode. Used to test the eSPI controller internal functionality, the transmitter output is      |
+|       |     internally connected to the receiver input. The receiver and transmitter operate normally, except that |
+|       |     received data is ignored.                                                                              |
++-------+------------------------------------------------------------------------------------------------------------+
+| 29-14 |This field is reserved.                                                                                     |
+|       |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 13-8  |Tx FIFO threshold-if Tx FIFO has less than TXTHR bytes, an interrupt can be issued to the core.             |
+| TXTHR |Valid values: 0-31                                                                                          |
++-------+------------------------------------------------------------------------------------------------------------+
+| 7-5   |This field is reserved.                                                                                     |
+|       |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 4-0   |Rx FIFO threshold-if Rx FIFO has more than RXTHR bytes, an interrupt can be issued to the core.             |
+| RXTHR |Valid values: 0-31                                                                                          |
++-------+------------------------------------------------------------------------------------------------------------+
+ 
+
+2. eSPI event register (ESPI_SPIE)
+    The eSPI event register (SPIE) generates interrupts and reports events recognized by the
+    eSPI. When an event is recognized, the eSPI sets the corresponding SPIE bit. Clear SPIE
+    bits by writing a 1-writing 0 has no effect. Setting a bit in the eSPI mask register (SPIM)
+    enables interrupt and clearing a bit masks the corresponding interrupt. Unmasked SPIE
+    bits must be cleared before the core clears internal interrupt requests. Bits RNE and TNF
+    are status bits. Fields RXCNT and TXCNT hold Rx and Tx FIFOS' statuses. They are not
+    cleared as a result of writing to SPIE.
+
+ESPI_SPIE field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31-30 |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 29-24 |The current number of full Rx FIFO bytes                                                                    |
+| RXCNT |NOTE: For character lengths of 9 to 16 bits-each character occupies 2 bytes in Rx/Tx FIFO.                  |
++-------+------------------------------------------------------------------------------------------------------------+
+| 21-26 |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 10-15 |The current number of free Tx FIFO bytes                                                                    |
+| TXCNT |NOTE: For character lengths of 9 to 16 bits-each character occupies 2 bytes in Rx/Tx FIFO                   |
++-------+------------------------------------------------------------------------------------------------------------+
+| 15    |Tx FIFO is empty                                                                                            |
+| TXE   |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 14    |Last character was transmitted.                                                                             |
+| DON   |The last character was transmitted and a new command can be written for the next frame                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 13    |Rx FIFO has more than RXTHR bytes, that is, at least RXTHR + 1 bytes                                        |
+| RXT   |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 12    |Rx FIFO is full                                                                                             |
+| RXF   |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 11    |Tx FIFO has less than TXTHR bytes, that is, at most TXTHR - 1 bytes                                         |
+| TXT   |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 10    |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 9     |Not empty. Indicates that the Rx FIFO register contains a received character.                               |
+| RNE   |0  The Rx FIFO is empty                                                                                     |
+|       |1  The Rx FIFO has a received character. The core can read the content of Rx FIFO through SPIRF.            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 8     |Tx FIFO not full.                                                                                           |
+| TNF   |0  The transmitter FIFO is full.                                                                            |
+|       |1  The transmitter FIFO is not full.                                                                        |
++-------+------------------------------------------------------------------------------------------------------------+
+| 7-0   | This field is reserved.                                                                                    |
+|       | Reserved, should be cleared.                                                                               |
++-------+------------------------------------------------------------------------------------------------------------+
+ 
+
+3 eSPI mask register (ESPI_SPIM)
+    The eSPI mask register (SPIM) enables/masks interrupts for events recognized by the
+    eSPI. When an event is recognized, the eSPI sets the corresponding SPIE bit. Setting a bit
+    in the eSPI mask register (SPIM) enables and clearing a bit masks the corresponding
+    interrupt. Unmasked SPIE bits must be cleared before the core clears internal interrupt
+    requests.
+    Bits RNE and TNF in SPIM are status bits. They are not cleared as a result of writing to
+    SPIM.
+
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31-16 |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 15    |Tx FIFO empty interrupt mask                                                                                |
+| TXE   |0  TXE event will not cause eSPI Interrupt                                                                  |
+|       |1  TXE event will cause eSPI Interrupt                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 14    |Last character transmitted mask                                                                             |
+| DON   |0  DON event will not cause eSPI Interrupt                                                                  |
+|       |1  DON event will cause eSPI Interrupt                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 13    |Rx threshold interrupt mask                                                                                 |
+| RXT   |0  RXT event will not cause eSPI Interrupt                                                                  |
+|       |1  RXT event will cause eSPI Interrupt                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 12    |Rx FIFO full interrupt mask                                                                                 |
+| RXF   |0  RXF event will not cause eSPI Interrupt                                                                  |
+|       |1  RXF event will cause eSPI Interrupt                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 11    |Tx threshold interrupt mask                                                                                 |
+| TXT   |0  TXT event will not cause eSPI Interrupt                                                                  |
+|       |1  TXT event will cause eSPI Interrupt                                                                      |
++-------+------------------------------------------------------------------------------------------------------------+
+| 10    |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 9     |Rx not empty interrupt mask                                                                                 |
+| RNE   |0  Not Empty event will not cause eSPI Interrupt                                                            |
+|       |1  Not Empty event will cause eSPI Interrupt                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 8     |Tx not full interrupt mask                                                                                  |
+| TNF   |0  Not full event will not cause eSPI Interrupt                                                             |
+|       |1  Not full event will cause eSPI Interrupt                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 7-0   |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+
+4 eSPI command register (ESPI_SPCOM)
+    The eSPI command register (SPCOM) is used by the host to supply information on the
+    new frame.
+    After SPCOM has been written to initiate the first transaction after startup, commands
+    can be executed only after SPIE[DON] is set. Otherwise they are ignored.
+    A transaction can be full duplex (regular eSPI) or half duplex. Half duplex can be used
+    for example for write accesses to a flash (only transmit) or for a read access from a flash
+    (first part is transmit without receive, while the second part is receive without transmit).
+
+ESPI_SPCOM field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31-30 |Chip select-chip select for which transaction is destined                                                   |
+| CS    |00   SPI_CS0_B                                                                                              |
+|       |01   SPI_CS1_B                                                                                              |
+|       |10   SPI_CS2_B                                                                                              |
+|       |11   SPI_CS3_B                                                                                              |
++-------+------------------------------------------------------------------------------------------------------------+
+| 29    |                                                                                                            |
+|RxDELAY|Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 28    |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 27    |Transmit only                                                                                               |
+| TO    |1 No reception is done for the frame (useful for write transactions)                                        |
+|       |0 Normal operation                                                                                          |
++-------+------------------------------------------------------------------------------------------------------------+
+| 26    |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 25-24 |This field is reserved.                                                                                     |
+|       |Reserved, should be cleared.                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 23-16 |If (RXSKIP != 0)-Number of characters skipped for reception from frame start.                               |
+| RxSKIP|Non-zero values of RxSKIP force the eSPI to half-duplex mode, and therefore this causes TRANLEN-            |
+|       |RxSKIP characters to be skipped for transmission.                                                           |
+|       |RXSKIP is useful for reads of SPI flash memories where the first valid read data is received several        |
+|       |characters after the transmission begins (after the eSPI has transmitted an instruction opcode and          |
+|       |address).                                                                                                   |
+|       |NOTE: If TO = 1, RxSKIP must be set to 0.                                                                   |
+|       |NOTE: If RXSKIP = 0 and TO = 0, the eSPI changes to full duplex mode.                                       |
++-------+------------------------------------------------------------------------------------------------------------+
+| 15-0  |Transaction length - (number of characters in the frame - 1)                                                |
+|TRANLEN|                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+
+
+5 eSPI transmit FIFO access register (ESPI_SPITF)
+    The 32-bit write-only eSPI transmit FIFO access register (SPITF) holds the characters to
+    be written to the transmit FIFO. The number of bits in each character is specified by
+    CSMODEx[LENx]. Each time SPIE[TNF] is set, the core can write more data to the
+    SPITF register, if there is no error indication in the SPIE.
+    For character lengths of 4 to 8 bits, SPITF contains up to 4 characters (unless end of
+    frame). The lsbs are in bits 7, 15, 23, and 31 of SPITF.
+    For character lengths of 9 to 16 bits, SPITF contains up to 2 characters (unless end of
+    frame). For 16 bits with CSMODEx[REVx] = 1, the lsb is in bits 15 and 31 of SPITF. For
+    other options, lsbs are in bits 7 and 23 while msbs are in bits (23-LENx) and (39-LENx)
+    of SPITF.
+    For example: REV = 0, LEN = 10 (0xA), SPITF[0-15] = 0xFB05-bitstream is: (lsb first)
+    11011111101 (msb last).
+    NOTE
+    The user must write N bytes of SPITF (1 < N < 4) that do not
+    exceed the number of free bytes in the transmit FIFO. It is valid
+    for the user to write only 1 or 2 bytes of SPITF (at offset
+    0x010) if the user wishes to write fewer characters than the
+    maximum supported by SPITF for the particular character
+    length in use.
+    The following figures show examples of the contents of SPITF with various parameters
+    set.
+
+SPITF Example - CSMODEx[REVx]=0, CSMODEx[LENx]=3, LSB Sent First:
+
+   |31-28| 27 |26-25| 24 |23-20 | 19 |18-17| 16 |15-12| 11 |10-9 | 8  | 7-4  | 3  | 2-1 | 0  |
+   +-----+----+-----+----+------+----+-----+----+-----+----+-----+----+------+----+-----+----+
+RW |     |MSB3|Data3|LSB3|      |MSB2|Data2|LSB2|     |MSB1|Data1|LSB1|      |MSB1|Data1|LSB1|
+   +-----+----+-----+----+------+----+-----+----+-----+----+-----+----+------+----+-----+----+
+
+SPITF Example - CSMODEx[REVx]=x, CSMODEx[LENx]=7:
+                                                                                     
+   | 31 | 30-25 | 24   | 23 | 22-17 | 16   | 15 | 14-9  |  8   | 7  |  6-1  | 0    |
+   +----+-------+------+----+-------+------+----+-------+------+----+-------+------+
+RW |MSB3| Data3 | LSB3 |MSB2| Data2 | LSB2 |MSB1| Data1 | LSB1 |MSB0| Data0 | LSB0 |
+   +----+-------+------+----+-------+------+----+-------+------+----+-------+------+
+
+SPITF Example - CSMODEx[REVx]=0, CSMODEx[LENx]=10, LSB Sent First:
+
+   |31-27 | 26 | 25-17 | 16   |15-11 | 10 |  6-1  | 0    |
+   +------+----+-------+------+------+----+-------+------+
+RW |  -   |MSB1| Data1 | LSB1 |  -   |MSB0| Data0 | LSB0 |
+   +------+----+-------+------+------+----+-------+------+
+
+SPITF Example - CSMODEx[REVx]=1, CSMODEx[LENx]=15, MSB Sent First:
+
+   | 31 | 30-17 | 16   | 15 | 14-1  | 0    |
+   +----+-------+------+----+-------+------+
+RW |MSB1| Data1 | LSB1 |MSB0| Data0 | LSB0 |
+   +----+-------+------+----+-------+------+
+
+ESPI_SPITF field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31-0  |Varies as parameters set                                                                                    |
+| DATA  |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+
+6 eSPI receive FIFO access register (ESPI_SPIRF)
+The 32-bit read-only eSPI receive data register (SPIRF) is used to hold characters read
+from the receive FIFO. Each time SPIE[RNE] is set, the core can read the SPIRF register.
+For character lengths of 4 to 8 bits, SPIRF contains up to 4 characters. The msbs are in
+bits 0, 8, 16, and 24. For character lengths of 9 to 16 bits, SPIRF contains up to 2
+characters. The msbs are in bits 0 and 16. CSMODEx[REVx] does not affect the msb or
+lsb bit positions when reading the SPIRF register.
+The user must read N bytes of SPIRF (1 ≤ N ≤ 4) that do not exceed the amount of data in
+the receive FIFO. The user can read less bytes than the amount of data in the receive
+FIFO. For example, a 1-byte read of SPIRF when configured for 8-bit characters with 4
+characters of data in the receive FIFO results in the 3 unread characters shuffling down to
+the lower 24 bits of SPIRF in preparation for the following SPIRF read.
+SPIRF Example - CSMODEx[LENx]=3
+SPIRF Example - CSMODEx[LENx]=10:
+SPIRF Example - CSMODEx[LENx]=15:
+
+ESPI_SPIRF field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+| Field  |Description                                                                                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31-0   |Varies as parameters set                                                                                   |
+| DATA   |                                                                                                           |
++-------+------------------------------------------------------------------------------------------------------------+
+
+7 eSPI CS0 mode register (ESPI_SPMODE0)
+The eSPI CS0 mode register (SPMODE0) controls eSPI master operation with chip select
+0.
+
+ESPI_CSMODE field descriptions
++-------+------------------------------------------------------------------------------------------------------------+
+| Field |Description                                                                                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 31    |Clock invert. Inverts eSPI clock polarity. See Figure 18-3 and Figure 18-4 for more information             |
+| CI    |                                                                                                            |
+|       |0 The inactive state of SPI_CLK is low.                                                                     |
+|       |1 The inactive state of SPI_CLK is high.                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 30    |Clock phase. Selects the transfer format. See Figure 18-3 and Figure 18-4 for more information.             |
+| CP    |                                                                                                            |
+|       |0  SPI_CLK starts toggling at the middle of the data transfer.                                              |
+|       |1  SPI_CLK starts toggling at the beginning of the data transfer.                                           |
++-------+------------------------------------------------------------------------------------------------------------+
+| 29    |Reverse data mode. Determines the receive and transmit character bit order.                                 |
+| REV   |                                                                                                            |
+|       |0  lsb of the character sent and received first                                                             |
+|       |1  msb of the character sent and received first-for 8/16 bits data character only                           |
++-------+------------------------------------------------------------------------------------------------------------+
+| 28    |Divide by 16. Selects the clock source for the eSPI baud rate generator (eSPI BRG) when configured as       |
+| DIV16 |an eSPI master.                                                                                             |
+|       |NOTE: System clock as used here is defined to be platform clock divided by 2.                               |
+|       |0  System clock is the input to the eSPI BRG.                                                               |
+|       |1  System clock/16 is the input to the eSPI BRG.                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 27-24 |Prescale modulus select. Specifies the divide ratio of the prescale divider in the eSPI clock generator. The|
+| PM    |eSPI baud rate generator clock source (either system clock or system clock divided by 16, depending on      |
+|       |DIV16 bit) is divided by 2 x ([PM] + 1), a range from 2 to 32. For example,if the prescale modulus is set to|
+|       |PM=0x0011 and DIV16 is set, the SPI_CLK/system clock rate will be 16 x (2 x (0x0011 + 1)) = 128             |
+|       |NOTE: System clock as used here is defined to be platform clock divided by 2                                |
++-------+------------------------------------------------------------------------------------------------------------+
+| 23    | MISO and MISO use one pin in half-duplex, that is SDIO pin, for some slave device                          |
+|IS3WIRE| Note: If received transactions, SPCOM.RxSKIP must != 0. that is RxSKIP > 0                                 |
++-------+------------------------------------------------------------------------------------------------------------+
+| 22-21 |This field is reserved.                                                                                     |
+|       |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+| 20    |CS Polarity.                                                                                                |
+| POL   |1  Asserted Low, Negated High                                                                               |
+|       |0  Asserted High, Negated Low.                                                                              |
++-------+------------------------------------------------------------------------------------------------------------+
+| 19-16 |Character length in bits per character. Supports a range from 1-bit to 16-bit data characters.              |
+| LEN   |                                                                                                            |
++-------+------------------------------------------------------------------------------------------------------------+
+| 15-12 |CS assertion time in bits before frame start (that is, before clock toggles)                                |
+| CSBEF |                                                                                                            |
+|       |Example: CSBEF = 0010 inserts 2 bits time gap between CS assertion to clock toggle                          |
++-------+------------------------------------------------------------------------------------------------------------+
+| 11-8  |CS assertion time in bits after frame end (that is, after clock finishes toggling)                          |
+| CSAFT |                                                                                                            |
+|       |Example: CSAFT = 0010 inserts 2 bits time gap between clock stop to CS negation                             |
+| 7-3   |Clock gap                                                                                                   |
+| CSCG  |                                                                                                            |
+|       |insert gaps between transmitted frames according to this size (during this time, chip select is negated).   |
+|       |Chip select is negated minimum time of 1 bit time.                                                          |
+|       |Example: CSCG = 00101 inserts 5 + 1 = 6 bits time gap between every two consecutive frames                  |
++-------+------------------------------------------------------------------------------------------------------------+
+| 2-0   |This field is reserved.                                                                                     |
+|       |Reserved                                                                                                    |
++-------+------------------------------------------------------------------------------------------------------------+
+                   ___       ___       ___       ___       ___       ___       ___       ___
+          CI = 0  /   \     /   \     /   \     /   \     /   \     /   \     /   \     /   \
+SPICLK  _________/     \___/     \___/     \___/     \___/     \___/     \___/     \___/     \_____
+        _________       ___       ___       ___       ___       ___       ___       ___       _____
+SPICLK    CI = 1 \     /   \     /   \     /   \     /   \     /   \     /   \     /   \     /
+                  \___/     \___/     \___/     \___/     \__ /     \___/     \___/     \___/
+        ______  _______  ________  ________  ________  ________  ________  ________  ________  ____
+SPIMOSI       \/       \/        \/        \/        \/        \/        \/        \/        \/
+               \_______/\________/\________/\________/\________/\________/\________/\________/
+              _______  ________  ________  ________  ________  ________  ________  ________
+SPIMISO _____/       \/        \/        \/        \/        \/        \/        \/        \_______
+             \_______/\________/\________/\________/\________/\________/\________/\________/
+SPISEL  __                                                                                       __
+          \                                                                                     /
+           \___________________________________________________________________________________/
+                          SPI Transfer Format with SPMODE[CP] = 0
+
+                 ___       ___       ___       ___       ___       ___       ___       ___
+        CI = 0  /   \     /   \     /   \     /   \     /   \     /   \     /   \     /   \
+SPICLK ________/     \___/     \___/     \___/     \___/     \___/     \___/     \___/     \_____
+       ________       ___       ___       ___       ___       ___       ___       ___       _____
+SPICLK  CI = 1 \     /   \     /   \     /   \     /   \     /   \     /   \     /   \     /
+                \___/     \___/     \___/     \___/     \__ /     \___/     \___/     \___/
+       ________  _______  ________  ________  ________  ________  ________  ________  ________  ___
+SPIMOSI        \/       \/        \/        \/        \/        \/        \/        \/        \/
+                \_______/\________/\________/\________/\________/\________/\________/\________/
+            ___  _______  ________  ________  ________  ________  ________  ________  ________
+SPIMISO____/ Q \/       \/        \/        \/        \/        \/        \/        \/        \____
+           \___/\_______/\________/\________/\________/\________/\________/\________/\________/
+SPISEL ___                                                                                       __
+          \                                                                                     /
+           \___________________________________________________________________________________/
+                         SPI Transfer Format with SPMODE[CP] = 1
+
+eSPI programming examples
+This section provides eSPI programming examples for 24-bit address memory and 16-bit
+address memory.
+18.6.1 24-bit address example
+The following sequence initializes the eSPI to read 36 bytes from 24-bit address memory,
+start address = 0x00_0040:
+1. Configure a parallel I/O signal to operate as the eSPI CS output signal.
+2. Write 0xFFFF_FFFF to SPIE to clear any previous events. Configure SPIM to enable
+all desired eSPI interrupts.
+3. Configure SPMODE = 0x8000_100F to enable normal operation, eSPI enabled.
+4. Configure SPMODE1 = 0x2417_1108-REV1 = 1, PM1 = 4 (divide eSPI input clock
+by 10), LEN1 = 7, POL1 = 1, CSBEF = CSAFT = CSCG = 1.
+5. Configure SPITF = 0x0300_0040-0x03 is read opcode while 0x00_0040 is the 24-bit
+start address.
+6. Configure SPCOM = 0x0004_0027 so 4 bytes are skipped (1 for opcode and 3 for
+24-bit address), TRANLEN = 36 + 4 - 1 = 39 = 27h.
+18.6.2 16-bit address example
+The following sequence initializes the eSPI to read 36 bytes from 16-bit address memory,
+start address = 0x0040:
+1. Configure a parallel I/O signal to operate as the eSPI CS output signal.
+2. Write 0xFFFF_FFFF to SPIE to clear any previous events. Configure SPIM to enable
+all desired eSPI interrupts.
+3. Configure SPMODE = 0x8000_100F to enable normal operation, eSPI enabled.
+4. Configure CSMODE1 = 0x2417_1108-REV = 1, PM = 4 (divide eSPI input clock
+by 10), LEN = 7, POL1 = 1, CSBEF = CSAFT = CSCG = 1.
+5. Configure SPITF = 0x0300_40xx (xx is don't care)-0x03 is read opcode while
+0x0040 is the 16-bit start address.
+6. Configure SPCOM = 0x0003_0026 so 3 bytes are skipped (1 for opcode and 2 for
+16-bit address), TRANLEN = 36 + 3 - 1 = 38 = 26h.
+
