@@ -288,7 +288,7 @@ begin
             chr_go <= 0;
             data_rx <= 0;
         end
-        if (char_go_wire) begin
+        if (char_go_wire || spcom_updated) begin
             if (CSMODE[CSMODE_CPHA]) begin
                 if (CSMODE[CSMODE_REV]) begin
                     char_bit_cnt <= CSMODE_LEN + 1;
