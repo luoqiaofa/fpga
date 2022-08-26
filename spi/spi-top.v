@@ -211,7 +211,6 @@ begin
         end
         if (1'b1 == spird_updated) begin
             RNE = 0;
-            spird_char_idx <= 0;
         end
         if (csmodex_updated) begin
             CSXMODE[cs_idx] <= csmodex;
@@ -278,12 +277,14 @@ begin
             char_trx_idx <= 0;
             if (FRAME_SM_IDLE == frame_state) begin
                 frame_go <= 1;
-                spi_brg_go <= 0;
                 frame_in_process <= 1;
+                frame_next_start <= 0;
                 frame_state <= FRAME_SM_BEF_WAIT;
+                spi_brg_go <= 0;
                 cnt_cscg <= CSMODE_CSCG;
             end
             else begin
+                frame_in_process <= 0;
                 frame_next_start <= 1;
             end
 
@@ -375,11 +376,11 @@ begin
                     end
                     else begin
                         if (frame_next_start) begin
-                            frame_state <= FRAME_SM_BEF_WAIT;
+                            frame_in_process <= 1;
                             frame_next_start <= 0;
+                            frame_state <= FRAME_SM_BEF_WAIT;
                             spi_brg_go <= 0;
                             frame_go <= 1;
-                            frame_in_process <= 1;
                             cnt_cscg <= CSMODE_CSCG;
                         end
                         else begin
@@ -417,6 +418,9 @@ begin
         spird_char_idx <= 0;
     end
     else begin
+        if (1'b1 == spird_updated) begin
+            spird_char_idx <= 0;
+        end
         if (spcom_updated) begin
             char_rx_idx <= 0;
             spird_char_idx <= 0;
