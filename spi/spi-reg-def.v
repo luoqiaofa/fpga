@@ -35,13 +35,13 @@ localparam SPIE_RNE           = 9;
 localparam SPIE_TNF           = 8;
 
 // 3. SPIM
-localparam SPIM_DON           = 14;
-localparam SPIM_DNR           = 13;
-localparam SPIM_OV            = 12;
-localparam SPIM_UN            = 11;
-localparam SPIM_MME           = 10;
-localparam SPIM_RNE           = 9;
-localparam SPIM_TNF           = 8;
+localparam SPIM_DON           = SPIE_DON;
+localparam SPIM_DNR           = SPIE_DNR;
+localparam SPIM_OV            = SPIE_OV;
+localparam SPIM_UN            = SPIE_UN;
+localparam SPIM_MME           = SPIE_MME;
+localparam SPIM_RNE           = SPIE_RNE;
+localparam SPIM_TNF           = SPIE_TNF;
 
 // 4. SPCOM
 localparam SPCOM_CS_HI        = 31;
@@ -58,23 +58,26 @@ localparam SPCOM_TRANLEN_LO   = 0;
 // 5. SPITD
 
 // 6. SPIRD
-// CSMODE define
+
+// 7. SPI_SPMODE0 ~ SPI_SPMODEx ;
 localparam CSMODE_CPOL        = 31; /* CI: clock inverted, clock polarity */
 localparam CSMODE_CPHA        = 30; /* CP: clock phase */
-localparam CSMODE_POL         = 29; /* CS(chip select pin) polarity */
-localparam CSMODE_REV         = 28;
-localparam CSMODE_IS3WIRE     = 27;
-localparam CSMODE_DIV16       = 20;
-localparam CSMODE_PM_HI       = 19;
-localparam CSMODE_PM_LO       = 16;
-localparam CSMODE_LEN_HI      = 15;
-localparam CSMODE_LEN_LO      = 12;
-localparam CSMODE_CSBEF_HI    = 11;
-localparam CSMODE_CSBEF_LO    = 8;
-localparam CSMODE_CSAFT_HI    = 7;
-localparam CSMODE_CSAFT_LO    = 4;
-localparam CSMODE_CSCG_HI     = 3;
-localparam CSMODE_CSCG_LO     = 0;
+localparam CSMODE_REV         = 29;
+localparam CSMODE_DIV16       = 28;
+localparam CSMODE_PM_HI       = 27;
+localparam CSMODE_PM_LO       = 24;
+// read data from MOSI pin, some spi slave use one pin for rx and tx
+// that is sdio pin. at this time, RXSKIP must bigger than 0;
+localparam CSMODE_IS3WIRE     = 23;
+localparam CSMODE_POL         = 20; /* cs polarity */
+localparam CSMODE_LEN_HI      = 19;
+localparam CSMODE_LEN_LO      = 16;
+localparam CSMODE_CSBEF_HI    = 15;
+localparam CSMODE_CSBEF_LO    = 12;
+localparam CSMODE_CSAFT_HI    = 11;
+localparam CSMODE_CSAFT_LO    = 8;
+localparam CSMODE_CSCG_HI     = 7;
+localparam CSMODE_CSCG_LO     = 3;
 
 // num bits define
 localparam NBITS_CS           = SPCOM_CS_HI - SPCOM_CS_LO + 1;
