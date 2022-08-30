@@ -26,6 +26,8 @@ localparam SPMODE_LOOP        = 30;
 localparam SPMODE_MASTER      = 29;
 
 // 2. SPIE
+localparam SPIE_RXCNT_HI      = 29;
+localparam SPIE_RXCNT_LO      = 24;
 localparam SPIE_DON           = 14;
 localparam SPIE_DNR           = 13;
 localparam SPIE_OV            = 12;
@@ -88,6 +90,7 @@ localparam NBITS_CHARLEN      = CSMODE_LEN_HI   - CSMODE_LEN_LO + 1;
 localparam NBITS_CSBEF        = CSMODE_CSBEF_HI - CSMODE_CSBEF_LO + 1;
 localparam NBITS_CSAFT        = CSMODE_CSAFT_HI - CSMODE_CSAFT_LO + 1;
 localparam NBITS_CSCG         = CSMODE_CSCG_HI  - CSMODE_CSCG_LO + 1;
+localparam NBITS_RXCNT        = SPIE_RXCNT_HI   - SPIE_RXCNT_LO + 1;
 
 // defaut register value
 localparam SPMODE_DEF         = 32'h0000_0000;

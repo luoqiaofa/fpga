@@ -375,11 +375,11 @@ begin
                         cnt_cscg <= cnt_cscg - 1;
                     end
                     else begin
+                        spi_brg_go <= 0;
                         if (frame_next_start) begin
                             frame_in_process <= 1;
                             frame_next_start <= 0;
                             frame_state <= FRAME_SM_BEF_WAIT;
-                            spi_brg_go <= 0;
                             frame_go <= 1;
                             cnt_cscg <= CSMODE_CSCG;
                         end
@@ -412,7 +412,7 @@ end
 
 always @(posedge S_SYSCLK)
 begin
-    if (1'b0 == S_RESETN || (1'b0 == SPMODE[SPMODE_EN])) begin
+    if (1'b0 == S_RESETN) begin
         SPIRD <= SPIRD_DEF;
         char_rx_idx <= 0;
         spird_char_idx <= 0;
@@ -628,7 +628,7 @@ end
 
 always @(posedge S_SYSCLK /* or negedge S_RESETN */)
 begin
-    if (S_RESETN == 1'b0 )
+    if (S_RESETN == 1'b0)
     begin
         SPMODE  <= SPMODE_DEF;
         SPIE    <= SPIE_DEF;
@@ -654,6 +654,12 @@ begin
         if (frame_done) begin
             SPIE[SPIE_DON] <= 1'b1;
             num_spitd_upd <= 0;
+        end
+        if (CSMODE[CSMODE_LEN] > 7) begin
+            SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] <= {spird_char_idx[NBITS_RXCNT-2:0], 1'b0};
+        end
+        else begin
+            SPIE[SPIE_RXCNT_HI:SPIE_RXCNT_LO] <= spird_char_idx[NBITS_RXCNT-1:0];
         end
         SPIE[SPIE_DNR] <= 0;
         SPIE[SPIE_OV]  <= 0;
@@ -755,7 +761,7 @@ end
 spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .sysclk(S_SYSCLK),           // system clock input
     .rst_n(S_RESETN),            // module reset
-    .enable(spi_brg_go),  // module enable
+    .enable(spi_brg_go & SPMODE[SPMODE_EN]),  // module enable
     .go(spi_brg_go),                 // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(1'b0),     // last clock
