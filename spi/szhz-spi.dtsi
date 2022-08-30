@@ -1,10 +1,10 @@
-&szhz-espi@80000300{
+szhz-spi@80000300 {
     reg = <0x0 0x80000300 0x0 0x100>;
     #address-cells = <0x1>;
     #size-cells = <0x0>;
 
-    compatible = "szhz,espi";
-    szhz,espi-num-chipselects = <4>;
+    compatible = "szhz,spi";
+    szhz,spi-num-chipselects = <4>;
     clock-frequency = <100000000>; /* 100 MHz */
     irq-gpio = <&gpio 24 0>;
     ad9371@0{
@@ -12,6 +12,7 @@
         compatible = "adi,ad9371";
         szhz,csbef = <3>;
         szhz,csaft = <5>;
+        reset-gpio = <&gpio 78 0>;
         spi-max-frequency = <5000000>; /* 10 MHz */
     };
 };
