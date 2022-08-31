@@ -406,10 +406,10 @@ begin
                         cnt_cscg <= cnt_cscg - 1;
                     end
                     else begin
+                        spi_brg_go <= 0;
                         if (frame_next_start) begin
                             frame_state <= FRAME_SM_BEF_WAIT;
                             frame_next_start <= 0;
-                            spi_brg_go <= 0;
                             frame_go <= 1;
                             frame_in_process <= 1;
                             cnt_cscg <= CSMODE_CSCG;
@@ -803,7 +803,7 @@ end
 spi_clk_gen # (.C_DIVIDER_WIDTH(NBITS_BRG_DIVIDER)) spi_brg (
     .sysclk(S_SYSCLK),           // system clock input
     .rst_n(S_RESETN),            // module reset
-    .enable(spi_brg_go),  // module enable
+    .enable(spi_brg_go & SPMODE[SPMODE_EN]),  // module enable
     .go(spi_brg_go),                 // start transmit
     .CPOL(CSMODE[CSMODE_CPOL]),           // clock polarity
     .last_clk(1'b0),     // last clock
