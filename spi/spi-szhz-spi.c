@@ -253,57 +253,47 @@ static unsigned int szhz_spi_check_rxskip_mode(struct spi_message *m)
 
 static inline void szhz_spi_fill_tansmitter(struct szhz_spi *hzspi, u32 events)
 {
-    u32 tx_fifo_avail;
+    u32 xfer_left;
     unsigned int tx_left;
     const void *tx_buf;
-    u32 val;
+    u32 val = 0;
     u8 *buf;
-    int idx;
     u32 mask;
 
     /* if events is zero transfer has not started and tx fifo is empty */
-    tx_fifo_avail = hzspi->xfer_len - hzspi->xfer_count;
-    if (0 == tx_fifo_avail) {
+    xfer_left = hzspi->xfer_len - hzspi->xfer_count;
+    if (0 == xfer_left) {
         return;
     }
     tx_left = hzspi->tx_t->len - hzspi->tx_pos;
+    // dbg_print("tx_left=%d,tx_pos=%d,xfer_left=%d", tx_left, hzspi->tx_pos,xfer_left);
     tx_buf = hzspi->tx_t->tx_buf;
     if (tx_left >= 4) {
-        if (hzspi->swab) {
-            szhz_spi_write_reg(hzspi, SPI_SPITD, swahb32p(tx_buf + hzspi->tx_pos));
-        } else {
-            szhz_spi_write_reg(hzspi, SPI_SPITD,
-                    *(u32 *)(tx_buf + hzspi->tx_pos));
-        }
-        hzspi->tx_pos += 4;
-    } else if (tx_left > 0 && tx_left < 4) {
-        val = 0;
         buf = (u8 *)&val;
-        for (idx = 0; idx < tx_left; idx++) {
-            buf[idx] = *(u8 *)(tx_buf + hzspi->tx_pos);
-            hzspi->tx_pos += 1;
-            tx_fifo_avail -= 1;
-        }
-        hzspi->tx_pos += tx_left;
+        memcpy(buf, tx_buf + hzspi->tx_pos, 4);
+        hzspi->tx_pos += 4;
+        // dbg_print("SPI_SPITD=0x%08x", val);
         szhz_spi_write_reg(hzspi, SPI_SPITD, val);
-    } else if (tx_fifo_avail > 0) {
+    } else if (tx_left > 0 && tx_left < 4) {
+        buf = (u8 *)&val;
+        memcpy(buf, tx_buf + hzspi->tx_pos, tx_left);
+        hzspi->tx_pos += tx_left;
+        // dbg_print("SPI_SPITD=0x%08x", val);
+        szhz_spi_write_reg(hzspi, SPI_SPITD, val);
+    } else /* if (xfer_left > 0) */ {
+        // dbg_print("SPI_SPITD=0x%08x", 0);
         szhz_spi_write_reg(hzspi, SPI_SPITD, 0);
-    } else {
+    } 
+    hzspi->xfer_count += 4;
+    if (hzspi->xfer_count > hzspi->xfer_len) {
+        hzspi->xfer_count = hzspi->xfer_len;
     }
-    if (tx_fifo_avail > 0) {
-        hzspi->xfer_count += 4;
-        if (hzspi->xfer_count > hzspi->xfer_len) {
-            hzspi->xfer_count = hzspi->xfer_len;
-        }
-        if (hzspi->xfer_count == hzspi->xfer_len) {
-            hzspi->tx_done = 1;
-            mask = szhz_spi_read_reg(hzspi, SPI_SPIM);
-            mask &= ~SPIM_TNF;
-            szhz_spi_write_reg(hzspi, SPI_SPIM, mask);
-        }
+    if (hzspi->xfer_count == hzspi->xfer_len) {
+        hzspi->tx_done = 1;
+        mask = szhz_spi_read_reg(hzspi, SPI_SPIM);
+        mask &= ~SPIM_TNF;
+        szhz_spi_write_reg(hzspi, SPI_SPIM, mask);
     }
-
-    // dbg_print("tx_left=%d,tx_pos=%d,tx_fifo_avail=%d", tx_left, hzspi->tx_pos,tx_fifo_avail);
 }
 
 static inline void szhz_spi_cpfrom_receiver(struct szhz_spi *hzspi, u32 events)
@@ -316,17 +306,22 @@ static inline void szhz_spi_cpfrom_receiver(struct szhz_spi *hzspi, u32 events)
     u32 idx;
     uint8_t *ptr;
 
+    rx_buf = hzspi->rx_t->rx_buf;
+
     rxcnt = SPIE_RXCNT(events);
     if (rxcnt > 4) {
+        for (idx = 0; idx < rxcnt; idx++) {
+            *((uint8_t *)(rx_buf + hzspi->rx_pos + idx)) = 0x00;
+        }
+        hzspi->rx_pos = hzspi->rx_pos + rxcnt;
         pr_err("Receive data overflow! rxcnt=%u", rxcnt);
     }
 
-    rx_buf = hzspi->rx_t->rx_buf;
     val = szhz_spi_read_reg(hzspi, SPI_SPIRD);
 
     ptr = (uint8_t *)&val;
     rx_left = min(4U, rxcnt);
-    dbg_print("SPI_SPIRD=0x%08x, rx_left=%u", val, rx_left);
+    // dbg_print("SPI_SPIRD=0x%08x, rx_left=%u", val, rx_left);
 
     for (idx = 0; idx < rx_left; idx++) {
         *((uint8_t *)(rx_buf + hzspi->rx_pos)) = *(ptr + idx);
@@ -378,8 +373,6 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
     u32 mask, spcom;
     int ret;
 
-    dbg_print("rx_len=%d", rx_len);
-
     reinit_completion(&hzspi->done);
 
     /* Set SPCOM[CS] and SPCOM[TRANLEN] field */
@@ -394,6 +387,7 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
         hzspi->rx_done = true;
         spcom |= SPCOM_TO;
     }
+    // dbg_print("rx_len=%d", rx_len);
 
     szhz_spi_write_reg(hzspi, SPI_SPCOM, spcom);
 
@@ -433,7 +427,7 @@ static int szhz_spi_trans(struct spi_message *m, struct spi_transfer *trans)
     struct spi_device *spi = m->spi;
     int ret;
 
-    dbg_print("Enter");
+    // dbg_print("Enter");
     /* In case of LSB-first and bits_per_word > 8 byte-swap all words */
     hzspi->swab = spi->mode & SPI_LSB_FIRST && trans->bits_per_word > 8;
 
@@ -456,8 +450,9 @@ static int szhz_spi_trans(struct spi_message *m, struct spi_transfer *trans)
     }
 
     /* In RXSKIP mode skip first transfer for reads */
-    if (hzspi->rxskip)
+    if (hzspi->rxskip) {
         hzspi->rx_t = list_next_entry(hzspi->rx_t, transfer_list);
+    }
 
     szhz_spi_setup_transfer(spi, trans);
 
@@ -576,10 +571,10 @@ static irqreturn_t szhz_spi_irq(s32 irq, void *context_data)
     /* Get interrupt events(tx/rx) */
     events = szhz_spi_read_reg(hzspi, SPI_SPIE);
     mask   = szhz_spi_read_reg(hzspi, SPI_SPIM);
-    if ((events & SPIE_RNE) & mask) {
+    if (events & SPIE_RNE) {
         szhz_spi_cpfrom_receiver(hzspi, events);
     }
-    if ((events & SPIE_TNF) & mask) {
+    if (events & SPIE_TNF) {
         szhz_spi_fill_tansmitter(hzspi, events);
     }
 
@@ -592,7 +587,7 @@ static irqreturn_t szhz_spi_irq(s32 irq, void *context_data)
 
     spin_unlock(&hzspi->lock);
 
-    dbg_print("SPI_SPIE 0x%08x", events);
+    // dbg_print("SPI_SPIE 0x%08x", events);
 
     return IRQ_HANDLED;
 }
