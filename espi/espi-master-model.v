@@ -11,7 +11,7 @@ module spi_master_model
     input  [31 : 0] S_RDATA,
     output reg S_REG_RDEN
 );
-`include "./reg-bit-def.v"
+`include "espi-reg-def.v"
 always @(posedge S_SYSCLK or negedge S_RESETN)
 begin
     if (1'b0 == S_RESETN) begin

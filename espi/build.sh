@@ -1,10 +1,10 @@
-iverilog -o wave spi-clkgen.v \
-            spi_tb.v \
-            spi_module.v \
-            spi_master_model.v \
-            spi_slave_model.v \
-            spi_top.v \
-            spi-slave.v \
+iverilog -o wave espi-clkgen.v \
+            espi-tb.v \
+            espi-module.v \
+            espi-master-model.v \
+            espi-slave-model.v \
+            espi-top.v \
+            espi-slave.v \
             ../gpio/iobuf.v \
             ../edge_detect/edge_detect.v
 # reg-bit-def.v

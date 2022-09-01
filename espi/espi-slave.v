@@ -17,7 +17,7 @@ module spi_slave_trx_char
     output wire        S_SPI_MISO,
     input  wire        S_SPI_MOSI
 );
-`include "reg-bit-def.v"
+`include "espi-reg-def.v"
 localparam MAX_BITNO_OF_CHAR = 4'hf;
 
 reg done;

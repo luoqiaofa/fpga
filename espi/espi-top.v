@@ -16,7 +16,7 @@ module spi_intface # (parameter NCS = 4)
     inout  wire S_SPI_MOSI,
     output wire [NCS-1:0] S_SPI_SEL
 );
-`include "reg-bit-def.v"
+`include "espi-reg-def.v"
 `include "const.v"
 localparam NBITS_WORD_TXFIFO = clogb2 (NWORD_TXFIFO-1);
 localparam NBITS_WORD_RXFIFO = clogb2 (NWORD_RXFIFO-1);

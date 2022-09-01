@@ -2,7 +2,7 @@
 `include "../version.v"
 
 module spi_tb;
-`include "reg-bit-def.v"
+`include "espi-reg-def.v"
 
 localparam C_DIVIDER_WIDTH = 8;
 localparam CHAR_NBITS = 8;

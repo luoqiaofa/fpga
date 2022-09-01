@@ -19,7 +19,7 @@ module spi_master_trx_char
     input  wire        S_SPI_MISO,
     output wire        S_SPI_MOSI
 );
-`include "reg-bit-def.v"
+`include "espi-reg-def.v"
 
 reg go;        // start transmit, in transmit progress
 reg done;
