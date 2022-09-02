@@ -177,7 +177,7 @@ assign o_spi_mosi = (FRAME_SM_IN_TRANS == frame_state) ? data_tx[char_bit_cnt] :
 assign S_SPI_SCK  = (FRAME_SM_IN_TRANS == frame_state) ? brg_clk : CSMODE[CSMODE_CPOL];
 assign S_SPI_SEL  = spi_sel;
 
-assign i_spi_miso = CSMODE[CSMODE_IS3WIRE] ? i_spi_mosi : S_SPI_MISO;
+assign i_spi_miso = CSMODE[CSMODE_3WIRE] ? i_spi_mosi : S_SPI_MISO;
 assign din = SPMODE[SPMODE_LOOP] ? o_spi_mosi : i_spi_miso;
 
 iobuf ioc_spi_mosi(
@@ -266,7 +266,7 @@ begin
         if (chr_done) begin
             chr_done <= 0;
             if (1'b0 == SPCOM[SPCOM_TO]) begin
-                if (CSMODE[CSMODE_IS3WIRE]) begin
+                if (CSMODE[CSMODE_3WIRE]) begin
                     if ((SPCOM_RSKIP > 0) && (char_trx_idx == SPCOM_RSKIP)) begin
                         t_spi_mosi <= 1'b1; // change mosi pin as input
                     end
