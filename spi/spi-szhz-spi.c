@@ -48,6 +48,7 @@
 #define CSMODE_REV              BIT(29)
 #define CSMODE_DIV16            BIT(28)
 #define CSMODE_PM(x)            ((x) << 24)
+#define CSMODE_3WIRE            BIT(23)
 #define CSMODE_POL_1            BIT(20)
 #define CSMODE_LEN(x)           ((x) << 16)
 #define CSMODE_BEF(x)           ((x) << 12)
@@ -227,28 +228,26 @@ static int szhz_spi_check_message(struct spi_message *m)
 static unsigned int szhz_spi_check_rxskip_mode(struct spi_message *m)
 {
     struct spi_transfer *t;
-    unsigned int i = 0, rxskip = 0;
+    unsigned int rx_len = 0, i = 0;
 
     /*
-     * prerequisites for SPI rxskip mode:
+     * prerequisites for ESPI rxskip mode:
      * - message has two transfers
      * - first transfer is a write and second is a read
      *
      * In addition the current low-level transfer mechanism requires
      * that the rxskip bytes fit into the TX FIFO. Else the transfer
-     * would hang because after the first FSL_SPI_FIFO_SIZE bytes
+     * would hang because after the first HZ_ESPI_FIFO_SIZE bytes
      * the TX FIFO isn't re-filled.
      */
     list_for_each_entry(t, &m->transfers, transfer_list) {
-        if (i == 0) {
-            rxskip = t->len;
-        } else if (i == 1) {
-            if (t->tx_buf || !t->rx_buf)
-                return 0;
+        if (NULL != t->rx_buf) {
+            rx_len += t->len;
         }
         i++;
     }
-    return i == 2 ? rxskip : 0;
+    dbg_print("num spi_transfer=%u", i);
+    return (m->frame_length - rx_len);
 }
 
 static inline void szhz_spi_fill_tansmitter(struct szhz_spi *hzspi, u32 events)
@@ -283,7 +282,7 @@ static inline void szhz_spi_fill_tansmitter(struct szhz_spi *hzspi, u32 events)
     } else /* if (xfer_left > 0) */ {
         // dbg_print("SPI_SPITD=0x%08x", 0);
         szhz_spi_write_reg(hzspi, SPI_SPITD, 0);
-    } 
+    }
     hzspi->xfer_count += 4;
     if (hzspi->xfer_count > hzspi->xfer_len) {
         hzspi->xfer_count = hzspi->xfer_len;
@@ -330,7 +329,7 @@ static inline void szhz_spi_cpfrom_receiver(struct szhz_spi *hzspi, u32 events)
             mask = szhz_spi_read_reg(hzspi, SPI_SPIM);
             mask &= ~SPIM_RNE;
             szhz_spi_write_reg(hzspi, SPI_SPIM, mask);
-            hzspi->rx_done = 1;
+            hzspi->rx_done = true;
             return ;
         }
     }
@@ -381,11 +380,13 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 
     /* configure RXSKIP mode */
     if (hzspi->rxskip) {
-        spcom |= SPCOM_RXSKIP(hzspi->rxskip);
         rx_len = t->len - hzspi->rxskip;
-    } else {
-        hzspi->rx_done = true;
-        spcom |= SPCOM_TO;
+        if (0 == rx_len) {
+            spcom |= SPCOM_TO;
+            hzspi->rx_done = true;
+        } else {
+            spcom |= SPCOM_RXSKIP(hzspi->rxskip);
+        }
     }
     // dbg_print("rx_len=%d", rx_len);
 
@@ -393,7 +394,7 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 
     /* enable interrupts */
     mask = SPIM_DON;
-    if (hzspi->rxskip > 0) {
+    if (rx_len > 0) {
         mask |= SPIM_RNE;
     }
     szhz_spi_write_reg(hzspi, SPI_SPIM, mask);
@@ -412,8 +413,10 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 
     /* Won't hang up forever, SPI bus sometimes got lost interrupts... */
     ret = wait_for_completion_timeout(&hzspi->done, 2 * HZ);
-    if (ret == 0)
+    if (ret == 0) {
+        pr_err("tx_done=%d,rx_done=%d", hzspi->tx_done, hzspi->rx_done);
         dev_err(hzspi->dev, "Transfer timed out!\n");
+    }
 
     /* disable rx ints */
     szhz_spi_write_reg(hzspi, SPI_SPIM, 0);
@@ -423,9 +426,10 @@ static int szhz_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 
 static int szhz_spi_trans(struct spi_message *m, struct spi_transfer *trans)
 {
+    int ret;
     struct szhz_spi *hzspi = spi_master_get_devdata(m->spi->master);
     struct spi_device *spi = m->spi;
-    int ret;
+    unsigned int rx_len;
 
     // dbg_print("Enter");
     /* In case of LSB-first and bits_per_word > 8 byte-swap all words */
@@ -450,7 +454,8 @@ static int szhz_spi_trans(struct spi_message *m, struct spi_transfer *trans)
     }
 
     /* In RXSKIP mode skip first transfer for reads */
-    if (hzspi->rxskip) {
+    rx_len = m->frame_length - hzspi->rxskip;
+    if ((rx_len > 0) && (NULL == hzspi->rx_t->rx_buf)) {
         hzspi->rx_t = list_next_entry(hzspi->rx_t, transfer_list);
     }
 
@@ -536,6 +541,12 @@ static int szhz_spi_setup(struct spi_device *spi)
         cs->hw_mode |= CSMODE_CI_INACTIVEHIGH;
     if (!(spi->mode & SPI_LSB_FIRST))
         cs->hw_mode |= CSMODE_REV;
+    if (spi->mode & SPI_3WIRE) {
+        cs->hw_mode |= CSMODE_3WIRE;
+    }
+    if (spi->mode & SPI_CS_HIGH) {
+        cs->hw_mode &= ~CSMODE_POL_1;
+    }
 
     /* Handle the loop mode */
     loop_mode = szhz_spi_read_reg(hzspi, SPI_SPMODE);
@@ -704,7 +715,7 @@ static int szhz_spi_probe(struct device *dev, struct resource *mem,
     dev_set_drvdata(dev, master);
 
     master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH |
-        SPI_LSB_FIRST | SPI_LOOP;
+        SPI_LSB_FIRST | SPI_LOOP | SPI_3WIRE;
     master->dev.of_node = dev->of_node;
     master->bits_per_word_mask = SPI_BPW_RANGE_MASK(4, 16);
     master->setup = szhz_spi_setup;

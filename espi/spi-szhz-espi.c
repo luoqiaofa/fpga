@@ -50,17 +50,18 @@
 #define CSMODE_REV              BIT(29)
 #define CSMODE_DIV16            BIT(28)
 #define CSMODE_PM(x)            ((x) << 24)
+#define CSMODE_3WIRE            BIT(23)
 #define CSMODE_POL_1            BIT(20)
 #define CSMODE_LEN(x)           ((x) << 16)
 #define CSMODE_BEF(x)           ((x) << 12)
 #define CSMODE_AFT(x)           ((x) << 8)
 #define CSMODE_CG(x)            ((x) << 3)
 
-#define FSL_ESPI_FIFO_SIZE      32
-#define FSL_ESPI_RXTHR          15
+#define HZ_ESPI_FIFO_SIZE      32
+#define HZ_ESPI_RXTHR          15
 
 /* Default mode/csmode for eSPI controller */
-#define SPMODE_INIT_VAL (SPMODE_TXTHR(16) | SPMODE_RXTHR(FSL_ESPI_RXTHR))
+#define SPMODE_INIT_VAL (SPMODE_TXTHR(16) | SPMODE_RXTHR(15))
 #define CSMODE_INIT_VAL (CSMODE_POL_1 | CSMODE_BEF(3) \
         | CSMODE_AFT(5) | CSMODE_CG(4))
 
@@ -109,6 +110,8 @@ struct szhz_espi {
 
     bool swab;
     unsigned int rxskip;
+    unsigned int xfer_len;
+    unsigned int xfer_cnt;
 
     spinlock_t lock;
 
@@ -126,6 +129,7 @@ static inline u32 szhz_espi_read_reg(struct szhz_espi *espi, int offset)
     u32 val;
 
     val= ioread32(espi->reg_base + offset);
+#if 0
     switch (offset) {
         case ESPI_SPMODE    : dbg_print("ESPI_SPMODE=0x%08x", val); break;
         case ESPI_SPIE      : dbg_print("ESPI_SPIE=0x%08x", val); break;
@@ -138,6 +142,7 @@ static inline u32 szhz_espi_read_reg(struct szhz_espi *espi, int offset)
         case ESPI_SPMODEx(2): dbg_print("ESPI_SPMODE2=0x%08x", val); break;
         case ESPI_SPMODEx(3): dbg_print("ESPI_SPMODE3=0x%08x", val); break;
     }
+#endif
     return val;
 }
 
@@ -145,7 +150,7 @@ static inline u16 szhz_espi_read_reg16(struct szhz_espi *espi, int offset)
 {
     u16 val;
     val = ioread16(espi->reg_base + offset);
-    dbg_print("offset=%d,val=0x%04x", offset, val);
+    // dbg_print("offset=%d,val=0x%04x", offset, val);
     return val;
 }
 
@@ -154,13 +159,14 @@ static inline u8 szhz_espi_read_reg8(struct szhz_espi *espi, int offset)
     u8 val;
 
     val = ioread8(espi->reg_base + offset);
-    dbg_print("offset=%d,val=0x%02x", offset, val);
+    // dbg_print("offset=%d,val=0x%02x", offset, val);
     return val;
 }
 
 static inline void szhz_espi_write_reg(struct szhz_espi *espi, int offset,
         u32 val)
 {
+#if 0
     switch (offset) {
         case ESPI_SPMODE    : dbg_print("ESPI_SPMODE=0x%08x", val); break;
         case ESPI_SPIE      : dbg_print("ESPI_SPIE=0x%08x", val); break;
@@ -173,20 +179,21 @@ static inline void szhz_espi_write_reg(struct szhz_espi *espi, int offset,
         case ESPI_SPMODEx(2): dbg_print("ESPI_SPMODE2=0x%08x", val); break;
         case ESPI_SPMODEx(3): dbg_print("ESPI_SPMODE3=0x%08x", val); break;
     }
+#endif
     iowrite32(val, espi->reg_base + offset);
 }
 
 static inline void szhz_espi_write_reg16(struct szhz_espi *espi, int offset,
         u16 val)
 {
-    dbg_print("offset=%d,val=0x%04x", offset, val);
+    // dbg_print("offset=%d,val=0x%04x", offset, val);
     iowrite16(val, espi->reg_base + offset);
 }
 
 static inline void szhz_espi_write_reg8(struct szhz_espi *espi, int offset,
         u8 val)
 {
-    dbg_print("offset=%d,val=0x%02x", offset, val);
+    // dbg_print("offset=%d,val=0x%02x", offset, val);
     iowrite8(val, espi->reg_base + offset);
 }
 
@@ -227,7 +234,7 @@ static int szhz_espi_check_message(struct spi_message *m)
 static unsigned int szhz_espi_check_rxskip_mode(struct spi_message *m)
 {
     struct spi_transfer *t;
-    unsigned int i = 0, rxskip = 0;
+    unsigned int rx_len = 0, i = 0;
 
     /*
      * prerequisites for ESPI rxskip mode:
@@ -236,84 +243,65 @@ static unsigned int szhz_espi_check_rxskip_mode(struct spi_message *m)
      *
      * In addition the current low-level transfer mechanism requires
      * that the rxskip bytes fit into the TX FIFO. Else the transfer
-     * would hang because after the first FSL_ESPI_FIFO_SIZE bytes
+     * would hang because after the first HZ_ESPI_FIFO_SIZE bytes
      * the TX FIFO isn't re-filled.
      */
     list_for_each_entry(t, &m->transfers, transfer_list) {
-        if (i == 0) {
-            if (!t->tx_buf || t->rx_buf ||
-                    t->len > FSL_ESPI_FIFO_SIZE)
-                return 0;
-            rxskip = t->len;
-        } else if (i == 1) {
-            if (t->tx_buf || !t->rx_buf)
-                return 0;
+        if (NULL != t->rx_buf) {
+            rx_len += t->len;
         }
         i++;
     }
-
-    return i == 2 ? rxskip : 0;
+    dbg_print("num spi_transfer=%u", i);
+    return (m->frame_length - rx_len);
 }
 
 static void szhz_espi_fill_tx_fifo(struct szhz_espi *espi, u32 events)
 {
-    u32 tx_fifo_avail;
-    unsigned int tx_left;
-    const void *tx_buf;
     u32 val;
-    u8 *buf;
-    int idx;
-    int nbytes;
+    u32 tx_fifo_avail;
+    const void *tx_buf;
+    unsigned int tx_left;
+    unsigned int xfer_left;
 
     /* if events is zero transfer has not started and tx fifo is empty */
-    tx_fifo_avail = events ? SPIE_TXCNT(events) :  FSL_ESPI_FIFO_SIZE;
-start:
+    tx_fifo_avail = events ? SPIE_TXCNT(events) :  HZ_ESPI_FIFO_SIZE;
+    xfer_left = espi->xfer_len - espi->xfer_cnt;
     tx_left = espi->tx_t->len - espi->tx_pos;
     tx_buf = espi->tx_t->tx_buf;
-    /* dbg_print("tx_left=%d,tx_buf=%p,tx_fifo_avail=%d", tx_left,tx_buf,tx_fifo_avail); */
-    while (tx_fifo_avail >= min(4U, tx_left) && tx_left) {
-        dbg_print("tx_left=%d,tx_pos=%d,tx_fifo_avail=%d", tx_left, espi->tx_pos,tx_fifo_avail);
-        if (tx_left >= 4) {
-            if (!tx_buf)
-                szhz_espi_write_reg(espi, ESPI_SPITF, 0);
-            else if (espi->swab)
-                szhz_espi_write_reg(espi, ESPI_SPITF,
-                        swahb32p(tx_buf + espi->tx_pos));
-            else
-                szhz_espi_write_reg(espi, ESPI_SPITF,
-                        *(u32 *)(tx_buf + espi->tx_pos));
-            espi->tx_pos += 4;
-            tx_left -= 4;
-            tx_fifo_avail -= 4;
-        } else  {
-            val = 0;
-            buf = (u8 *)&val;
-            nbytes = tx_left;
-            for (idx = 0; idx < nbytes; idx++) {
-                buf[idx] = *(u8 *)(tx_buf + espi->tx_pos);
-                espi->tx_pos += 1;
-                tx_left -= 1;
-                tx_fifo_avail -= 1;
+    // while (tx_fifo_avail >= min(4U, tx_left) && xfer_left)
+    while ((tx_fifo_avail >= 4) && (xfer_left > 0)) {
+        val = 0;
+        if (NULL != tx_buf) {
+            if (tx_left >= 4) {
+                memcpy((void *)&val, tx_buf + espi->tx_pos, 4);
+                tx_left -= 4;
+                espi->tx_pos += 4;
+            } else if (tx_left > 0) {
+                memcpy((void *)&val, tx_buf + espi->tx_pos, tx_left);
+                espi->tx_pos += tx_left;
+                tx_left = 0;
+            } else {
+                /* espi->xfer_cnt += 4; */
             }
-            szhz_espi_write_reg(espi, ESPI_SPITF, val);
+        } else {
+            /* tx_buf == NULL, rx_buf != NULL */
         }
-    }
+        szhz_espi_write_reg(espi, ESPI_SPITF, val);
 
-    dbg_print("tx_left=%d,tx_pos=%d,tx_fifo_avail=%d", tx_left, espi->tx_pos,tx_fifo_avail);
-    if (!tx_left) {
-        /* Last transfer finished, in rxskip mode only one is needed */
-        if (list_is_last(&espi->tx_t->transfer_list,
-                    espi->m_transfers) || espi->rxskip) {
-            espi->tx_done = true;
-            dbg_print("tx_done true");
-            return;
+        tx_fifo_avail -= 4;
+        if (xfer_left >= 4) {
+            xfer_left -= 4;
+        } else {
+            xfer_left = 0;
         }
-        espi->tx_t = list_next_entry(espi->tx_t, transfer_list);
-        espi->tx_pos = 0;
-        /* continue with next transfer if tx fifo is not full */
-        if (tx_fifo_avail)
-            goto start;
+        espi->xfer_cnt += 4;
+        if (0 == xfer_left) {
+            espi->xfer_cnt = espi->xfer_len;
+            espi->tx_done = true;
+        }
     }
+    // dbg_print("tx_left=%d,tx_buf=%p,tx_fifo_avail=%d", tx_left,tx_buf,tx_fifo_avail);
 }
 
 static void szhz_espi_read_rx_fifo(struct szhz_espi *espi, u32 events)
@@ -321,41 +309,45 @@ static void szhz_espi_read_rx_fifo(struct szhz_espi *espi, u32 events)
     u32 rx_fifo_avail = SPIE_RXCNT(events);
     unsigned int rx_left;
     void *rx_buf;
+    uint32_t val32;
 
 start:
-    rx_left = espi->rx_t->len - espi->rx_pos;
     rx_buf = espi->rx_t->rx_buf;
+    if (NULL == rx_buf) {
+        espi->rx_done = true;
+        return ;
+    }
+    rx_left = espi->rx_t->len - espi->rx_pos;
+    // dbg_print("rx_left=%d,rx_pos=%d,rx_fifo_avail=%d", rx_left, espi->rx_pos,rx_fifo_avail);
     while (rx_fifo_avail >= min(4U, rx_left) && rx_left) {
-        dbg_print("rx_left=%d,rx_pos=%d,rx_fifo_avail=%d", rx_left, espi->rx_pos,rx_fifo_avail);
-        if (rx_left >= 4) {
-            u32 val = szhz_espi_read_reg(espi, ESPI_SPIRF);
-
-            if (rx_buf && espi->swab)
-                *(u32 *)(rx_buf + espi->rx_pos) = swahb32(val);
-            else if (rx_buf)
-                *(u32 *)(rx_buf + espi->rx_pos) = val;
-            espi->rx_pos += 4;
-            rx_left -= 4;
-            rx_fifo_avail -= 4;
-        } else if (rx_left >= 2 && rx_buf && espi->swab) {
-            u16 val = szhz_espi_read_reg16(espi, ESPI_SPIRF);
-
-            *(u16 *)(rx_buf + espi->rx_pos) = swab16(val);
-            espi->rx_pos += 2;
-            rx_left -= 2;
-            rx_fifo_avail -= 2;
+        if (rx_fifo_avail >= 4) {
+            if (rx_left >= 4) {
+                val32 = szhz_espi_read_reg(espi, ESPI_SPIRF);
+                if (espi->swab) {
+                    val32 = swahb32(val32);
+                }
+                memcpy((rx_buf + espi->rx_pos), (void *)&val32, 4);
+                espi->rx_pos += 4;
+                rx_left -= 4;
+                rx_fifo_avail -= 4;
+            } else {
+                val32 = szhz_espi_read_reg(espi, ESPI_SPIRF);
+                memcpy(rx_buf + espi->rx_pos, (void *)&val32, rx_left);
+                espi->rx_pos += rx_left;
+                rx_fifo_avail -= rx_left;
+                rx_left = 0;
+            }
         } else {
-            u8 val = szhz_espi_read_reg8(espi, ESPI_SPIRF);
-
-            if (rx_buf)
-                *(u8 *)(rx_buf + espi->rx_pos) = val;
-            espi->rx_pos += 1;
-            rx_left -= 1;
-            rx_fifo_avail -= 1;
+            /* rx_fifo_avail >= rx_left && rx_left < 4 */
+            val32 = szhz_espi_read_reg(espi, ESPI_SPIRF);
+            memcpy(rx_buf + espi->rx_pos, (void *)&val32, rx_left);
+            espi->rx_pos += rx_left;
+            rx_fifo_avail -= rx_left;
+            rx_left = 0;
         }
     }
 
-    dbg_print("rx_left=%d,rx_pos=%d,rx_fifo_avail=%d", rx_left, espi->rx_pos,rx_fifo_avail);
+    // dbg_print("rx_left=%d,rx_pos=%d,rx_fifo_avail=%d", rx_left, espi->rx_pos,rx_fifo_avail);
     if (!rx_left) {
         if (list_is_last(&espi->rx_t->transfer_list,
                     espi->m_transfers)) {
@@ -407,8 +399,6 @@ static int szhz_espi_bufs(struct spi_device *spi, struct spi_transfer *t)
     u32 mask, spcom;
     int ret;
 
-    dbg_print("rx_len=%d", rx_len);
-
     reinit_completion(&espi->done);
 
     /* Set SPCOM[CS] and SPCOM[TRANLEN] field */
@@ -417,18 +407,20 @@ static int szhz_espi_bufs(struct spi_device *spi, struct spi_transfer *t)
 
     /* configure RXSKIP mode */
     if (espi->rxskip) {
-        spcom |= SPCOM_RXSKIP(espi->rxskip);
         rx_len = t->len - espi->rxskip;
-    } else {
-        espi->rx_done = true;
-        spcom |= SPCOM_TO;
+        if (0 == rx_len) {
+            espi->rx_done = true;
+            spcom |= SPCOM_TO;
+        } else {
+            spcom |= SPCOM_RXSKIP(espi->rxskip);
+        }
     }
 
     szhz_espi_write_reg(espi, ESPI_SPCOM, spcom);
 
     /* enable interrupts */
     mask = SPIM_DON;
-    if (rx_len > FSL_ESPI_FIFO_SIZE)
+    if (rx_len > HZ_ESPI_FIFO_SIZE)
         mask |= SPIM_RXT;
     szhz_espi_write_reg(espi, ESPI_SPIM, mask);
 
@@ -436,25 +428,33 @@ static int szhz_espi_bufs(struct spi_device *spi, struct spi_transfer *t)
     spin_lock_irq(&espi->lock);
     szhz_espi_fill_tx_fifo(espi, 0);
     spin_unlock_irq(&espi->lock);
+    if (espi->xfer_len > HZ_ESPI_FIFO_SIZE) {
+        mask |= SPIM_TXE;
+        szhz_espi_write_reg(espi, ESPI_SPIM, mask);
+    }
 
     /* Won't hang up forever, SPI bus sometimes got lost interrupts... */
     ret = wait_for_completion_timeout(&espi->done, 2 * HZ);
-    if (ret == 0)
+    if (ret == 0) {
+        pr_err("tx_pos=%u,tx_done=%d, rx_pos=%u, rx_done=%d",
+                espi->tx_pos, espi->tx_done, espi->rx_pos, espi->rx_done);
         dev_err(espi->dev, "Transfer timed out!\n");
+    }
 
     /* disable rx ints */
     szhz_espi_write_reg(espi, ESPI_SPIM, 0);
+    szhz_espi_write_reg(espi, ESPI_SPIE, 0xffffffff);
 
     return ret == 0 ? -ETIMEDOUT : 0;
 }
 
 static int szhz_espi_trans(struct spi_message *m, struct spi_transfer *trans)
 {
+    int ret;
+    unsigned int rx_len;
     struct szhz_espi *espi = spi_master_get_devdata(m->spi->master);
     struct spi_device *spi = m->spi;
-    int ret;
 
-    dbg_print("Enter");
     /* In case of LSB-first and bits_per_word > 8 byte-swap all words */
     espi->swab = spi->mode & SPI_LSB_FIRST && trans->bits_per_word > 8;
 
@@ -467,16 +467,24 @@ static int szhz_espi_trans(struct spi_message *m, struct spi_transfer *trans)
             transfer_list);
     espi->rx_pos = 0;
     espi->rx_done = false;
+    espi->xfer_cnt = 0;
+    espi->xfer_len = trans->len;
 
     espi->rxskip = szhz_espi_check_rxskip_mode(m);
+    dbg_print("xfer_len=%u, rxskip=%u", espi->xfer_len, espi->rxskip);
     if (trans->rx_nbits == SPI_NBITS_DUAL && !espi->rxskip) {
         dev_err(espi->dev, "Dual output mode requires RXSKIP mode!\n");
         return -EINVAL;
     }
 
+    dbg_print("tx_t=%p, tx_buf=%p", espi->tx_t, espi->tx_t->tx_buf);
+    dbg_print("rx_t=%p, rx_buf=%p", espi->rx_t, espi->rx_t->rx_buf);
     /* In RXSKIP mode skip first transfer for reads */
-    if (espi->rxskip)
+    rx_len = m->frame_length - espi->rxskip;
+    if ((rx_len > 0) && (NULL == espi->rx_t->rx_buf)) {
         espi->rx_t = list_next_entry(espi->rx_t, transfer_list);
+        dbg_print("rx_t=%p, rx_buf=%p", espi->rx_t, espi->rx_t->rx_buf);
+    }
 
     szhz_espi_setup_transfer(spi, trans);
 
@@ -560,6 +568,12 @@ static int szhz_espi_setup(struct spi_device *spi)
         cs->hw_mode |= CSMODE_CI_INACTIVEHIGH;
     if (!(spi->mode & SPI_LSB_FIRST))
         cs->hw_mode |= CSMODE_REV;
+    if (spi->mode & SPI_3WIRE) {
+        cs->hw_mode |= CSMODE_3WIRE;
+    }
+    if (spi->mode & SPI_CS_HIGH) {
+        cs->hw_mode &= ~CSMODE_POL_1;
+    }
 
     /* Handle the loop mode */
     loop_mode = szhz_espi_read_reg(espi, ESPI_SPMODE);
@@ -594,19 +608,15 @@ static void szhz_espi_cpu_irq(struct szhz_espi *espi, u32 events)
         szhz_espi_fill_tx_fifo(espi, events);
     }
 
-    dbg_print("tx_done=%d,rx_done=%d", espi->tx_done, espi->rx_done);
+    // dbg_print("tx_done=%d,rx_done=%d", espi->tx_done, espi->rx_done);
     if (!espi->tx_done || !espi->rx_done)
         return;
 
     /* we're done, but check for errors before returning */
     events = szhz_espi_read_reg(espi, ESPI_SPIE);
-    dbg_print("events=0x%08x", events);
+    // dbg_print("events=0x%08x", events);
 
-    if (!(events & SPIE_DON))
-        dev_err(espi->dev,
-                "Transfer done but SPIE_DON isn't set!\n");
-
-    if (SPIE_RXCNT(events) || SPIE_TXCNT(events) != FSL_ESPI_FIFO_SIZE)
+    if (SPIE_RXCNT(events) || SPIE_TXCNT(events) != HZ_ESPI_FIFO_SIZE)
         dev_err(espi->dev, "Transfer done but rx/tx fifo's aren't empty!\n");
 
     complete(&espi->done);
@@ -621,7 +631,7 @@ static irqreturn_t szhz_espi_irq(s32 irq, void *context_data)
 
     /* Get interrupt events(tx/rx) */
     events = szhz_espi_read_reg(espi, ESPI_SPIE);
-    dbg_print("events 0x%08x", events);
+    // dbg_print("events 0x%08x", events);
     if (!events) {
         spin_unlock(&espi->lock);
         return IRQ_NONE;
@@ -749,7 +759,7 @@ static int szhz_espi_probe(struct device *dev, struct resource *mem,
     dev_set_drvdata(dev, master);
 
     master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH |
-        SPI_LSB_FIRST | SPI_LOOP;
+        SPI_LSB_FIRST | SPI_LOOP | SPI_3WIRE;
     master->dev.of_node = dev->of_node;
     master->bits_per_word_mask = SPI_BPW_RANGE_MASK(4, 16);
     master->setup = szhz_espi_setup;
@@ -776,7 +786,7 @@ static int szhz_espi_probe(struct device *dev, struct resource *mem,
 
     init_completion(&espi->done);
 
-    espi->reg_base = devm_ioremap_resource(dev, mem) + 0x300;
+    espi->reg_base = devm_ioremap_resource(dev, mem);
     dbg_print("reg_base=%p", espi->reg_base);
     if (IS_ERR(espi->reg_base)) {
         ret = PTR_ERR(espi->reg_base);
